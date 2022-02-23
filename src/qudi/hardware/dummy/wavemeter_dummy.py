@@ -24,70 +24,50 @@ If not, see <https://www.gnu.org/licenses/>.
 import random
 import scipy.constants as sc
 from PySide2 import QtCore
-from qudi.core.threadmanager import ThreadManager
+import time
 
 from qudi.core.configoption import ConfigOption
+from qudi.core.module import Base
 from qudi.interface.wavemeter_interface import WavemeterInterface
 from qudi.util.mutex import Mutex
 
 
-class HardwarePull(QtCore.QObject):
-    """ Helper class for running the hardware communication in a separate
-    thread.
-    """
-
-    def __init__(self, parentclass):
-        super().__init__()
-
-        # remember the reference to the parent class to access functions ad settings
-        self._parentclass = parentclass
-
-    def handle_timer(self, state_change):
-        """ Threaded method that can be called by a signal from outside to start
-            the timer.
-
-        @param bool state_change: (True) starts timer, (False) stops it.
-        """
-
-        if state_change:
-            self.timer = QtCore.QTimer()
-            self.timer.timeout.connect(self._measure_thread)
-            #QTimer needs the measurement_timing in miliseconds
-            self.timer.start(self._parentclass._measurement_timing/10**(-3))
-        else:
-            if hasattr(self, 'timer'):
-                self.timer.stop()
-
-    def _measure_thread(self):
-        """ The threaded method querying the data from the wavemeter. """
-
-        range_step = 0.1e-9 #currently for nm deviation not for frequency
-
-        # update as long as the status is busy
-        if self._parentclass.is_running:
-            # get the current wavelength from the wavemeter
-            #self._parentclass._current_wavelength += random.uniform(-range_step, range_step)
-            self._parentclass.current_wavelength += random.uniform(-range_step, range_step)
-        #todo emit signal if new measurment value is available (as it's the case in real hardware) and not directly update wavelength in parentclass
-        #todo from time to time also simulate some error?
-
-
-class WavemeterDummy(WavemeterInterface):
-    """ Dummy hardware class to simulate the controls for a wavemeter.
+class WavemeterDummy(Base):
+    # Todo change of wavemeter interface
+    # todo push
+    """ Threaded dummy hardware class to simulate the controls for a wavemeter.
 
     Example config for copy-paste:
 
-    temp_tsys:
+    wavemeter_dummy:
         module.Class: 'wavemeter_dummy.WavemeterDummy'
-        measurement_timing: 10.0
-
+        measurement_timing: 10.0e-3 # measurement timing should be given in seconds
+        unit: 'vac' # unit of the read out wavelength
+        automatic_acquisition: True # if set True on activation of the module measurement starts
     """
-    #_threaded = True #todo need for that at all? Or not necessary due to sperate measurement thread?
+    _threaded = True
 
     # config opts
     _measurement_timing = ConfigOption('measurement_timing', 10.e-3)
+    #todo check available units
+    _unit = ConfigOption('unit', 'vac')
+    automatic_acquisition = ConfigOption('automatic_acquisition', True)
 
-    sig_handle_timer = QtCore.Signal(bool)
+    _sig_start_hardware_query = QtCore.Signal()
+
+    error_dict = {0: 'Error no value as acquisition stopped',
+                  -1: 'Error no signal, wavlength meter has not detected any signal.',
+                  -2: 'Error bad signal, wavelength meter has not detected calculatable signal',
+                  -3: 'Error low signal, signal is too small to be calculated properly',
+                  -4: 'Error big signal, signal is too large to be calculated properly',
+                  -5: 'Error wavelength meter missing',
+                  -6: 'Error not available',
+                  -7: 'Nothing changed',
+                  -8: ' Error no pulse, the detected signal could not be divided in separated '
+                      'pulses',
+                  -13: 'Error division by 0',
+                  -14: 'Error out of range',
+                  -15: 'Error unit not available'}
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
@@ -95,231 +75,191 @@ class WavemeterDummy(WavemeterInterface):
         # locking for thread safety
         self.threadlock = Mutex()
 
-        # the current wavelength read by the wavemeter in nm (vac)
-        self.__current_wavelength = float()
+        # the inital wavelength as list which should contain timestamp and wavelength
+        self._wavelength = list()
+
+        # initial set of property showing if acquisition is running
         self._is_running = False
-        # Check if thread manager can be retrieved from the qudi main application #todo set to the right position? or better in activate?
-        self.thread_manager = ThreadManager.instance()
-        if self.thread_manager is None:
-            raise RuntimeError('No thread manager found. Qudi application is probably not running.')
+        self._last_error = 0, ''
+        # self._initial_wavelength = round(random.uniform(420, 1100), 2) * 10 ** (-9)
 
     def on_activate(self):
-        """ Activate module.
         """
-        self.__current_wavelength = float()
+        Activate module.
+        Connects signal to the hardware query mimicing measurement of a wavelength.
+        Will automatically start measurement if ConfigOption automatic_acquisition is set to True.
+        """
         self.log.warning("This module has not been tested on the new qudi core."
                          "Use with caution and contribute bug fixed back, please.")
 
-        # Get a newly spawned thread (PySide2.QtCore.QThread) from the thread manager and give it a name
-        # create an independent thread for the hardware communication
-        self.hardware_thread = self.thread_manager.get_new_thread('measure_thread')
+        # connect signal to _start_hardware_query
+        self._sig_start_hardware_query.connect(self._start_hardware_query)
 
-        # create an object for the hardware communication and let it live on the new thread
-        self._hardware_pull = HardwarePull(self)
-        self._hardware_pull.moveToThread(self.hardware_thread)
-
-        # connect the signals in and out of the threaded object
-        self.sig_handle_timer.connect(self._hardware_pull.handle_timer)
-        # self._hardware_pull.sig_wavelength.connect(self.handle_wavelength)
-
-        # start the event loop for the hardware
-        self.hardware_thread.start()
-
-        # start automatically acquisition
-        self.start_acquisition()
+        # start automatically measurement thread on activate
+        if self.automatic_acquisition:
+            self._set_run(True)
 
     def on_deactivate(self):
-        """ Deactivate module.
         """
-        self.stop_acquisition()
-        self.thread_manager.quit_thread('measure_thread')
-        self.sig_handle_timer.disconnect()
-        self._hardware_pull.sig_wavelength.disconnect()
-
-    @property
-    def is_running(self):
+        Deactivate module.
+        Stop threaded _start_hardware_query
+        Disconnects signal to _start_hardware_query
         """
-        Read-only flag indicating if the data acquisition is running.
-
-        @return bool: Data acquisition is running (True) or not (False)
-        """
-        return self._is_running
-
-    @is_running.setter
-    #todo documentation needed here?
-    def is_running(self, run):
-        if self._is_running and not run:
-            self._is_running = False
-        elif not self._is_running and run:
-            self._is_running = True
-        return
-
-    #todo check if this property is necessary or does it just duplication of get_wavelength()
-    @property
-    def current_wavelength(self):
-        return float(self.__current_wavelength)
-
-    @current_wavelength.setter
-    def current_wavelength(self, wavelength):
-        error_dict = {0: 'Error no value as acquisition stopped',
-                      -1: 'Error no signal, wavlength meter has not detected any signal.',
-                      -2: 'Error bad signal, wavelength meter has not detected calculatable signal',
-                      -3: 'Error low signal, signal is too small to be calculated properly',
-                      -4: 'Error big signal, signal is too large to be calculated properly',
-                      -5: 'Error wavelength meter missing',
-                      -6: 'Error not available',
-                      -7: 'Nothing changed',
-                      -8: ' Error no pulse, the detected signal could not be divided in separated '
-                          'pulses',
-                      -13: 'Error division by 0',
-                      -14: 'Error out of range',
-                      -15: 'Error unit not available'}
-        if wavelength > 0 and wavelength not in error_dict:
-            self.__current_wavelength = wavelength
-            return
-        elif wavelength in error_dict:
-            self.log.error(error_dict[self.current_wavelength])
-            return
-        else:
-            self.log.error('No valid wavelength/WLM error')
-            return
+        self.is_running = False
+        self._sig_start_hardware_query.disconnect(self._start_hardware_query)
 
     #############################################
     # Methods of the main class
     #############################################
-    def start_acquisition(self):
-        """ Method to start the wavemeter software.
 
-        @return int: error code (0:OK, -1:error)
-
-        Also the actual threaded method for getting the current wavemeter reading is started.
+    def _start_hardware_query(self):
         """
-        # first check its status
-        if self.is_running:
-            self.log.error('Wavemeter busy')
-            return -1
-
-        self._is_running = True
-        #todo self.module_state.lock() does not work
-
-        # actually start the wavemeter
-        self.log.info('starting Wavemeter')
-
+        Function who mimics the behavior of an hardware measuring some wavelength using QTimer
+        single shot function.
+        As soon as activated the module state is locked and also the thread is locked that no other
+        function can do changes to this time to the wavelength.
+        Module checks if the measured wavelength is valid, if not the error will be saved in the
+        property _last_error
+        """
+        if self.module_state() == 'idle':
+            self.module_state.lock()
         # set initial wavemeter value randomly between 4200nm and 1100nm in SI units
-        self.current_wavelength = round(random.uniform(420, 1100), 2)*10**(-9)
+        # todo should not be here because it isn't likely that the wavelength jumps so much
+        # todo how to do that wavelength is changed in certain step to previous wavelength?
+        wavelength = round(random.uniform(420, 1100), 2) * 10 ** (-9)
+        #self._parentclass._current_wavelength2 += random.uniform(-range_step, range_step)
 
-        #todo if placing here the creation of the thread: Why can't I create new thread in starting acquisition for the second time
-
-        # create an independent thread for the hardware communication
-        # self.hardware_thread = self.thread_manager.get_new_thread('measure_thread')
-        #
-        # # create an object for the hardware communication and let it live on the new thread
-        # self._hardware_pull = HardwarePull(self)
-        # self._hardware_pull.moveToThread(self.hardware_thread)
-        #
-        # # connect the signals in and out of the threaded object
-        # self.sig_handle_timer.connect(self._hardware_pull.handle_timer)
-        #
-        # # start the event loop for the hardware
-        # self.hardware_thread.start()
-
-        # start the measuring thread
-        self.sig_handle_timer.emit(True)
-
-        return 0
-
-    def stop_acquisition(self):
-        """ Stops the Wavemeter from measuring and kills the thread that queries the data.
-
-        @return int: error code (0:OK, -1:error)
-        """
-
-        # check status just for a sanity check
-        if not self.is_running:
-            self.log.warning('Wavemeter was already stopped, stopping it anyway!')
+        if wavelength > 0:
+            with self.threadlock:
+                self._wavelength.append((time.time(), wavelength))
+        elif wavelength in self.error_dict:
+            self._last_error = wavelength, self.error_dict[wavelength]
         else:
-            # stop the measurement thread
-            self.sig_handle_timer.emit(False)
-            # set the wavelength to no value again
-            #self.current_wavelength = float()
-            # set status to idle again
-            self.is_running = False
-            #todo self.module_state.unlock() does not work
+            self._last_error = wavelength, 'Unknown error'
 
-        # Stop the actual wavemeter measurement
-        self.log.warning('stopping Wavemeter')
-
-        #self.thread_manager.quit_thread('measure_thread')
-        #self.sig_handle_timer.disconnect()
-        self.is_running = False
-
-        return 0
-
-    def get_current_wavelength(self, kind="vac"):
-        """ This method returns the current wavelength.
-
-        @param string kind: can either be "vac" or "air" for the wavelength in vacuum or air, respectively.
-
-        @return float: wavelength (or negative value for errors)
-        """
-        error_dict = {0: 'Error no value as acquisition stopped',
-                      -1: 'Error no signal, wavlength meter has not detected any signal.',
-                      -2: 'Error bad signal, wavelength meter has not detected calculatable signal',
-                      -3: 'Error low signal, signal is too small to be calculated properly',
-                      -4: 'Error big signal, signal is too large to be calculated properly',
-                      -5: 'Error wavelength meter missing',
-                      -6: 'Error not available',
-                      -7: 'Nothing changed',
-                      -8: ' Error no pulse, the detected signal could not be divided in separated '
-                          'pulses',
-                      -13: 'Error division by 0',
-                      -14: 'Error out of range',
-                      -15: 'Error unit not available'}
-
-        if self.current_wavelength > 0 and self.current_wavelength not in error_dict:
-            #todo set here the current wavelength?
-            if kind in "vac":
-                # for vacuum just return the current wavelength
-                #return float(self._current_wavelength)
-                return self.current_wavelength
-            if kind in "air":
-                # for air we need the convert the current wavelength.
-                #return float(self.convert_unit(self._current_wavelength, 'vac', 'air'))
-                return self.convert_unit(self.current_wavelength, 'vac', 'air')
-        elif self.current_wavelength in error_dict:
-            self.log.error(error_dict[self.current_wavelength])
-            return self.current_wavelength
+        if self._is_running:
+            QtCore.QTimer.singleShot(int(self._measurement_timing * 1e3),
+                                     self._start_hardware_query)
         else:
-            self.log.error('No valid wavelength/WLM error')
-            return
+            self.module_state.unlock()
 
-    def handle_wavelength(self, wavelength):
-        """ Function to save the wavelength, when it comes in with a signal.
+    @property
+    def last_error(self):
         """
-        self._current_wavelength = wavelength
+        Property for saving if some errorous wavelength was detected.
 
-    def get_timing(self):
+        @return tuple: Error number, error message.
+        """
+        tmp_error = self._last_error[0], self._last_error[1]
+        self._last_error = 0, ''
+        return tmp_error
 
-        """ Get the timing of the internal measurement thread.
+    @property
+    def is_running(self):
+        """
+        Property to indicate if measurement is running, and used to start and stop measurements.
 
-        @return float: clock length in second (SI unit)
+        @ return bool: True if measurement thread is running, False if not.
+        """
+        return self._is_running
+
+    @is_running.setter
+    def is_running(self, value):
+        """
+        Setter of the is_running property. Uses the protected function _set_run but with additional
+        sanity checks of the current module state. Setting the value starts or stops the measurement
+
+        @ param bool value: True starts the measurement, False stops
+        """
+        # todo should be here some return value if that worked?
+        if value:
+            if self.module_state() == 'idle':
+                self._set_run(True)
+            else:
+                self.log.warning('acquisition already running, nothing done')
+        if not value:
+            if self.module_state() != 'idle':
+                self._set_run(False)
+                self.log.warning('stop requested, stopping the measurement')
+            else:
+                self.log.warning('stop requested, but measurement was already stopped before.')
+
+    def _set_run(self, value):
+        """
+        Protected function to set the is_running property. The is_running.setter uses this function.
+        Written in protected way that during activation already the measurement thread can be
+        started.
+        Uses signal emitting to start the hardware query.
+        """
+        self._is_running = value
+        if value:
+            self._sig_start_hardware_query.emit()
+            self.log.info('measurement thread started')
+
+    @property
+    def wavelength(self):
+        """
+        Property wavelength gets list of wavelengths which have been collected.
+
+        @return tuple result: returns list with two entries, first the time second the wavelength
+        """
+        with self.threadlock:
+            #todo do here the unit conversion
+
+            # self._convert_unit(self._unit)
+            result = tuple(self._wavelength)
+            self._wavelength = list()
+            return result
+
+    @property
+    def unit(self):
+        """
+        Property to store the unit of measured value.
+
+        @return str: Returns the unit as a string
+        """
+        return self._unit
+
+    @unit.setter
+    def unit(self, value):
+        """
+        Sets a different unit.
+
+        @params str value: The target unit inserted as str.
+        """
+        #todo use here convert unit
+        self._unit = value
+
+    @property
+    def measurement_timing(self):
+        """
+        Property measurement timing given in seconds.
         """
         return self._measurement_timing
 
-    def set_timing(self, timing):
-        """ Set the timing of the internal measurement thread.
+    @measurement_timing.setter
+    def measurement_timing(self, timing):
+        """
+        Setter for the measurement timing.
 
-        @param float timing: clock length in second (SI unit)
-
-        @return int: error code (0:OK, -1:error)
+        @params float timing: sets the measurement timing. Has to be given in seconds
         """
         self._measurement_timing = float(timing)
-        # update the measurement timing in the thread
-        self.sig_handle_timer.emit(True)
-        return 0
 
-    def convert_unit(self, value, unit_from, unit_to):
+    def _convert_unit(self, value, unit_from, unit_to):
+        """
+        Converts a wavelength value from one to another unit if in unit dict.
+
+        @params float value: Here to put in the actual measurement value
+        @params str unit_from: Here to put string of actual unit
+        @params str unit_to: Here to put a string out of unit dictionary
+
+        @return float: value converted in other unit
+        """
+        #todo rewrite convert unit that suitable for list?
+        #todo how to handle convert unit during one measurement? Probably the whole list...
         refractive_index_air = 1.0003
+        #todo write dict of units somewhere else?
         units = {'vac', 'air', 'freq'}
         if unit_from and unit_to in units:
             if unit_from == unit_to:
@@ -327,17 +267,14 @@ class WavemeterDummy(WavemeterInterface):
             if unit_from == 'vac' and unit_to == 'freq':
                 return sc.lambda2nu(value)
             if unit_from == 'vac' and unit_to == 'air':
-                return value/refractive_index_air
+                return value / refractive_index_air
             if unit_from == 'freq' and unit_to == 'vac':
                 return sc.nu2lambda(value)
             if unit_from == 'freq' and unit_to == 'air':
-                return sc.nu2lambda(value)/refractive_index_air
+                return sc.nu2lambda(value) / refractive_index_air
             if unit_from == 'air' and unit_to == 'vac':
-                return value*refractive_index_air
+                return value * refractive_index_air
             if unit_from == 'air' and unit_to == 'freq':
-                return sc.lambda2nu(value*refractive_index_air)
+                return sc.lambda2nu(value * refractive_index_air)
         else:
             return self.log.error('not allowed unit(s)')
-
-
-
