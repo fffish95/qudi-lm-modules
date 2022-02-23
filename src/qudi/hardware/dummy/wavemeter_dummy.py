@@ -81,7 +81,8 @@ class WavemeterDummy(WavemeterInterface):
         # initial set of property showing if acquisition is running
         self._is_running = False
         self._last_error = 0, ''
-        # self._initial_wavelength = round(random.uniform(420, 1100), 2) * 10 ** (-9)
+        self._initial_wavelength = round(random.uniform(420, 1100), 2) * 10 ** (-9)
+        self._current_wavelength = 0.0
 
     def on_activate(self):
         """
@@ -124,15 +125,16 @@ class WavemeterDummy(WavemeterInterface):
         """
         if self.module_state() == 'idle':
             self.module_state.lock()
-        # set initial wavemeter value randomly between 4200nm and 1100nm in SI units
-        # todo should not be here because it isn't likely that the wavelength jumps so much
-        # todo how to do that wavelength is changed in certain step to previous wavelength?
-        wavelength = round(random.uniform(420, 1100), 2) * 10 ** (-9)
-        #self._parentclass._current_wavelength2 += random.uniform(-range_step, range_step)
+
+        if self._current_wavelength == 0:
+            self._current_wavelength = self._initial_wavelength
+        range_step = 0.1 * 10 ** (-9)
+        wavelength = self._current_wavelength + random.uniform(-range_step, range_step)
 
         if wavelength > 0:
             with self.threadlock:
                 self._wavelength.append((time.time(), wavelength))
+                self._current_wavelength = wavelength
         elif wavelength in self.error_dict:
             self._last_error = wavelength, self.error_dict[wavelength]
         else:
@@ -147,7 +149,7 @@ class WavemeterDummy(WavemeterInterface):
     @property
     def last_error(self):
         """
-        Property for saving if some errorous wavelength was detected.
+        Property for saving if some erroneous wavelength was detected.
 
         @return tuple: Error number, error message.
         """
@@ -174,8 +176,12 @@ class WavemeterDummy(WavemeterInterface):
         """
         self._is_running = value
         if value:
+            self._initial_wavelength = round(random.uniform(420, 1100), 2) * 10 ** (-9)
             self._sig_start_hardware_query.emit()
             self.log.info('measurement thread started')
+        else:
+            self._initial_wavelength = 0.0
+            self._current_wavelength = 0.0
 
     def start_acquisition(self):
         """ Method to start the wavemeter software.
@@ -205,8 +211,20 @@ class WavemeterDummy(WavemeterInterface):
             self.log.warning('stop requested, but measurement was already stopped before.')
         return 0
 
+    @property
+    def current_wavelength(self):
+        """
+        Read-only property
+
+        @return float: returns current wavelength
+        """
+        if self._current_wavelength in self.error_dict:
+            # self._last_error = self._current_wavelength, self.error_dict[self._current_wavelength]
+            self.log.error(self.error_dict[self._current_wavelength])
+        return self._current_wavelength
+
     def get_current_wavelength(self, unit):
-        # todo implement this function
+        # todo implement this function or delete it as obsolete due to property current_wavelength
         """ This method returns the current wavelength.
 
         @param (str) unit: should be the unit in which the wavelength should be returned
