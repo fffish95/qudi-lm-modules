@@ -32,9 +32,7 @@ from qudi.interface.wavemeter_interface import WavemeterInterface
 from qudi.util.mutex import Mutex
 
 
-class WavemeterDummy(Base):
-    # Todo change of wavemeter interface
-    # todo push
+class WavemeterDummy(WavemeterInterface):
     """ Threaded dummy hardware class to simulate the controls for a wavemeter.
 
     Example config for copy-paste:
@@ -48,12 +46,14 @@ class WavemeterDummy(Base):
     _threaded = True
 
     # config opts
-    _measurement_timing = ConfigOption('measurement_timing', 10.e-3)
-    #todo check available units
-    _unit = ConfigOption('unit', 'vac')
-    automatic_acquisition = ConfigOption('automatic_acquisition', True)
+    _measurement_timing = ConfigOption(name='measurement_timing', default=10.e-3)
+    # todo check available units?
+    _unit = ConfigOption(name='unit', default='vac')
+    automatic_acquisition = ConfigOption(name='automatic_acquisition', default=True)
 
     _sig_start_hardware_query = QtCore.Signal()
+
+    available_units = {'vac', 'air', 'freq'}
 
     error_dict = {0: 'Error no value as acquisition stopped',
                   -1: 'Error no signal, wavlength meter has not detected any signal.',
@@ -75,7 +75,7 @@ class WavemeterDummy(Base):
         # locking for thread safety
         self.threadlock = Mutex()
 
-        # the inital wavelength as list which should contain timestamp and wavelength
+        # the initial wavelength as list which should contain timestamp and wavelength
         self._wavelength = list()
 
         # initial set of property showing if acquisition is running
@@ -95,7 +95,8 @@ class WavemeterDummy(Base):
         # connect signal to _start_hardware_query
         self._sig_start_hardware_query.connect(self._start_hardware_query)
 
-        # start automatically measurement thread on activate
+        # start automatically measurement thread on activate using _set_run instead of
+        # start_acquisition (latter one can't work until on_activate is fully through)
         if self.automatic_acquisition:
             self._set_run(True)
 
@@ -105,7 +106,7 @@ class WavemeterDummy(Base):
         Stop threaded _start_hardware_query
         Disconnects signal to _start_hardware_query
         """
-        self.is_running = False
+        self.stop_acquisition()
         self._sig_start_hardware_query.disconnect(self._start_hardware_query)
 
     #############################################
@@ -157,44 +158,70 @@ class WavemeterDummy(Base):
     @property
     def is_running(self):
         """
-        Property to indicate if measurement is running, and used to start and stop measurements.
+        Read-only flag indicating if the data acquisition is running.
 
-        @ return bool: True if measurement thread is running, False if not.
+        @return bool: Data acquisition is running (True) or not (False)
         """
         return self._is_running
 
-    @is_running.setter
-    def is_running(self, value):
-        """
-        Setter of the is_running property. Uses the protected function _set_run but with additional
-        sanity checks of the current module state. Setting the value starts or stops the measurement
-
-        @ param bool value: True starts the measurement, False stops
-        """
-        # todo should be here some return value if that worked?
-        if value:
-            if self.module_state() == 'idle':
-                self._set_run(True)
-            else:
-                self.log.warning('acquisition already running, nothing done')
-        if not value:
-            if self.module_state() != 'idle':
-                self._set_run(False)
-                self.log.warning('stop requested, stopping the measurement')
-            else:
-                self.log.warning('stop requested, but measurement was already stopped before.')
-
     def _set_run(self, value):
         """
-        Protected function to set the is_running property. The is_running.setter uses this function.
+        Protected function to set the is_running property.
+        start_acquisition and stop_acquisition uses this function.
         Written in protected way that during activation already the measurement thread can be
         started.
-        Uses signal emitting to start the hardware query.
+        Method for getting the current wavemeter reading started.
         """
         self._is_running = value
         if value:
             self._sig_start_hardware_query.emit()
             self.log.info('measurement thread started')
+
+    def start_acquisition(self):
+        """ Method to start the wavemeter software.
+
+        @return (int): error code (0:OK, -1:error)
+
+        Also the actual threaded method for getting the current wavemeter
+        reading is started.
+
+        """
+        if self.module_state() == 'idle':
+            self._set_run(True)
+            return 0
+        else:
+            self.log.warning('acquisition already running, nothing done')
+            return -1
+
+    def stop_acquisition(self):
+        """ Stops the Wavemeter from measuring and kills the thread that queries the data.
+
+        @return (int): error code (0:OK, -1:error)
+        """
+        if self.module_state() != 'idle':
+            self._set_run(False)
+            self.log.warning('stop requested, stopping the measurement')
+        else:
+            self.log.warning('stop requested, but measurement was already stopped before.')
+        return 0
+
+    def get_current_wavelength(self, unit):
+        # todo implement this function
+        """ This method returns the current wavelength.
+
+        @param (str) unit: should be the unit in which the wavelength should be returned
+
+        @return (float): wavelength (or negative value for errors)
+        """
+        pass
+
+    def get_wavelength_stream(self):
+        # todo implement this method
+        """ This method gets a continuous stream of the measured wavelengths with timestamp.
+
+        @return float: returns tuple list of measured wavelengths with timestamp
+        """
+        pass
 
     @property
     def wavelength(self):
@@ -204,17 +231,16 @@ class WavemeterDummy(Base):
         @return tuple result: returns list with two entries, first the time second the wavelength
         """
         with self.threadlock:
-            #todo do here the unit conversion
+            #todo do here the unit conversion?
 
-            # self._convert_unit(self._unit)
+            # self.convert_unit(self._unit)
             result = tuple(self._wavelength)
             self._wavelength = list()
             return result
 
     @property
     def unit(self):
-        """
-        Property to store the unit of measured value.
+        """ Property to store the unit of measured value.
 
         @return str: Returns the unit as a string
         """
@@ -222,31 +248,29 @@ class WavemeterDummy(Base):
 
     @unit.setter
     def unit(self, value):
-        """
-        Sets a different unit.
+        """ Sets a different unit.
 
         @params str value: The target unit inserted as str.
         """
-        #todo use here convert unit
         self._unit = value
 
     @property
     def measurement_timing(self):
-        """
-        Property measurement timing given in seconds.
+        """ Get the measurement time
+
+        @return (float): Measurement time in second
         """
         return self._measurement_timing
 
     @measurement_timing.setter
     def measurement_timing(self, timing):
-        """
-        Setter for the measurement timing.
+        """ Set the measurement time
 
-        @params float timing: sets the measurement timing. Has to be given in seconds
+        @param (float) timing: Measurement time to set in second
         """
         self._measurement_timing = float(timing)
 
-    def _convert_unit(self, value, unit_from, unit_to):
+    def convert_unit(self, value, unit_from, unit_to):
         """
         Converts a wavelength value from one to another unit if in unit dict.
 
@@ -256,12 +280,9 @@ class WavemeterDummy(Base):
 
         @return float: value converted in other unit
         """
-        #todo rewrite convert unit that suitable for list?
-        #todo how to handle convert unit during one measurement? Probably the whole list...
+        #todo how to handle convert unit during one measurement? How to make it suitable for whole list?
         refractive_index_air = 1.0003
-        #todo write dict of units somewhere else?
-        units = {'vac', 'air', 'freq'}
-        if unit_from and unit_to in units:
+        if unit_from and unit_to in self.available_units:
             if unit_from == unit_to:
                 return value
             if unit_from == 'vac' and unit_to == 'freq':
