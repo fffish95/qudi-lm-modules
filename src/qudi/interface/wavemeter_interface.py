@@ -27,7 +27,6 @@ from qudi.core.module import Base
 class WavemeterInterface(Base):
     """ Define the controls for a wavemeter hardware.
 
-    Note: This interface is very similar in feature with slow counter
     """
 
     @abstractmethod
@@ -49,30 +48,66 @@ class WavemeterInterface(Base):
         """
         pass
 
+    @property
     @abstractmethod
-    def get_current_wavelength(self, kind="air"):
+    def is_running(self):
+        """
+        Read-only flag indicating if the data acquisition is running.
+
+        @return bool: Data acquisition is running (True) or not (False)
+        """
+        pass
+
+    @abstractmethod
+    def get_wavelength_stream(self):
+        """ This method gets a continuous stream of the measured wavelengths with timestamp.
+
+        @return float: returns tuple list of measured wavelengths with timestamp
+        """
+        pass
+
+    @abstractmethod
+    def get_current_wavelength(self, unit):
         """ This method returns the current wavelength.
 
-        @param (str) kind: can either be "air" or "vac" for the wavelength in air or vacuum, respectively.
+        @param (str) unit: should be the unit in which the wavelength should be returned
 
         @return (float): wavelength (or negative value for errors)
         """
         pass
 
+    @property
     @abstractmethod
-    def get_timing(self):
-        """ Get the timing of the internal measurement thread.
+    def measurement_timing(self):
+        """ Get the measurement time
 
-        @return (float): clock length in second
+        @return (float): Measurement time in second
         """
         pass
 
+    @measurement_timing.setter
     @abstractmethod
-    def set_timing(self, timing):
-        """ Set the timing of the internal measurement thread.
+    def measurement_timing(self, value):
+        """ Set the measurement time
 
-        @param (float) timing: clock length in second
+        @param (float) value: Measurement time to set in second
+        """
+        pass
 
-        @return (int): error code (0:OK, -1:error)
+    @property
+    @abstractmethod
+    def unit(self):
+        """ Property to store the unit of measured value.
+
+        @return str: Returns the unit as a string
+        """
+        pass
+
+    @unit.setter
+    @abstractmethod
+    def unit(self, value):
+        """ Sets a different unit.
+
+        @params str value: The target unit inserted as str.
         """
         pass
