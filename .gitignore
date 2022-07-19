@@ -32,3 +32,8 @@
 *.log
 *.log.*
 
+# vscode files
+.vscode/
+
+# playground
+playground/
