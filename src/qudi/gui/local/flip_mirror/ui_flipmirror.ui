@@ -72,7 +72,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../../../artwork/icons/oxygen/22x22/media-playback-start.png</normaloff>../../../artwork/icons/oxygen/22x22/media-playback-start.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/media-playback-start.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/media-playback-start.png</iconset>
    </property>
    <property name="text">
     <string>Start Task</string>
@@ -87,7 +87,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../../../artwork/icons/oxygen/22x22/media-playback-stop.png</normaloff>../../../artwork/icons/oxygen/22x22/media-playback-stop.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/media-playback-stop.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/media-playback-stop.png</iconset>
    </property>
    <property name="text">
     <string>Stop Task</string>
