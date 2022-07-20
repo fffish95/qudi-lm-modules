@@ -19,22 +19,22 @@ Copyright (c) the Qudi Developers. See the COPYRIGHT.txt file at the
 top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi/>
 """
 
-from qtpy import QtCore
+from PySide2 import QtCore
 import numpy as np
 import datetime as dt
 import time
 import matplotlib.pyplot as plt
 
-from core.connector import Connector
-from core.statusvariable import StatusVar
-from core.configoption import ConfigOption
-from logic.generic_logic import GenericLogic
-from core.util.mutex import Mutex
-from core.util.units import ScaledFloat
-from interface.data_instream_interface import StreamChannelType, StreamingMode
+from qudi.core.connector import Connector
+from qudi.core.statusvariable import StatusVar
+from qudi.core.configoption import ConfigOption
+from qudi.core.module import LogicBase
+from qudi.util.mutex import Mutex
+from qudi.util.units import ScaledFloat
+from qudi.interface.data_instream_interface import StreamChannelType, StreamingMode
 
 
-class TimeSeriesReaderLogic(GenericLogic):
+class TimeSeriesReaderLogic(LogicBase):
     """
     This logic module gathers data from a hardware streaming device.
 
