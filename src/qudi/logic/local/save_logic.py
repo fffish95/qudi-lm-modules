@@ -30,11 +30,11 @@ import sys
 import time
 
 from collections import OrderedDict
-from core.configoption import ConfigOption
-from core.util import units
-from core.util.mutex import Mutex
-from core.util.network import netobtain
-from logic.generic_logic import GenericLogic
+from qudi.core.configoption import ConfigOption
+from qudi.util import units
+from qudi.util.mutex import Mutex
+from qudi.util.network import netobtain
+from qudi.core.module import LogicBase
 from matplotlib.backends.backend_pdf import PdfPages
 from PIL import Image
 from PIL import PngImagePlugin
@@ -115,7 +115,7 @@ class FunctionImplementationError(Exception):
         return repr(self.value)
 
 
-class SaveLogic(GenericLogic):
+class SaveLogic(LogicBase):
 
     """
     A general class which saves all kinds of data in a general sense.
