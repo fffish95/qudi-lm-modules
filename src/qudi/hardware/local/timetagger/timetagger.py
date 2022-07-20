@@ -1,6 +1,6 @@
 from TimeTagger import createTimeTagger, freeTimeTagger, Correlation, Histogram, Counter, CountBetweenMarkers, FileWriter, Countrate, Combiner, TimeDifferences
-from core.configoption import ConfigOption
-from core.module import Base
+from qudi.core.configoption import ConfigOption
+from qudi.core.module import Base
 
 
 class TT(Base):

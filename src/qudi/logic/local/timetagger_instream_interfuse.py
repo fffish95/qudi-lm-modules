@@ -4,12 +4,12 @@ import numpy as np
 from enum import Enum 
 import time
 
-from core.module import Base
-from core.configoption import ConfigOption
-from core.connector import Connector
-from core.util.helpers import natural_sort
-from interface.data_instream_interface import DataInStreamInterface, DataInStreamConstraints
-from interface.data_instream_interface import StreamChannelType, StreamChannel
+
+from qudi.core.configoption import ConfigOption
+from qudi.core.connector import Connector
+from qudi.util.helpers import natural_sort
+from qudi.interface.data_instream_interface import DataInStreamInterface, DataInStreamConstraints
+from qudi.interface.data_instream_interface import StreamChannelType, StreamChannel
 
 
 class TTMeasurementMode(Enum):
@@ -18,7 +18,7 @@ class TTMeasurementMode(Enum):
     HISTOGRAM = 2
     CORRELATION = 3
 
-class TTInstreamInterfuse(Base, DataInStreamInterface):
+class TTInstreamInterfuse(DataInStreamInterface):
     """ Methods to use TimeTagger as data in-streaming device (continuously read values)
 
     Example config for copy-paste:
@@ -96,9 +96,10 @@ class TTInstreamInterfuse(Base, DataInStreamInterface):
         """
         if self.is_running:
             self._is_running = False
-        for chn in self.__active_channels:
-            self.Counterfunc[chn].clear()
-        self.Counterfunc = None
+        if self.Counterfunc is not None:
+            for chn in self.__active_channels:
+                self.Counterfunc[chn].clear()
+            self.Counterfunc = None
 
     def configure(self, *args, **kwargs):
         """
@@ -285,9 +286,10 @@ class TTInstreamInterfuse(Base, DataInStreamInterface):
         """
         if self.is_running:
             self._is_running = False
-        for chn in self.__active_channels:
-            self.Counterfunc[chn].clear()
-        self.Counterfunc = None
+        if self.Counterfunc is not None:
+            for chn in self.__active_channels:
+                self.Counterfunc[chn].clear()
+            self.Counterfunc = None
         return 0
 
     def read_data_into_buffer(self, buffer, number_of_samples=None):
