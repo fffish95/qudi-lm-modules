@@ -14,6 +14,7 @@ python -m pip install qudi-core
 python -m pip install git+https://github.com/fffish95/qudi-core.git@main  
 # when update use python -m pip install --ignore-installed git+https://github.com/fffish95/qudi-core.git@main
 python -m pip install -e .
+# when update use python -m pip install --upgrade --force-reinstall -e .
 qudi-install-kernel
 
 ## install arduino-python3
