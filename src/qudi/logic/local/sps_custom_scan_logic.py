@@ -223,7 +223,7 @@ class SPSCustonScanLogic(LogicBase):
                     self._wavemeter.set_deviation_mode(False)
                     self._wavemeter.set_exposure_mode(False)
                 self._nicard.write_task(task= self._shutter_task, data = False)
-            elif scan_counter % self.Params[self._eit_modenum]['measurements_per_action'] == 1:
+            elif scan_counter % self.Params[self._eit_modenum]['measurements_per_action'] == int(self.Params[self._eit_modenum]['measurements_per_action']/2):
                 # open the shutter
                 self._nicard.write_task(task= self._shutter_task, data = True)
                 if self.Params[self._eit_modenum]['wavelength_ramp']:
@@ -285,7 +285,7 @@ class SPSCustonScanLogic(LogicBase):
     def EIT_stop_scanner(self):
         if self.Params[self._eit_modenum]['Background_subtract']:
             for param in self.Params:
-                param['measurements_per_action'] = int(param['measurements_per_action']) # remove 1 action added before
+                param['measurements_per_action'] = int(param['measurements_per_action']/2) # remove 1 action added before
             # keep the shutter open
             self._nicard.write_task(task= self._shutter_task, data = True)
             self._nicard.close_do_task(taskname = 'shutter')
