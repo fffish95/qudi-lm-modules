@@ -30,14 +30,14 @@ import sys
 from collections import OrderedDict
 from distutils.version import LooseVersion
 
-from logic.generic_logic import GenericLogic
-from core.util.modules import get_main_dir
-from core.util.mutex import Mutex
-from core.config import load, save
-from core.configoption import ConfigOption
+from qudi.core.module import LogicBase
+from qudi.util.paths import get_main_dir
+from qudi.util.mutex import Mutex
+from qudi.util.config import load, save
+from qudi.core.configoption import ConfigOption
 
 
-class FitLogic(GenericLogic):
+class FitLogic(LogicBase):
     """
     Documentation to add a new fit model/estimator/function can be found in
     documentation/how_to_use_fitting.md or in the online documentation at
@@ -62,7 +62,7 @@ class FitLogic(GenericLogic):
 
         filenames = []
         # for path in directories:
-        path_list = [os.path.join(get_main_dir(), 'logic', 'fitmethods')]
+        path_list = [os.path.join(get_main_dir(), 'util', 'fitmethods')]
         # adding additional path, to be defined in the config
 
         if self._additional_methods_import_path:

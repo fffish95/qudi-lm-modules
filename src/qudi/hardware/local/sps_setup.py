@@ -5,9 +5,9 @@ from enum import Enum
 import time
 
 
-from core.module import Base
-from core.configoption import ConfigOption
-from core.connector import Connector
+from qudi.core.module import Base
+from qudi.core.configoption import ConfigOption
+from qudi.core.connector import Connector
 
 
 

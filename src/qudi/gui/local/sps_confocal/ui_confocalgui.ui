@@ -1904,7 +1904,7 @@
   <action name="actionSave_XY_Scan">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-save.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-save.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Save XY scan</string>
@@ -1913,7 +1913,7 @@
   <action name="actionSave_configuration">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-save.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-save.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</iconset>
    </property>
    <property name="text">
     <string>Save co&amp;nfiguration</string>
@@ -1922,7 +1922,7 @@
   <action name="action_Settings">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/configure.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/configure.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/configure.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/configure.svg</iconset>
    </property>
    <property name="text">
     <string>Se&amp;ttings</string>
@@ -1931,7 +1931,7 @@
   <action name="actionClose">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/application-exit.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/application-exit.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/application-exit.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/application-exit.svg</iconset>
    </property>
    <property name="text">
     <string>C&amp;lose</string>
@@ -1946,7 +1946,7 @@
   <action name="actionSave_Depth_Scan">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-save.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-save.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</iconset>
    </property>
    <property name="text">
     <string>Save &amp;Depth scan</string>
@@ -1958,7 +1958,7 @@
   <action name="action_optimizer_settings">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/configure.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/configure.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/configure.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/configure.svg</iconset>
    </property>
    <property name="text">
     <string>O&amp;ptimizer Settings</string>
@@ -1970,8 +1970,8 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/zoom-select.png</normaloff>
-     <normalon>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/32x32/search_active.png</normalon>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/zoom-select.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/zoom-select.svgz</normaloff>
+     <normalon>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/zoom-select.svg</normalon>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/zoom-select.svgz</iconset>
    </property>
    <property name="text">
     <string>Zoom</string>
@@ -2048,7 +2048,7 @@
   <action name="action_scan_xy_start">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-xy-start.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-xy-start.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-xy-start.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-xy-start.svg</iconset>
    </property>
    <property name="text">
     <string>Scan XY</string>
@@ -2063,7 +2063,7 @@
   <action name="action_scan_xy_resume">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-xy-resume.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-xy-resume.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-xy-restart.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-xy-restart.svg</iconset>
    </property>
    <property name="text">
     <string>Resume XY scan</string>
@@ -2078,7 +2078,7 @@
   <action name="action_scan_depth_start">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-depth-start.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-depth-start.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-depth-start.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-depth-start.svg</iconset>
    </property>
    <property name="text">
     <string>Scan depth</string>
@@ -2093,7 +2093,7 @@
   <action name="action_scan_depth_resume">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-depth-resume.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/scan-depth-resume.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-depth-restart.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-depth-restart.svg</iconset>
    </property>
    <property name="text">
     <string>Resume depth scan</string>
@@ -2105,7 +2105,7 @@
   <action name="action_optimize_position">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/optimize-position.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/optimize-position.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/optimize-position.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/optimize-position.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Optimize position</string>
@@ -2123,7 +2123,7 @@
   <action name="action_stop_scanning">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/stop-scan.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/stop-scan.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-stop.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/scan-stop.svg</iconset>
    </property>
    <property name="text">
     <string>Stop scan</string>
@@ -2146,7 +2146,7 @@
   <action name="optimizer_only_view_Action">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/optimize-position.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/optimize-position.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/optimize-position.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/optimize-position.svg</iconset>
    </property>
    <property name="text">
     <string>O&amp;ptimizer-only</string>
@@ -2186,7 +2186,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/correct-tilt.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/qudiTheme/22x22/correct-tilt.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/correct-tilt.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/correct-tilt.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Use Tilt Correction</string>
@@ -2206,7 +2206,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/go-next.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/go-next.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-next.svgz</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-next.svgz</iconset>
    </property>
    <property name="text">
     <string>&amp;Forward</string>
@@ -2224,7 +2224,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/go-previous.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/go-previous.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-previous.svgz</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-previous.svgz</iconset>
    </property>
    <property name="text">
     <string>&amp;Back</string>
@@ -2250,7 +2250,7 @@
   <action name="action_full_range_xy">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/zoom-fit-best.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/zoom-fit-best.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/zoom-fit-best.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/zoom-fit-best.svg</iconset>
    </property>
    <property name="text">
     <string>Full range XY</string>
@@ -2265,7 +2265,7 @@
   <action name="action_full_range_z">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/zoom-fit-best.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/zoom-fit-best.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/zoom-fit-best.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/zoom-fit-best.svg</iconset>
    </property>
    <property name="text">
     <string>Full range Z</string>
@@ -2316,7 +2316,7 @@
   <action name="actionLoad_configuration">
    <property name="icon">
     <iconset>
-     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-open.png</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/oxygen/22x22/document-open.png</iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-open.svgz</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-open.svgz</iconset>
    </property>
    <property name="text">
     <string>Load configuration</string>
@@ -2332,12 +2332,12 @@
   <customwidget>
    <class>ScienDSpinBox</class>
    <extends>QDoubleSpinBox</extends>
-   <header>qudi.core.gui.qtwidgets.scientific_spinbox</header>
+   <header>qudi.util.widgets.scientific_spinbox</header>
   </customwidget>
   <customwidget>
    <class>ScanPlotWidget</class>
    <extends>QGraphicsView</extends>
-   <header>qtwidgets.scan_plotwidget.h</header>
+   <header>qudi.util.qtwidgets.scan_plotwidget</header>
   </customwidget>
  </customwidgets>
  <tabstops>
