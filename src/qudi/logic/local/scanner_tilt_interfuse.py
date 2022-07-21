@@ -19,12 +19,10 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 
 import copy
-from qtpy import QtCore
 
-from core.connector import Connector
-from logic.generic_logic import GenericLogic
-from interface.confocal_scanner_interface import ConfocalScannerInterface
-class ScannerTiltInterfuse(GenericLogic, ConfocalScannerInterface):
+from qudi.core.connector import Connector
+from qudi.interface.confocal_scanner_interface import ConfocalScannerInterface
+class ScannerTiltInterfuse(ConfocalScannerInterface):
     """ This interfuse produces a Z correction corresponding to a tilted surface.
     """
 

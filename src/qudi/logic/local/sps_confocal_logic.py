@@ -28,10 +28,10 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from logic.generic_logic import GenericLogic
-from core.util.mutex import Mutex
-from core.connector import Connector
-from core.statusvariable import StatusVar
+from qudi.core.module import LogicBase
+from qudi.util.mutex import Mutex
+from qudi.core.connector import Connector
+from qudi.core.statusvariable import StatusVar
 
 
 class OldConfigFileError(Exception):
@@ -250,7 +250,7 @@ class ConfocalHistoryEntry(QtCore.QObject):
                 raise OldConfigFileError()
 
 
-class ConfocalLogic(GenericLogic):
+class ConfocalLogic(LogicBase):
     """
     This is the Logic class for confocal scanning.
     """
@@ -385,7 +385,7 @@ class ConfocalLogic(GenericLogic):
         self.signal_depth_image_updated.emit()
         self.signal_tilt_correction_update.emit()
         self.signal_tilt_correction_active.emit(self._scanning_device.tiltcorrection)
-        self._change_position('history')
+        #self._change_position('history')
         self.signal_change_position.emit('history')
         self.signal_history_event.emit()
 

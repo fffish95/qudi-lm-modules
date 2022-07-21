@@ -26,22 +26,20 @@ import os
 import pyqtgraph as pg
 import time
 
-from core import config
-from core.connector import Connector
-from core.configoption import ConfigOption
-from core.statusvariable import StatusVar
-from core.util.modules import get_main_dir
+from qudi.util import config
+from qudi.core.connector import Connector
+from qudi.core.configoption import ConfigOption
+from qudi.core.statusvariable import StatusVar
+from qudi.util.paths import get_main_dir
 from collections import OrderedDict
-from qtwidgets.scan_plotwidget import ScanImageItem
-from gui.guibase import GUIBase
-from gui.guiutils import ColorBar
-from gui.colordefs import ColorScaleInferno
-from gui.colordefs import QudiPalettePale as palette
-from gui.fitsettings import FitParametersWidget
-from qtpy import QtCore
-from qtpy import QtGui
-from qtpy import QtWidgets
-from qtpy import uic
+from qudi.util.qtwidgets.scan_plotwidget import ScanImageItem
+from qudi.core.module import GuiBase
+from qudi.util.guiutils import ColorBar
+from qudi.util.colordefs import ColorScaleInferno
+from qudi.util.colordefs import QudiPalettePale as palette
+from qudi.util.fitsettings import FitParametersWidget
+from PySide2 import QtCore, QtGui, QtWidgets
+from qudi.util import uic
 
 
 class ConfocalMainWindow(QtWidgets.QMainWindow):
@@ -127,7 +125,7 @@ class LoadDialog(QtWidgets.QDialog):
         self.hbox.addSpacerItem(QtWidgets.QSpacerItem(50, 0))
         self.setLayout(self.hbox)
 
-class ConfocalGui(GUIBase):
+class ConfocalGui(GuiBase):
     """ Main Confocal Class for xy and depth scans.
     """
 
