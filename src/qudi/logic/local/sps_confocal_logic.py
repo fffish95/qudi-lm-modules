@@ -387,7 +387,7 @@ class ConfocalLogic(LogicBase):
         self.signal_depth_image_updated.emit()
         self.signal_tilt_correction_update.emit()
         self.signal_tilt_correction_active.emit(self._scanning_device.tiltcorrection)
-        #self._change_position('history')
+        self._change_position('history')
         self.signal_change_position.emit('history')
         self.signal_history_event.emit()
 
@@ -754,11 +754,13 @@ class ConfocalLogic(LogicBase):
         lsz = np.linspace(old_pos_array[2], pos_array[2], gs)
         lsa = np.linspace(old_pos_array[3], pos_array[3], gs)
         move_line = np.vstack([lsx, lsy, lsz, lsa])
-        self.module_state.lock()
+        if tag != 'history':
+            self.module_state.lock()
         self.start_oneline_scanner()
         move_line_counts = self._scanning_device.scan_line(move_line)
         self.kill_scanner()
-        self.module_state.unlock()
+        if tag != 'history':
+            self.module_state.unlock()
         return 0
 
     def get_position(self):
