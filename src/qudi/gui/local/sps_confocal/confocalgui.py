@@ -34,12 +34,13 @@ from qudi.util.paths import get_main_dir
 from collections import OrderedDict
 from qudi.util.qtwidgets.scan_plotwidget import ScanImageItem
 from qudi.core.module import GuiBase
-from qudi.util.guiutils import ColorBar
+from qudi.util.widgets.plotting.colorbar import ColorBarItem
 from qudi.util.colordefs import ColorScaleInferno
 from qudi.util.colordefs import QudiPalettePale as palette
 from qudi.util.fitsettings import FitParametersWidget
 from PySide2 import QtCore, QtGui, QtWidgets
 from qudi.util import uic
+from qudi.util.paths import get_artwork_dir
 
 
 class ConfocalMainWindow(QtWidgets.QMainWindow):
@@ -565,26 +566,30 @@ class ConfocalGui(GuiBase):
         ###################################################################
 
         self._scan_xy_single_icon = QtGui.QIcon()
+        self._scan_xy_single_icon_path = os.path.join(get_artwork_dir(), 'icons', 'scan-xy-start')
         self._scan_xy_single_icon.addPixmap(
-            QtGui.QPixmap("artwork/icons/qudiTheme/22x22/scan-xy-start.png"),
+            QtGui.QPixmap(self._scan_xy_single_icon_path),
             QtGui.QIcon.Normal,
             QtGui.QIcon.Off)
 
         self._scan_depth_single_icon = QtGui.QIcon()
+        self._scan_depth_single_icon_path = os.path.join(get_artwork_dir(), 'icons', 'scan-depth-start')
         self._scan_depth_single_icon.addPixmap(
-            QtGui.QPixmap("artwork/icons/qudiTheme/22x22/scan-depth-start.png"),
+            QtGui.QPixmap(self._scan_depth_single_icon_path),
             QtGui.QIcon.Normal,
             QtGui.QIcon.Off)
 
         self._scan_xy_loop_icon = QtGui.QIcon()
+        self._scan_xy_loop_icon_path = os.path.join(get_artwork_dir(), 'icons', 'scan-xy-loop')
         self._scan_xy_loop_icon.addPixmap(
-            QtGui.QPixmap("artwork/icons/qudiTheme/22x22/scan-xy-loop.png"),
+            QtGui.QPixmap(self._scan_xy_loop_icon_path),
             QtGui.QIcon.Normal,
             QtGui.QIcon.Off)
 
         self._scan_depth_loop_icon = QtGui.QIcon()
+        self._scan_depth_loop_icon_path = os.path.join(get_artwork_dir(), 'icons', 'scan-depth-loop')
         self._scan_depth_loop_icon.addPixmap(
-            QtGui.QPixmap("artwork/icons/qudiTheme/22x22/scan-depth-loop.png"),
+            QtGui.QPixmap(self._scan_depth_loop_icon_path),
             QtGui.QIcon.Normal,
             QtGui.QIcon.Off)
 
@@ -593,7 +598,7 @@ class ConfocalGui(GuiBase):
         #################################################################
         # Get the colorscale and set the LUTs
         self.my_colors = ColorScaleInferno()
-
+        self.cmap = ColorScaleInferno().colormap
         self.xy_image.setLookupTable(self.my_colors.lut)
         self.depth_image.setLookupTable(self.my_colors.lut)
         self.xy_refocus_image.setLookupTable(self.my_colors.lut)
@@ -601,8 +606,8 @@ class ConfocalGui(GuiBase):
         # Create colorbars and add them at the desired place in the GUI. Add
         # also units to the colorbar.
 
-        self.xy_cb = ColorBar(self.my_colors.cmap_normed, width=100, cb_min=0, cb_max=100)
-        self.depth_cb = ColorBar(self.my_colors.cmap_normed, width=100, cb_min=0, cb_max=100)
+        self.xy_cb = ColorBarItem(cmap = self.cmap)
+        self.depth_cb = ColorBarItem(cmap = self.cmap)
         self._mw.xy_cb_ViewWidget.addItem(self.xy_cb)
         self._mw.xy_cb_ViewWidget.hideAxis('bottom')
         self._mw.xy_cb_ViewWidget.setLabel('left', 'Fluorescence', units='c/s')
@@ -782,7 +787,7 @@ class ConfocalGui(GuiBase):
         invert the colorbar if the lower border is bigger then the higher one.
         """
         cb_range = self.get_xy_cb_range()
-        self.xy_cb.refresh_colorbar(cb_range[0], cb_range[1])
+        self.xy_cb.set_limits(cb_range[0], cb_range[1])
 
     def refresh_depth_colorbar(self):
         """ Adjust the depth colorbar.
@@ -792,7 +797,7 @@ class ConfocalGui(GuiBase):
         invert the colorbar if the lower border is bigger then the higher one.
         """
         cb_range = self.get_depth_cb_range()
-        self.depth_cb.refresh_colorbar(cb_range[0], cb_range[1])
+        self.depth_cb.set_limits(cb_range[0], cb_range[1])
 
     def disable_scan_actions(self, tag = ''):
         """ Disables the buttons for scanning.
