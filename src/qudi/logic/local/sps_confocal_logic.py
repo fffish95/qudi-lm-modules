@@ -264,6 +264,8 @@ class ConfocalLogic(LogicBase):
     return_slowness = StatusVar(default=50)
     goto_speed = StatusVar(default=20)
     max_history_length = StatusVar(default=10)
+    _statusVariables = StatusVar(default=OrderedDict())
+
 
     # signals
     signal_start_scanning = QtCore.Signal(str)
