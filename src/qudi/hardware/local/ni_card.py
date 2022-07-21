@@ -25,8 +25,8 @@ import re
 
 import PyDAQmx as daq
 
-from core.module import Base
-from core.configoption import ConfigOption
+from qudi.core.module import Base
+from qudi.core.configoption import ConfigOption
 import nidaqmx as ni
 from nidaqmx._lib import lib_importer  # Due to NIDAQmx C-API bug needed to bypass property getter
 from nidaqmx.constants import  SampleTimingType, ChannelType, UsageTypeCO
