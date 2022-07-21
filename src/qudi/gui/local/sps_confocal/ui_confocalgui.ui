@@ -28,7 +28,7 @@
      <x>0</x>
      <y>0</y>
      <width>1261</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -2407,7 +2407,7 @@
   </connection>
   <connection>
    <sender>actionXY_scan_view</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>xy_scan_dockWidget</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -2439,7 +2439,7 @@
   </connection>
   <connection>
    <sender>actionDepth_scan_view</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>depth_scan_dockWidget</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -2471,7 +2471,7 @@
   </connection>
   <connection>
    <sender>actionScan_control_view</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>scan_control_dockWidget</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -2503,7 +2503,7 @@
   </connection>
   <connection>
    <sender>actionOptimizer_view</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>optimizer_dockWidget</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -2535,7 +2535,7 @@
   </connection>
   <connection>
    <sender>actionScan_Toolbar</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>scan_ToolBar</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -2551,7 +2551,7 @@
   </connection>
   <connection>
    <sender>actionUtil_Toolbar</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>util_ToolBar</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -2567,7 +2567,7 @@
   </connection>
   <connection>
    <sender>actionTilt_correction_view</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>tilt_correction_dockWidget</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -2631,7 +2631,7 @@
   </connection>
   <connection>
    <sender>actionScan_line_view</sender>
-   <signal>triggered(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>scanLineDockWidget</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
