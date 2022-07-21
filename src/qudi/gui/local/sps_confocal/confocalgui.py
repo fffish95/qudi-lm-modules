@@ -1710,7 +1710,7 @@ class ConfocalGui(GuiBase):
         if filename != '':
             self._save_dialog.show()
             self._scanning_logic.save_history_config()
-            variables = self._scanning_logic.getStatusVariables()
+            variables = self._scanning_logic._statusVariables
             try:
                 config.save(filename, variables)
                 self._save_dialog.hide()
@@ -1735,7 +1735,7 @@ class ConfocalGui(GuiBase):
                     self._load_dialog.hide()
                 else:
                     variables = OrderedDict()
-                self._scanning_logic.setStatusVariables(variables)
+                self._scanning_logic._statusVariables=variables
                 self._scanning_logic.load_history_config()
         except:
             self.log.exception('Failed to load status variables from {0}'.format(filename))
