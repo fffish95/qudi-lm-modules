@@ -25,18 +25,14 @@ import pyqtgraph as pg
 from enum import Enum
 
 from collections import OrderedDict
-from core.connector import Connector
-from gui.colordefs import ColorScaleInferno
-from gui.guibase import GUIBase
-from gui.guiutils import ColorBar
-from qtpy import QtCore
-from qtpy import QtGui
-from qtpy import QtWidgets
-from qtpy import uic
-import time
-
-from qtwidgets.scan_plotwidget import ScanImageItem
-from core import config
+from qudi.core.connector import Connector
+from qudi.util.colordefs import ColorScaleInferno
+from qudi.core.module import GuiBase
+from qudi.util.widgets.plotting.colorbar import ColorBarItem
+from PySide2 import QtCore, QtGui, QtWidgets
+from qudi.util import uic
+from qudi.util.qtwidgets.scan_plotwidget import ScanImageItem
+from qudi.util import config
 
 class CustomScanMode(Enum):
     XYPLOT = 0
@@ -103,7 +99,7 @@ class LoadDialog(QtWidgets.QDialog):
         self.hbox.addSpacerItem(QtWidgets.QSpacerItem(50, 0))
         self.setLayout(self.hbox)
 
-class LaserscannerGui(GUIBase):
+class LaserscannerGui(GuiBase):
     """ 
     """
     
@@ -388,13 +384,14 @@ class LaserscannerGui(GUIBase):
         #################################################################
         # Get the colorscales at set LUT
         my_colors = ColorScaleInferno()
+        self.cmap = ColorScaleInferno().colormap
 
         self.trace_scan_matrix_image.setLookupTable(my_colors.lut)
         self.retrace_scan_matrix_image.setLookupTable(my_colors.lut)
 
         # Create colorbars and add them at the desired place in the GUI. Add
         # also units to the colorbar.
-        self.scan_cb = ColorBar(my_colors.cmap_normed, width = 100, cb_min = 0, cb_max = 100000)
+        self.scan_cb = ColorBarItem(cmap = self.cmap)
 
         #adding colorbar to ViewWidget
         self._mw.cb_ViewWidget.addItem(self.scan_cb)
@@ -877,7 +874,7 @@ class LaserscannerGui(GUIBase):
         invert the colorbar if the lower border is bigger then the higher one.
         """
         cb_range = self.get_cb_range()
-        self.scan_cb.refresh_colorbar(cb_range[0], cb_range[1])
+        self.scan_cb.set_limits(cb_range[0], cb_range[1])
 
     def disable_scan_actions(self):
         """ Disables the buttons for scanning.

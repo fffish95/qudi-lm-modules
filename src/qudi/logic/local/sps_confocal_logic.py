@@ -19,7 +19,7 @@ Copyright (c) the Qudi Developers. See the COPYRIGHT.txt file at the
 top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi/>
 """
 
-from qtpy import QtCore
+from PySide2 import QtCore
 from collections import OrderedDict
 from copy import copy
 import time
@@ -387,7 +387,7 @@ class ConfocalLogic(LogicBase):
         self.signal_depth_image_updated.emit()
         self.signal_tilt_correction_update.emit()
         self.signal_tilt_correction_active.emit(self._scanning_device.tiltcorrection)
-        self._change_position('history')
+        self._change_position('load_history')
         self.signal_change_position.emit('history')
         self.signal_history_event.emit()
 
@@ -622,7 +622,6 @@ class ConfocalLogic(LogicBase):
         if clock_status < 0:
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self.set_position('scanner')
             return -1
 
         scanner_status = self._scanning_device.set_up_scanner()
@@ -631,7 +630,6 @@ class ConfocalLogic(LogicBase):
             self._scanning_device.close_scanner_clock()
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self.set_position('scanner')
             return -1
 
         self.signal_scan_lines_next.emit()
@@ -646,7 +644,6 @@ class ConfocalLogic(LogicBase):
         if clock_status < 0:
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self.set_position('scanner')
             return -1
 
         scanner_status = self._scanning_device.set_up_scanner()
@@ -655,7 +652,6 @@ class ConfocalLogic(LogicBase):
             self._scanning_device.close_scanner_clock()
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self.set_position('scanner')
             return -1
         return 0
 
@@ -672,7 +668,6 @@ class ConfocalLogic(LogicBase):
         if clock_status < 0:
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self.set_position('scanner')
             return -1
 
         scanner_status = self._scanning_device.set_up_scanner()
@@ -681,7 +676,6 @@ class ConfocalLogic(LogicBase):
             self._scanning_device.close_scanner_clock()
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self.set_position('scanner')
             return -1
 
         self.signal_scan_lines_next.emit()
@@ -754,12 +748,12 @@ class ConfocalLogic(LogicBase):
         lsz = np.linspace(old_pos_array[2], pos_array[2], gs)
         lsa = np.linspace(old_pos_array[3], pos_array[3], gs)
         move_line = np.vstack([lsx, lsy, lsz, lsa])
-        if tag != 'history':
+        if tag != 'load_history':
             self.module_state.lock()
         self.start_oneline_scanner()
         move_line_counts = self._scanning_device.scan_line(move_line)
         self.kill_scanner()
-        if tag != 'history':
+        if tag != 'load_history':
             self.module_state.unlock()
         return 0
 
