@@ -30,11 +30,11 @@ import numpy as np
 import time
 from enum import Enum 
 
-from core.connector import Connector
-from core.statusvariable import StatusVar
-from core.util.mutex import Mutex
-from logic.generic_logic import GenericLogic
-from qtpy import QtCore
+from qudi.core.connector import Connector
+from qudi.core.statusvariable import StatusVar
+from qudi.util.mutex import Mutex
+from qudi.core.module import LogicBase
+from PySide2 import QtCore
 
 
 class CustomScanMode(Enum):
@@ -262,7 +262,7 @@ class LaserScannerHistoryEntry(QtCore.QObject):
 
 
 
-class LaserScannerLogic(GenericLogic):
+class LaserScannerLogic(LogicBase):
 
     """This is the logic class for laser scanner.
     """
@@ -277,7 +277,7 @@ class LaserScannerLogic(GenericLogic):
     _order_3_counter = StatusVar(default=0)
     _oneline_scanner_frequency = StatusVar(default=20000)
     _goto_speed = StatusVar(default=100)
-
+    _statusVariables = StatusVar(default=OrderedDict())
     max_history_length = StatusVar(default=10)
 
     # signals
@@ -381,7 +381,7 @@ class LaserScannerLogic(GenericLogic):
         self.signal_retrace_plots_updated.emit()
         # clock frequency is not in status variables, set clock frequency
         self.set_clock_frequency()
-        self._change_position()
+        self._change_position('load_history')
         self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
         self.signal_change_position.emit('history')
         self.signal_history_event.emit()
@@ -396,7 +396,7 @@ class LaserScannerLogic(GenericLogic):
             self.signal_retrace_plots_updated.emit()
             # clock frequency is not in status variables, set clock frequency
             self.set_clock_frequency()
-            self._change_position()
+            self._change_position('history')
             self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             self.signal_change_position.emit('history')
             self.signal_history_event.emit()
@@ -411,7 +411,7 @@ class LaserScannerLogic(GenericLogic):
             self.signal_retrace_plots_updated.emit()
             # clock frequency is not in status variables, set clock frequency
             self.set_clock_frequency()
-            self._change_position()
+            self._change_position('history')
             self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             self.signal_change_position.emit('history')
             self.signal_history_event.emit()
@@ -557,8 +557,6 @@ class LaserScannerLogic(GenericLogic):
             self.module_state.unlock()
             if self._custom_scan and self._custom_scan_mode.value < 2:
                 self._confocal_logic.module_state.unlock()
-            self._change_position()
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             return -1
         
         scanner_status = self._scanning_device.set_up_scanner()
@@ -569,8 +567,6 @@ class LaserScannerLogic(GenericLogic):
             self.module_state.unlock()
             if self._custom_scan and self._custom_scan_mode.value < 2:
                 self._confocal_logic.module_state.unlock()
-            self._change_position()
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             return -1
                 
 
@@ -593,8 +589,6 @@ class LaserScannerLogic(GenericLogic):
         if clock_status < 0:
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self._change_position()
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             return -1
 
         scanner_status = self._scanning_device.set_up_scanner()
@@ -603,8 +597,6 @@ class LaserScannerLogic(GenericLogic):
             self._scanning_device.close_scanner_clock()
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self._change_position()
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             return -1
         return 0
     
@@ -621,8 +613,6 @@ class LaserScannerLogic(GenericLogic):
         if clock_status < 0:
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self._change_position()
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             return -1
 
         scanner_status = self._scanning_device.set_up_scanner()
@@ -631,8 +621,6 @@ class LaserScannerLogic(GenericLogic):
             self._scanning_device.close_scanner_clock()
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
-            self._change_position()
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             return -1
 
         self.signal_scan_lines_next.emit()
@@ -735,7 +723,7 @@ class LaserScannerLogic(GenericLogic):
         else: 
             self._current_a = self._scanning_device.get_scanner_position()[3]
 
-    def _change_position(self):
+    def _change_position(self, tag):
         """ Let hardware move to current a"""
         ramp = np.linspace(self._scanning_device.get_scanner_position()[3], self._current_a, self._goto_speed)
         move_line = np.vstack((
@@ -744,11 +732,13 @@ class LaserScannerLogic(GenericLogic):
             np.ones((len(ramp), )) * self._scanning_device.get_scanner_position()[2],
             ramp
             ))
-        self.module_state.lock()
+        if tag != 'load_history':
+            self.module_state.lock()
         self.start_oneline_scanner()
         move_line_counts = self._scanning_device.scan_line(move_line)
         self.kill_scanner()
-        self.module_state.unlock()
+        if tag != 'load_history':
+            self.module_state.unlock()
         return 0
     
     def get_scanner_count_channels(self):
