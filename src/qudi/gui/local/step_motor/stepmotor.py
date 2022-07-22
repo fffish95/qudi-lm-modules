@@ -21,12 +21,10 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 
 import os
 
-from core.connector import Connector
-from gui.guibase import GUIBase
-from gui.colordefs import QudiPalettePale as palette
-from qtpy import QtWidgets
-from qtpy import QtCore
-from qtpy import uic
+from qudi.core.connector import Connector
+from qudi.core.module import GuiBase
+from PySide2 import QtWidgets
+from qudi.util import uic
 
 
 class StepMotorMainWindow(QtWidgets.QMainWindow):
@@ -40,7 +38,7 @@ class StepMotorMainWindow(QtWidgets.QMainWindow):
 
 
 
-class StepMotorGui(GUIBase):
+class StepMotorGui(GuiBase):
     stepmotorlogic = Connector(interface='StepMotorLogic')
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)

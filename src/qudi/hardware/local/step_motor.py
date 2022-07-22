@@ -20,13 +20,12 @@ Copyright (c) the Qudi Developers. See the COPYRIGHT.txt file at the
 top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi/>
 """
 
-from core.module import Base
-from core.configoption import ConfigOption
-from interface.motor_interface import MotorInterface
+from qudi.core.configoption import ConfigOption
+from qudi.interface.motor_interface import MotorInterface
 
 import pyvisa as visa
 
-class StepMotor(Base, MotorInterface):
+class StepMotor(MotorInterface):
     """ Designed for driving a servo motor through Arduino.
 
     See [arduino-python3 Command API] & [arduino-libraries/Servo] for details.
@@ -35,8 +34,10 @@ class StepMotor(Base, MotorInterface):
 
     StepMotor:
         module.Class: 'local.step_motor.StepMotor'
-        port:
-            - 'COM4'
+        options:
+            port:
+                - 'COM9'
+
 
     """
 

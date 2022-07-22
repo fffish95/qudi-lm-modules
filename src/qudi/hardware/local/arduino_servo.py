@@ -20,35 +20,34 @@ Copyright (c) the Qudi Developers. See the COPYRIGHT.txt file at the
 top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi/>
 """
 
-from core.module import Base
-from core.configoption import ConfigOption
-from interface.motor_interface import MotorInterface
+from qudi.core.configoption import ConfigOption
+from qudi.interface.motor_interface import MotorInterface
 
 from Arduino import Arduino
-import time
 
-class ArduinoServo(Base, MotorInterface):
+class ArduinoServo(MotorInterface):
     """ Designed for driving a servo motor through Arduino.
 
     See [arduino-python3 Command API] & [arduino-libraries/Servo] for details.
 
     Example config for copy-paste:
-
+    
     ServoMotor:
-        module.Class: 'local.arduino_servo.ArduinoServo'
+        module.Class: 'local.arduino_servo.LocalArduinoServo'
         # Arduino Params
-        baud: 9600
-        tmeout: 2
-        port:
-            - 'COM3'
-        # Servo Motor Params
-        pin: 5
-        0 degree position: 750          #test with code ServoMotor._board.Servos.writeMicroseconds(5,750)
-        90 degree position: 1650        #test with code ServoMotor._board.Servos.writeMicroseconds(5,1650)
-        slow down time: 0               #s
-        step size: 0.3                  #degree
-        angle_range:
-            - [0,90]
+        options:
+            baud: 9600
+            tmeout: 2
+            port:
+                - 'COM3'
+            # Servo Motor Params
+            pin: 5
+            0 degree position: 750          #test with code ServoMotor._board.Servos.writeMicroseconds(5,750)
+            90 degree position: 1650        #test with code ServoMotor._board.Servos.writeMicroseconds(5,1650)
+            slow down time: 0               #s
+            step size: 0.3                  #degree
+            angle_range:
+                - [0,90]
     """
 
     # config options

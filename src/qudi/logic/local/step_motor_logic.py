@@ -21,13 +21,13 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 
 
-from core.connector import Connector
-from logic.generic_logic import GenericLogic
-from core.util.mutex import Mutex
-from qtpy import QtCore
+from qudi.core.connector import Connector
+from qudi.core.module import LogicBase
+from qudi.util.mutex import Mutex
 
 
-class StepMotorLogic(GenericLogic):
+
+class StepMotorLogic(LogicBase):
     stepmotor1 = Connector(interface='MotorInterface')
     def __init__(self, config, **kwargs):
         super().__init__(config= config, **kwargs)
