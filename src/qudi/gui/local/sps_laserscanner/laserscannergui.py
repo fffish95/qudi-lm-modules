@@ -641,7 +641,7 @@ class LaserscannerGui(GuiBase):
 
 
     def refresh_retrace_plots(self):
-        """ Refresh the trace-matrix image """
+        """ Refresh the retrace-matrix image """
         retrace_image_data = self._scanning_logic.retrace_scan_matrix[:self._scanning_logic._scan_counter, :, 4 + self._channel]
         cb_range = self.get_cb_range()
 
@@ -653,7 +653,7 @@ class LaserscannerGui(GuiBase):
         self.retrace_plot_y_image.setData(self._scanning_logic.plot_x, _data_retrace_plot_y)
 
         # Unlock state widget if scan is finished
-        if self._scanning_logic.module_state() != 'locked':
+        if self._scanning_logic.module_state() != 'locked'and not self._mw.action_scan_start.isEnabled():
             self.enable_scan_actions()
 
 
@@ -831,7 +831,7 @@ class LaserscannerGui(GuiBase):
         """
         self._mw.cursorpositionDoubleSpinBox.setValue(int(self.main_cursor.value()))
         self._scanning_logic.set_position(a=self._mw.cursorpositionDoubleSpinBox.value())
-        self._scanning_logic._change_position()
+        self._scanning_logic._change_position('gui')
 
     def setRegionCursorPosition(self):
         self.region_cursor.setRegion([self._mw.startDoubleSpinBox.value(),self._mw.stopDoubleSpinBox.value()])
@@ -840,7 +840,7 @@ class LaserscannerGui(GuiBase):
     def setCursorPosition(self):
 
         self._scanning_logic.set_position(a=self._mw.cursorpositionDoubleSpinBox.value())
-        self._scanning_logic._change_position()
+        self._scanning_logic._change_position('gui')
         self.main_cursor.setValue(self._mw.cursorpositionDoubleSpinBox.value())
 
     def get_cb_range(self):
