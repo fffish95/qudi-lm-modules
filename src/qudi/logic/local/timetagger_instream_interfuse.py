@@ -96,10 +96,9 @@ class TTInstreamInterfuse(DataInStreamInterface):
         """
         if self.is_running:
             self._is_running = False
-        if self.Counterfunc is not None:
+        if hasattr(self, 'Counterfunc'):
             for chn in self.__active_channels:
                 self.Counterfunc[chn].clear()
-            self.Counterfunc = None
 
     def configure(self, *args, **kwargs):
         """
@@ -286,10 +285,9 @@ class TTInstreamInterfuse(DataInStreamInterface):
         """
         if self.is_running:
             self._is_running = False
-        if self.Counterfunc is not None:
+        if hasattr(self, 'Counterfunc'):
             for chn in self.__active_channels:
                 self.Counterfunc[chn].clear()
-            self.Counterfunc = None
         return 0
 
     def read_data_into_buffer(self, buffer, number_of_samples=None):
