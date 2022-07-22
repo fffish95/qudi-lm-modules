@@ -25,34 +25,39 @@ class NITTConfocalScanner(Base):
         connect:
             nicard: 'nicard'
             timetagger: 'tagger'
+        options:
+            scanner_ao_channels:
+                - 'AO0'
+                - 'AO1'
+                - 'AO2'
+                - 'AO3'
+            scanner_voltage_ranges:
+                - [0, 5]
+                - [0, 5]
+                - [0, 3.2]
+                - [-4, 4]
 
-        scanner_ao_channels:
-            - 'AO0'
-            - 'AO1'
-            - 'AO2'
-            - 'AO3'
-        scanner_voltage_ranges:
-            - [0, 5]
-            - [0, 5]
-            - [0, 3.2]
-            - [-5, 5]
-        scanner_position_ranges:
-            - [0, 300e-6]
-            - [0, 300e-6]
-            - [0, 20e-6]
-            - [0, 30e3]
-        scanner_clock_channel:
-            - 'ctr0'
-        pixel_clock_channel:
-            - 'pfi0'
-        timetagger_cbm_begin_channel:
-            - 'ch8'
-        scanner_ai_channels:
-            - 'AI0'
-            - 'AI1'
-        ai_voltage_ranges:
-            - [-10,10]
-            - [-10,10]
+            scanner_position_ranges:
+                - [0, 300e-6]
+                - [0, 300e-6]
+                - [0, 20e-6]
+                - [0, 30e3]
+            scanner_clock_channel:
+                - 'ctr0'
+            pixel_clock_channel:
+                - 'pfi0'
+            timetagger_cbm_begin_channel:
+                - 'ch8'
+            scanner_ai_channels:
+                - 'AI0'
+                - 'AI1'
+                - 'AI2'
+                - 'AI3'
+            ai_voltage_ranges:
+                - [-10,10]
+                - [-10,10]
+                - [-10,10]
+                - [-10,10]
 
     """
 
