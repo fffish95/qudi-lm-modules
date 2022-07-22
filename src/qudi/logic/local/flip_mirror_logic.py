@@ -21,14 +21,14 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 
 
-from core.connector import Connector
-from logic.generic_logic import GenericLogic
-from core.util.mutex import Mutex
-from qtpy import QtCore
+from qudi.core.connector import Connector
+from qudi.core.module import LogicBase
+from qudi.util.mutex import Mutex
+from PySide2 import QtCore
 import time
 import numpy as np
 
-class FlipMirrorLogic(GenericLogic):
+class FlipMirrorLogic(LogicBase):
     servomotor1 = Connector(interface='MotorInterface')
 
     sigOntoOffProcessing = QtCore.Signal()

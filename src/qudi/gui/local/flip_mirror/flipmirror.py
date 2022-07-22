@@ -21,13 +21,10 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 
 import os
 
-from core.connector import Connector
-from gui.guibase import GUIBase
-from gui.colordefs import QudiPalettePale as palette
-from qtpy import QtWidgets
-from qtpy import QtCore
-from qtpy import uic
-import time
+from qudi.core.connector import Connector
+from qudi.core.module import GuiBase
+from PySide2 import QtCore, QtWidgets
+from qudi.util import uic
 
 
 class FlipMirrorMainWindow(QtWidgets.QMainWindow):
@@ -41,7 +38,7 @@ class FlipMirrorMainWindow(QtWidgets.QMainWindow):
 
 
 
-class FlipMirrorGui(GUIBase):
+class FlipMirrorGui(GuiBase):
     flipmirrorlogic = Connector(interface='FlipMirrorLogic')
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)

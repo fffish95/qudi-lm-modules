@@ -11,33 +11,35 @@ class TT(Base):
     Example config for copy-paste: 
 
     tagger:
-        module.Class: 'local.timetagger.TT'
-        hist:
-            channel: 1
-            trigger_channel: 5
-            bins_width: 1000    #ps
-            number_of_bins: 500
-        
-        corr:
-            channel_start: 1
-            channel_stop: 2
-            bins_width: 1000
-            number_of_bins: 1000
+        module.Class: 'local.timetagger.timetagger.TT'
+        options:
+            hist:
+                channel: 1
+                trigger_channel: 5
+                bins_width: 1000    #ps
+                number_of_bins: 500
+            
+            corr:
+                channel_start: 1
+                channel_stop: 2
+                bins_width: 1000
+                number_of_bins: 1000
 
-        counter:
-            channels: [1, 2]
-            bins_width: 2e10
-            n_values: 100
-        
-        test_channels: [1,2, 4] #[1,2,3,4,5,6,7]#[1,2, 4, -4]    
+            counter:
+                channels: [1, 2]
+                bins_width: 1000000000000
+                n_values: 100
+            
+            
+            channels_params:
+                ch1:
+                    delay: 0
+                    # trigger_level: 2 # range 0.5V-2.5V, with 50 Ohms impedance usually half input Volts is read out
 
-
-        channels_params:
-            ch1:
-                delay: 0
-                # trigger_level: 0
-
-        maxDumps: 1000000000
+            test_channels: [1,2,8] #[1,2,3,4,5,6,7]#[1,2, 4, -4]
+            maxDumps: 1000000000 
+            detector_channels:
+                - 'ch1'
 
     """
     # config options

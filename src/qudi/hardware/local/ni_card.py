@@ -117,10 +117,11 @@ class NICard(Base):
     stable: Kay Jahnke, Alexander Stark
 
     Example config for copy-paste:
-
+    
     nicard:
         module.Class: 'local.ni_card.NICard'
-        device_name: 'Dev3'  
+        options:
+            device_name: 'Dev1'
     """
 
     # config options
