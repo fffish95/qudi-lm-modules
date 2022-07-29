@@ -61,14 +61,6 @@ class TimeSeriesSelectionDialog(QtWidgets.QDialog):
 class TimeSeriesGui(GuiBase):
     """
     GUI module to be used in conjunction with TimeSeriesReaderLogic.
-
-    Example config for copy-paste:
-
-    time_series_gui:
-        module.Class: 'time_series.time_series_gui.TimeSeriesGui'
-        use_antialias: True  # optional, set to False if you encounter performance issues
-        connect:
-            _time_series_logic_con: <TimeSeriesReaderLogic_name>
     """
 
     # declare connectors

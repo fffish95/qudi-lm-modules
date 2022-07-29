@@ -29,9 +29,8 @@ from qudi.core.connector import Connector
 from qudi.util.colordefs import ColorScaleInferno
 from qudi.core.module import GuiBase
 from qudi.util.widgets.plotting.colorbar import ColorBarItem
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtCore, QtWidgets
 from qudi.util import uic
-from qudi.util.qtwidgets.scan_plotwidget import ScanImageItem
 from qudi.util import config
 
 class CustomScanMode(Enum):
@@ -189,9 +188,6 @@ class LaserscannerGui(GuiBase):
                 self._scanning_logic.a_range[1] - self._scanning_logic.a_range[0],
                 self._scanning_logic._number_of_repeats)
         )
-
-        # self.trace_scan_matrix_image = ScanImageItem(image=raw_data_trace_scan_matrix, axisOrder='row-major')
-        # self.retrace_scan_matrix_image = ScanImageItem(image=raw_data_retrace_scan_matrix, axisOrder='row-major')
 
 
         self.trace_plot_y_sum_image = pg.PlotDataItem(

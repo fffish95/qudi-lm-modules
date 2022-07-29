@@ -31,7 +31,7 @@ from qudi.core.configoption import ConfigOption
 from qudi.core.module import LogicBase
 from qudi.util.mutex import Mutex
 from qudi.util.units import ScaledFloat
-from qudi.interface.data_instream_interface import StreamChannelType, StreamingMode
+from qudi.interface.data_instream_interface import StreamChannelType
 
 
 class TimeSeriesReaderLogic(LogicBase):
@@ -485,23 +485,6 @@ class TimeSeriesReaderLogic(LogicBase):
             self._stop_requested = False
 
             self.sigStatusChanged.emit(True, self._data_recording_active)
-
-            # # Configure streaming device
-            # curr_settings = self._streamer.configure(sample_rate=self.sampling_rate,
-            #                                          streaming_mode=StreamingMode.CONTINUOUS,
-            #                                          active_channels=self._active_channels,
-            #                                          buffer_size=10000000,
-            #                                          use_circular_buffer=True)
-            # # update actually set values
-            # self._active_channels = tuple(ch.name for ch in curr_settings['active_channels'])
-            # self._averaged_channels = tuple(
-            #     ch for ch in self._averaged_channels if ch in self._active_channels)
-            # self._data_rate = curr_settings['sample_rate'] / self._oversampling_factor
-            #
-            # self._samples_per_frame = int(round(self._data_rate / self._max_frame_rate))
-            # self._init_data_arrays()
-            # settings = self.all_settings
-            # self.sigSettingsChanged.emit(settings)
 
             if self._data_recording_active:
                 self._record_start_time = dt.datetime.now()
