@@ -271,3 +271,102 @@ class DataInStreamInterface(Base):
         as well.
         """
         pass
+
+
+class StreamChannelType(Enum):
+    DIGITAL = 0
+    ANALOG = 1
+
+
+
+class StreamChannel:
+    def __init__(self, name, type, unit=None):
+        self._name = str(name)
+        self._type = StreamChannelType(type)
+        if unit is None:
+            if self._type == StreamChannelType.ANALOG:
+                self._unit = 'V'
+            elif self._type == StreamChannelType.DIGITAL:
+                self._unit = 'counts'
+        else:
+            self._unit = str(unit)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def unit(self):
+        return self._unit
+
+    @unit.setter
+    def unit(self, new_unit):
+        if isinstance(new_unit, str):
+            self._unit = str(new_unit)
+        else:
+            raise TypeError('StreamChannel unit property must be str.')
+        return
+
+    def copy(self):
+        return StreamChannel(name=self.name, type=self.type, unit=self.unit)
+
+
+class DataInStreamConstraints:
+    """
+    Collection of constraints for hardware modules implementing SimpleDataInterface.
+    """
+    def __init__(self, digital_channels=None, analog_channels=None, analog_sample_rate=None,
+                 digital_sample_rate=None, combined_sample_rate=None, read_block_size=None, 
+                 data_type=None, allow_circular_buffer=None):
+        if digital_channels is None:
+            self.digital_channels = dict()
+        else:
+            self.digital_channels = tuple(ch.copy() for ch in digital_channels)
+
+        if analog_channels is None:
+            self.analog_channels = dict()
+        else:
+            self.analog_channels = tuple(ch.copy() for ch in analog_channels)
+
+        if isinstance(analog_sample_rate, ScalarConstraint):
+            self.analog_sample_rate = ScalarConstraint(**vars(analog_sample_rate))
+        elif isinstance(analog_sample_rate, dict):
+            self.analog_sample_rate = ScalarConstraint(**analog_sample_rate)
+        else:
+            self.analog_sample_rate = ScalarConstraint(min=1, max=np.inf, step=1, default=1)
+
+        if isinstance(digital_sample_rate, ScalarConstraint):
+            self.digital_sample_rate = ScalarConstraint(**vars(digital_sample_rate))
+        elif isinstance(digital_sample_rate, dict):
+            self.digital_sample_rate = ScalarConstraint(**digital_sample_rate)
+        else:
+            self.digital_sample_rate = ScalarConstraint(min=1, max=np.inf, step=1, default=1)
+
+        if isinstance(combined_sample_rate, ScalarConstraint):
+            self.combined_sample_rate = ScalarConstraint(**vars(combined_sample_rate))
+        elif isinstance(combined_sample_rate, dict):
+            self.combined_sample_rate = ScalarConstraint(**combined_sample_rate)
+        else:
+            self.combined_sample_rate = ScalarConstraint(min=1, max=np.inf, step=1, default=1)
+
+        if isinstance(read_block_size, ScalarConstraint):
+            self.read_block_size = ScalarConstraint(**vars(read_block_size))
+        elif isinstance(read_block_size, dict):
+            self.read_block_size = ScalarConstraint(**read_block_size)
+        else:
+            self.read_block_size = ScalarConstraint(min=1, max=np.inf, step=1, default=1)
+
+        if data_type is None:
+            self.data_type = np.float64
+        else:
+            self.data_type = np.dtype(data_type)
+
+        self.allow_circular_buffer = bool(allow_circular_buffer)
+        return
+
+    def copy(self):
+        return DataInStreamConstraints(**vars(self))

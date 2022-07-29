@@ -46,6 +46,10 @@ class NITTConfocalScanner(Base):
                 - 'ctr0'
             pixel_clock_channel:
                 - 'pfi0'
+            timetagger_channels:
+                - 'ch1'
+                - 'ch2'
+                - 'DetectorChans'
             timetagger_cbm_begin_channel:
                 - 'ch8'
             scanner_ai_channels:
@@ -70,6 +74,7 @@ class NITTConfocalScanner(Base):
     _scanner_position_ranges = ConfigOption('scanner_position_ranges', missing='error')
     _scanner_clock_channel = ConfigOption('scanner_clock_channel', missing='error') 
     _pixel_clock_channel = ConfigOption('pixel_clock_channel', None, missing='nothing')
+    _timetagger_channels = ConfigOption('timetagger_channels', missing='error')
     _timetagger_cbm_begin_channel = ConfigOption('timetagger_cbm_begin_channel', missing='error')
     _scanner_ai_channels = ConfigOption('scanner_ai_channels', list(), missing='nothing')
     _ai_voltage_ranges = ConfigOption('ai_voltage_ranges', None, missing='nothing')
@@ -94,11 +99,8 @@ class NITTConfocalScanner(Base):
             self.log.error(
                 'Specify as many scanner_position_ranges as scanner_ao_channels!')
 
-        # channels to show in the image channel combobox
-        self._timetagger_scanner_counter_channels = self._tt._detector_channels.copy()
-        self._timetagger_scanner_counter_channels.insert(0,'all')
-
         self._scanner_task = self._nicard.create_ao_task(taskname = 'sps_setup_ao', channels = self._scanner_ao_channels, voltage_ranges = self._scanner_voltage_ranges)
+
 
 
     def on_deactivate(self):
@@ -134,7 +136,7 @@ class NITTConfocalScanner(Base):
 
     def get_scanner_count_channels(self):
         """ Return list of counter channels """
-        ch = self._timetagger_scanner_counter_channels.copy()
+        ch = self._timetagger_channels.copy()
         ch.extend(self._scanner_ai_channels)
         return ch
 
@@ -332,11 +334,8 @@ class NITTConfocalScanner(Base):
 
             # Start instance of TimeTagger.CountBetweenMarkers with the correct channels. Does this every time a line is scanned
             self._timetagger_cbm_tasks = list()
-            for i,ch in enumerate(self._timetagger_scanner_counter_channels):
-                if ch == 'all':
-                    self._timetagger_cbm_tasks.append(self._tt.count_between_markers(click_channel = self._tt._combined_detectorChans.getChannel(), begin_channel = self._tt.channel_codes[self._timetagger_cbm_begin_channel[0]], n_values=self._line_length))
-                else:
-                    self._timetagger_cbm_tasks.append(self._tt.count_between_markers(click_channel = self._tt.channel_codes[ch], begin_channel = self._tt.channel_codes[self._timetagger_cbm_begin_channel[0]], n_values=self._line_length))
+            for i,ch in enumerate(self._timetagger_channels):
+                self._timetagger_cbm_tasks.append(self._tt.count_between_markers(click_channel = self._tt.channel_codes[ch], begin_channel = self._tt.channel_codes[self._timetagger_cbm_begin_channel[0]], n_values=self._line_length))
             # Set up the configuration of ai task for scanning with certain length
             # dont't put ai task into self._timetagger_cbm_tasks
             if self._scanner_ai_channels:
