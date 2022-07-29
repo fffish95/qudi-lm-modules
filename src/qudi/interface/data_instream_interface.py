@@ -83,17 +83,6 @@ class DataInStreamConstraints:
     def sample_timing(self) -> SampleTiming:
         return self._sample_timing
 
-    @property
-    def streaming_modes(self) -> List[StreamingMode]:
-        return self._streaming_modes.copy()
-
-    @property
-    def data_type(self) -> np.dtype:
-        return self._data_type
-
-    @property
-    def sample_rate(self) -> ScalarConstraint:
-        return self._sample_rate
 
     @property
     def channel_buffer_size(self) -> ScalarConstraint:
@@ -178,12 +167,19 @@ class DataInStreamInterface(Base):
         pass
 
     @abstractmethod
-    def configure(self,
-                  active_channels: Sequence[str],
-                  streaming_mode: Union[StreamingMode, int],
-                  channel_buffer_size: int,
-                  sample_rate: float) -> None:
-        """ Configure a data stream. See read-only properties for information on each parameter. """
+    def configure(self, sample_rate=None, active_channels=None,
+                  total_number_of_samples=None, buffer_size=None):
+        """
+        Method to configure all possible settings of the data input stream.
+
+        @param float sample_rate: The sample rate in Hz at which data points are acquired
+        @param iterable active_channels: Iterable of channel names (str) to be read from.
+        @param int total_number_of_samples: In case of a finite data stream, the total number of
+                                            samples to read per channel
+        @param int buffer_size: The size of the data buffer to pre-allocate in samples per channel
+
+        @return dict: All current settings in a dict. Keywords are the same as kwarg names.
+        """
         pass
 
     @abstractmethod
@@ -320,6 +316,8 @@ class DataInStreamConstraints:
     Collection of constraints for hardware modules implementing SimpleDataInterface.
     """
     def __init__(self, digital_channels=None, analog_channels=None, analog_sample_rate=None,
+                 digital_sample_rate=None, combined_sample_rate=None, read_block_size=None, 
+                 data_type=None, allow_circular_buffer=None):
                  digital_sample_rate=None, combined_sample_rate=None, read_block_size=None, 
                  data_type=None, allow_circular_buffer=None):
         if digital_channels is None:

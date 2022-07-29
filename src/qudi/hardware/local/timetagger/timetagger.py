@@ -37,19 +37,27 @@ class TT(Base):
                     # trigger_level: 2 # range 0.5V-2.5V, with 50 Ohms impedance usually half input Volts is read out
 
             test_channels: [1,2,8] #[1,2,3,4,5,6,7]#[1,2, 4, -4]
-            maxDumps: 1000000000 
-            detector_channels:
-                - 'ch1'
+            maxDumps: -1
+            combined_channels: # Alias for combined channels must not start with 'ch'
+                DetectorChans:
+                    - 'ch1'
+                    - 'ch2'
+                APDset1:
+                    - 'ch1'
+                    - 'ch2'
+                APDset2:
+                    - 'ch3'
+                    - 'ch4'
 
     """
     # config options
     _hist = ConfigOption('hist', False, missing='warn')
     _corr = ConfigOption('corr', False, missing='warn')
     _counter = ConfigOption('counter', False, missing='warn')
-    _test_channels = ConfigOption('test_channels', False, missing='info')
+    _test_channels = ConfigOption('test_channels', False, missing='nothing')
     _channels_params = ConfigOption('channels_params', False, missing='warn')
-    _maxDumps =  ConfigOption('maxDumps', 1000000000, missing='info')
-    _detector_channels = ConfigOption('detector_channels', missing = 'error')
+    _maxDumps =  ConfigOption('maxDumps', -1, missing='nothing')
+    _combined_channels = ConfigOption('combined_channels', missing = 'error')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -58,12 +66,6 @@ class TT(Base):
         self.channel_codes = dict(zip(chan_alphabet, list(range(1,19,1))))
 
     def on_activate(self):
-        self.setup_TT()
-
-    def on_deactivate(self):
-        freeTimeTagger(self.tagger)
-
-    def setup_TT(self):
         try:
             self.tagger = createTimeTagger()
             # self.tagger.reset()
@@ -87,10 +89,20 @@ class TT(Base):
                 self.tagger.setTriggerLevel(channel, params['triggerLevel'])
 
         #Create combine channels:
-        self._detector_channels_array = []
-        for i in range(len(self._detector_channels)):
-            self._detector_channels_array.append(self.channel_codes[self._detector_channels[i]])
-        self._combined_detectorChans = self.combiner(self._detector_channels_array)      # create virtual channel that combines time_tags from apdChans. 
+        for key, channels in self._combined_channels.items():
+            channels_array = []
+            for i in range(len(channels)):
+                channels_array.append(self.channel_codes[channels[i]])
+            self._combined_channels.update({key:self.combiner(channels_array)})
+
+        #Append Channel codes with combined channels
+        for chn in self._combined_channels.keys():
+            self.channel_codes[chn]=self._combined_channels[chn].getChannel()
+
+
+
+    def on_deactivate(self):
+        freeTimeTagger(self.tagger)
 
 
 
