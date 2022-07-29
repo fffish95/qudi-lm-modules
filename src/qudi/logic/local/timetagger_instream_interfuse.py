@@ -10,7 +10,7 @@ from qudi.core.connector import Connector
 from qudi.util.helpers import natural_sort
 from qudi.interface.data_instream_interface import DataInStreamInterface, DataInStreamConstraints
 from qudi.interface.data_instream_interface import StreamChannelType, StreamChannel
-
+from qudi.util import tools
 
 
 class TTInstreamInterfuse(DataInStreamInterface):
@@ -293,7 +293,7 @@ class TTInstreamInterfuse(DataInStreamInterface):
         if number_of_samples < 1:
             return 0
         while self.available_samples < number_of_samples:
-            time.sleep(0.001)
+            tools.delay(1)
 
         # Check for buffer overflow
         avail_samples = self.available_samples
