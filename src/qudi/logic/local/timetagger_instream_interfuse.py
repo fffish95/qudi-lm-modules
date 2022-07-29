@@ -12,30 +12,11 @@ from qudi.interface.data_instream_interface import DataInStreamInterface, DataIn
 from qudi.interface.data_instream_interface import StreamChannelType, StreamChannel
 
 
-class TTMeasurementMode(Enum):
-    COUNTER = 0
-    COUNTBETWEENMARKERS = 1
-    HISTOGRAM = 2
-    CORRELATION = 3
 
 class TTInstreamInterfuse(DataInStreamInterface):
     """ Methods to use TimeTagger as data in-streaming device (continuously read values)
 
     Example config for copy-paste:
-
-    timetagger_instream_interfuse:
-        module.Class: 'local.timetagger_instream_interfuse.TTInstreamInterfuse'
-        connect:
-            timetagger: 'tagger'
-        available_channels:  
-            - 'ch1'
-            - 'ch2'
-            - 'ch3'
-            - 'ch4'
-            - 'detectorChans'
-        sample_rate: 50
-        buffer_size: 10000000
-        mode: 'Counter'
 
     """
 
@@ -44,15 +25,12 @@ class TTInstreamInterfuse(DataInStreamInterface):
     __available_channels = ConfigOption(name='available_channels', default=tuple(), missing='nothing')
     __sample_rate = ConfigOption(name='sample_rate', default=50, missing='nothing')
     __buffer_size = ConfigOption(name='buffer_size', default=10000000, missing='nothing')
-    __mode = ConfigOption(name='mode', default='Counter', missing='nothing')
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.__data_type = np.float64
-        if self.__mode.lower() == 'counter':
-            self.__measurement_mode = TTMeasurementMode.COUNTER
 
         # Data buffer
         self._data_buffer = np.empty(0, dtype=self.__data_type)
@@ -70,24 +48,12 @@ class TTInstreamInterfuse(DataInStreamInterface):
 
     def on_activate(self):
         self._tt = self.timetagger()
-     
-        self.__available_channels = natural_sort(str(chnl) for chnl in self.__available_channels)
-        self.__channel_lists = []
-        for chn in self.__available_channels:
-            if chn.startswith('ch'):
-                self.__channel_lists.append(int(chn[2:]))
-            elif chn == 'detectorChans':
-                self.__channel_lists.append(self._tt._combined_detectorChans.getChannel())
-            else:
-                self.log.error('Given available_channels can not be recognized.')
-                return -1
-        self.__available_channel_codes = dict(zip(self.__available_channels, self.__channel_lists))
-        if self.__measurement_mode == TTMeasurementMode.COUNTER:   
-            # Create constraints
-            self._constraints = DataInStreamConstraints()
-            self._constraints.digital_channels = tuple(
-                StreamChannel(name=ch, type=StreamChannelType.DIGITAL, unit='Cps') for ch in
-                self.__available_channels)
+
+        # Create constraints
+        self._constraints = DataInStreamConstraints()
+        self._constraints.digital_channels = tuple(
+            StreamChannel(name=ch, type=StreamChannelType.DIGITAL, unit='Cps') for ch in
+            self.__available_channels)
 
 
 
@@ -115,31 +81,24 @@ class TTInstreamInterfuse(DataInStreamInterface):
                 raise TypeError('"TTInstreamInterfuse.configure" takes exactly 0 or 1 positional '
                                 'argument of type dict.')
 
-            # if isinstance(param_dict['measurement_mode'], TTMeasurementMode):
-            #     self.__measurement_mode = param_dict["measurement_mode"]
+
+            if 'channel' in param_dict.keys():
+                self.__active_channels = tuple(param_dict['channel'])
             # else:
-            #     self.log.error('"TTInstreamInterfuse.configure" Argurement must include measurement_mode'
-            #                     'Example: measurement_mode = TTMeasurementMode.COUNTER')
-            #     return
+            #     self.__active_channels = tuple(self._available_channels)
 
-            if self.__measurement_mode == TTMeasurementMode.COUNTER:
-                if 'channel' in param_dict.keys():
-                    self.__active_channels = tuple(param_dict['channel'])
-                # else:
-                #     self.__active_channels = tuple(self._available_channels)
+            if 'sample_rate' in param_dict.keys():
+                self.__sample_rate = param_dict['sample_rate']
+            else:
+                self.log.error('Please input timetagger counter sample rate')
+                return
 
-                if 'sample_rate' in param_dict.keys():
-                    self.__sample_rate = param_dict['sample_rate']
-                else:
-                    self.log.error('Please input timetagger counter sample rate')
-                    return
-
-                if 'buffer_size' in param_dict.keys():
-                    self.__buffer_size = param_dict['buffer_size']
-                else:
-                    self.log.error('Please input buffer size (samples per channel)')
-                    return
-                
+            if 'buffer_size' in param_dict.keys():
+                self.__buffer_size = param_dict['buffer_size']
+            else:
+                self.log.error('Please input buffer size (samples per channel)')
+                return
+            
         return self.all_settings
 
     @property
@@ -148,8 +107,7 @@ class TTInstreamInterfuse(DataInStreamInterface):
         FIX ME
         """
    
-        return {'measurement_mode': self.__measurement_mode,
-                    'active_channels': self.__active_channels,
+        return {    'active_channels': self.__active_channels,
                     'sample_rate': self.__sample_rate,
                     'buffer_size': self.__buffer_size}
 
@@ -271,10 +229,10 @@ class TTInstreamInterfuse(DataInStreamInterface):
         self._is_running = True
         self._start_time = time.perf_counter()
         self._last_read = self._start_time
-        if self.__measurement_mode == TTMeasurementMode.COUNTER:
-            self.Counterfunc={}
-            for chn in self.__active_channels:
-                self.Counterfunc[chn] = self._tt.counter(channels=[self.__available_channel_codes[chn]], refresh_rate=self.__sample_rate, n_values=(self.buffer_size // self.number_of_channels))
+
+        self.Counterfunc=dict()
+        for chn in self.__active_channels:
+            self.Counterfunc[chn] = self._tt.counter(channels=[self._tt.channel_codes[chn]], refresh_rate=self.__sample_rate, n_values=(self.buffer_size // self.number_of_channels))
         return 0
 
     def stop_stream(self):
@@ -342,13 +300,13 @@ class TTInstreamInterfuse(DataInStreamInterface):
         if avail_samples > self.buffer_size:
             self._has_overflown = True
 
-        if self.__measurement_mode == TTMeasurementMode.COUNTER:
-            self._last_read = time.perf_counter()
 
-            write_offset = 0
-            for i, chn in enumerate(self.__active_channels):
-                buffer[write_offset:(write_offset+number_of_samples)] = self.Counterfunc[chn].getData()[0][-number_of_samples:]
-                write_offset += number_of_samples
+        self._last_read = time.perf_counter()
+
+        write_offset = 0
+        for i, chn in enumerate(self.__active_channels):
+            buffer[write_offset:(write_offset+number_of_samples)] = self.Counterfunc[chn].getData()[0][-number_of_samples:]
+            write_offset += number_of_samples
         return number_of_samples
 
     def read_available_data_into_buffer(self, buffer):
@@ -493,71 +451,6 @@ class TTInstreamInterfuse(DataInStreamInterface):
         @return bool: Flag indicates if buffer has overflown (True) or not (False)
         """
         return self._has_overflown
-
-    @property
-    def use_circular_buffer(self):
-        """
-        Read-only property to return a flag indicating if circular sample buffering is being used
-        or not.
-
-        @return bool: indicate if circular sample buffering is used (True) or not (False)
-        """
-        #return self.__use_circular_buffer
-        pass
-
-    @use_circular_buffer.setter
-    def use_circular_buffer(self, flag):
-        # if self._check_settings_change():
-        #     if flag and not self._constraints.allow_circular_buffer:
-        #         self.log.error('Circular buffer not allowed for this hardware module.')
-        #         return
-        #     self.__use_circular_buffer = bool(flag)
-        # return
-        pass
-
-    @property
-    def streaming_mode(self):
-        """
-        Read-only property to return the currently configured streaming mode Enum.
-
-        @return StreamingMode: Finite (StreamingMode.FINITE) or continuous
-                               (StreamingMode.CONTINUOUS) data acquisition
-        """
-        #return self.__streaming_mode
-        pass
-    @streaming_mode.setter
-    def streaming_mode(self, mode):
-        # if self._check_settings_change():
-        #     mode = StreamingMode(mode)
-        #     if mode not in self._constraints.streaming_modes:
-        #         self.log.error('Unknown streaming mode "{0}" encountered.\nValid modes are: {1}.'
-        #                        ''.format(mode, self._constraints.streaming_modes))
-        #         return
-        #     self.__streaming_mode = mode
-        # return
-        pass
-
-    @property
-    def stream_length(self):
-        """
-        Property holding the total number of samples per channel to be acquired by this stream.
-        This number is only relevant if the streaming mode is set to StreamingMode.FINITE.
-
-        @return int: The number of samples to acquire per channel. Ignored for continuous streaming.
-        """
-        # return self.__stream_length
-        pass
-
-    @stream_length.setter
-    def stream_length(self, length):
-        # if self._check_settings_change():
-        #     length = int(length)
-        #     if length < 1:
-        #         self.log.error('Stream_length must be a positive integer >= 1.')
-        #         return
-        #     self.__stream_length = length
-        # return
-        pass
 
 
 

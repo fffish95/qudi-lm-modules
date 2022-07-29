@@ -68,37 +68,6 @@ class DataInStreamInterface(Base):
         """
         pass
 
-    @property
-    @abstractmethod
-    def use_circular_buffer(self):
-        """
-        A flag indicating if circular sample buffering is being used or not.
-
-        @return bool: indicate if circular sample buffering is used (True) or not (False)
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def streaming_mode(self):
-        """
-        The currently configured streaming mode Enum.
-
-        @return StreamingMode: Finite (StreamingMode.FINITE) or continuous
-                               (StreamingMode.CONTINUOUS) data acquisition
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def stream_length(self):
-        """
-        Property holding the total number of samples per channel to be acquired by this stream.
-        This number is only relevant if the streaming mode is set to StreamingMode.FINITE.
-
-        @return int: The number of samples to acquire per channel. Ignored for continuous streaming.
-        """
-        pass
 
     @property
     @abstractmethod
@@ -183,19 +152,16 @@ class DataInStreamInterface(Base):
         pass
 
     @abstractmethod
-    def configure(self, sample_rate=None, streaming_mode=None, active_channels=None,
-                  total_number_of_samples=None, buffer_size=None, use_circular_buffer=None):
+    def configure(self, sample_rate=None, active_channels=None,
+                  total_number_of_samples=None, buffer_size=None):
         """
         Method to configure all possible settings of the data input stream.
 
         @param float sample_rate: The sample rate in Hz at which data points are acquired
-        @param StreamingMode streaming_mode: The streaming mode to use (finite or continuous)
         @param iterable active_channels: Iterable of channel names (str) to be read from.
         @param int total_number_of_samples: In case of a finite data stream, the total number of
                                             samples to read per channel
         @param int buffer_size: The size of the data buffer to pre-allocate in samples per channel
-        @param bool use_circular_buffer: Use circular buffering (True) or stop upon buffer overflow
-                                         (False)
 
         @return dict: All current settings in a dict. Keywords are the same as kwarg names.
         """
@@ -313,10 +279,6 @@ class StreamChannelType(Enum):
     ANALOG = 1
 
 
-class StreamingMode(Enum):
-    CONTINUOUS = 0
-    FINITE = 1
-
 
 class StreamChannel:
     def __init__(self, name, type, unit=None):
@@ -359,8 +321,8 @@ class DataInStreamConstraints:
     Collection of constraints for hardware modules implementing SimpleDataInterface.
     """
     def __init__(self, digital_channels=None, analog_channels=None, analog_sample_rate=None,
-                 digital_sample_rate=None, combined_sample_rate=None, read_block_size=None,
-                 streaming_modes=None, data_type=None, allow_circular_buffer=None):
+                 digital_sample_rate=None, combined_sample_rate=None, read_block_size=None, 
+                 data_type=None, allow_circular_buffer=None):
         if digital_channels is None:
             self.digital_channels = dict()
         else:
@@ -398,11 +360,6 @@ class DataInStreamConstraints:
             self.read_block_size = ScalarConstraint(**read_block_size)
         else:
             self.read_block_size = ScalarConstraint(min=1, max=np.inf, step=1, default=1)
-
-        if streaming_modes is None:
-            self.streaming_modes = (StreamingMode.CONTINUOUS, StreamingMode.FINITE)
-        else:
-            self.streaming_modes = tuple(StreamingMode(mode) for mode in streaming_modes)
 
         if data_type is None:
             self.data_type = np.float64
