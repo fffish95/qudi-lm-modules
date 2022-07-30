@@ -48,6 +48,14 @@ class TT(Base):
                 APDset2:
                     - 'ch3'
                     - 'ch4'
+            
+            conditional_filter:
+                trigger:
+                    - 'ch1'
+                    - 'ch2'
+                filtered:
+                    - 'ch8'
+            
 
     """
     # config options
@@ -58,6 +66,7 @@ class TT(Base):
     _channels_params = ConfigOption('channels_params', False, missing='warn')
     _maxDumps =  ConfigOption('maxDumps', -1, missing='nothing')
     _combined_channels = ConfigOption('combined_channels', missing = 'error')
+    _conditonal_filter = ConfigOption('conditional_filter', False, missing='nothing')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -98,7 +107,16 @@ class TT(Base):
         #Append Channel codes with combined channels
         for chn in self._combined_channels.keys():
             self.channel_codes[chn]=self._combined_channels[chn].getChannel()
-
+        
+        #Set Conditional Filter
+        if self._conditonal_filter:
+            self.trigger_channels_array = []
+            self.filtered_channels_array = []
+            for chn in self._conditonal_filter['trigger']:
+                self.trigger_channels_array.append(self.channel_codes[chn])
+            for chn in self._conditonal_filter['filtered']:
+                self.filtered_channels_array.append(self.channel_codes[chn])
+            self.tagger.setConditionalFilter(trigger = self.trigger_channels_array, filtered = self.filtered_channels_array)
 
 
     def on_deactivate(self):
