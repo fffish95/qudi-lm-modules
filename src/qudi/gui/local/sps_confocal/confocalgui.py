@@ -1086,7 +1086,7 @@ class ConfocalGui(GuiBase):
     def depth_scan_clicked(self):
         """ Start depth scan. """
         self.disable_scan_actions()
-        self._scanning_logic.start_scanning(zscan=True)
+        self._scanning_logic.start_scanning(zscan=True, tag='gui')
 
     def refocus_clicked(self):
         """ Start optimize position. """
