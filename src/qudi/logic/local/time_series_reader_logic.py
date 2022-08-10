@@ -32,6 +32,7 @@ from qudi.core.module import LogicBase
 from qudi.util.mutex import Mutex
 from qudi.util.units import ScaledFloat
 from qudi.interface.data_instream_interface import StreamChannelType
+from qudi.util.datastorage import TextDataStorage, ImageFormat
 
 
 class TimeSeriesReaderLogic(LogicBase):
@@ -747,30 +748,53 @@ class TimeSeriesReaderLogic(LogicBase):
         """
         with self.threadlock:
             timestamp = dt.datetime.now()
-
+        
             # write the parameters:
             parameters = dict()
             parameters['Time stamp'] = timestamp.strftime('%d.%m.%Y, %H:%M:%S.%f')
             parameters['Data rate (Hz)'] = self.data_rate
             parameters['Oversampling factor (samples)'] = self.oversampling_factor
             parameters['Sampling rate (Hz)'] = self.sampling_rate
-
-            header = ', '.join(
-                '{0} ({1})'.format(ch, unit) for ch, unit in self.active_channel_units.items())
+            
+            header = ['{0} ({1})'.format(ch, unit) for ch, unit in self.active_channel_units.items()]
             data_offset = self._trace_data.shape[1] - self.moving_average_width // 2
-            data = {header: self._trace_data[:, :data_offset].transpose()}
-
+            data = self._trace_data[:, :data_offset].transpose()
+        
             if to_file:
                 filepath = self._savelogic.get_path_for_module(module_name='TimeSeriesReader')
                 filelabel = 'data_trace_snapshot_{0}'.format(
                     name_tag) if name_tag else 'data_trace_snapshot'
-                self._savelogic.save_data(data=data,
-                                          filepath=filepath,
-                                          parameters=parameters,
-                                          filelabel=filelabel,
-                                          timestamp=timestamp,
-                                          delimiter='\t')
+                set_of_units = set(self.active_channel_units.values())
+                unit_list = tuple(self.active_channel_units)
+                y_unit = 'arb.u.'
+                occurrences = 0
+                for unit in set_of_units:
+                    count = unit_list.count(unit)
+                    if count > occurrences:
+                        occurrences = count
+                        y_unit = unit
+
+                fig = self._draw_figure(data.transpose(), self.data_rate, y_unit) if save_figure else None
+
+                data_storage = TextDataStorage(root_dir=filepath,
+                                comments='# ', 
+                                delimiter='\t',
+                                file_extension='.dat',
+                                column_formats=['.8f' for i in self.active_channel_units],
+                                include_global_metadata=True,
+                                image_format=ImageFormat.PNG)
+
+                file_path, timestamp, (rows, columns) = data_storage.save_data(data, 
+                                                                timestamp=dt.datetime.now(), 
+                                                                metadata=parameters, 
+                                                                notes='',
+                                                                nametag=filelabel,
+                                                                column_headers=header,
+                                                                column_dtypes=[float for i in self.active_channel_units])
+                if fig:
+                    data_storage.save_thumbnail(fig, file_path.rsplit('.')[0])
                 self.log.info('Time series snapshot saved to: {0}'.format(filepath))
+
         return data, parameters
 
     def _stop_reader_wait(self):
