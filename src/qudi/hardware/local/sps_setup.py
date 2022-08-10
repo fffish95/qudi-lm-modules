@@ -8,6 +8,7 @@ import time
 from qudi.core.module import Base
 from qudi.core.configoption import ConfigOption
 from qudi.core.connector import Connector
+from qudi.util.mutex import Mutex
 
 
 
@@ -83,6 +84,7 @@ class NITTConfocalScanner(Base):
     def on_activate(self):
         self._nicard = self.nicard()
         self._tt = self.timetagger()
+        self.threadlock = Mutex()
         self._scanner_task = None
         self._scanner_clock_task = None
         self._timetagger_cbm_tasks = list()
@@ -370,66 +372,66 @@ class NITTConfocalScanner(Base):
             self.log.error('Given line_path list is not array type.')
             return np.array([[-1.]])
         
+        with self.threadlock:
+            try:
+                # set task timing to use a sampling clock:
+                # specify how the Data of the selected task is collected, i.e. set it
+                # now to be sampled by a hardware (clock) signal.
+                self._nicard.samp_timing_type(self._scanner_task, 'sample_clock')
+                self._set_up_line(np.shape(line_path)[1])
+                line_volts = self._scanner_position_to_volt(line_path)
+                # write the positions to the analog output
+                self._nicard.write_task(task = self._scanner_task, data = line_volts, auto_start = False)
 
-        try:
-            # set task timing to use a sampling clock:
-            # specify how the Data of the selected task is collected, i.e. set it
-            # now to be sampled by a hardware (clock) signal.
-            self._nicard.samp_timing_type(self._scanner_task, 'sample_clock')
-            self._set_up_line(np.shape(line_path)[1])
-            line_volts = self._scanner_position_to_volt(line_path)
-            # write the positions to the analog output
-            self._nicard.write_task(task = self._scanner_task, data = line_volts, auto_start = False)
+                # set up the configuration of co task for scanning with certain length
+                self._scanner_clock_task.stop()
+                if pixel_clock and self._pixel_clock_channel is not None:
+                    self._nicard.connect_ctr_to_pfi(self._scanner_clock_channel[0], self._pixel_clock_channel[0])
+                # start the timed analog output task
+                self._scanner_task.start()
+                if self._scanner_ai_channels:
+                    self._scanner_ai_task.start()
+                self._scanner_clock_task.start()
 
-            # set up the configuration of co task for scanning with certain length
-            self._scanner_clock_task.stop()
-            if pixel_clock and self._pixel_clock_channel is not None:
-                self._nicard.connect_ctr_to_pfi(self._scanner_clock_channel[0], self._pixel_clock_channel[0])
-            # start the timed analog output task
-            self._scanner_task.start()
-            if self._scanner_ai_channels:
-                self._scanner_ai_task.start()
-            self._scanner_clock_task.start()
+                # # wait for the scanner counter to finish
+                # for i, ch in enumerate(self._timetagger_cbm_tasks):
+                #     self._timetagger_cbm_tasks[i].waitUntilFinished(timeout = 10 * 2 * self._line_length)
+                
+                # wait for the scanner clock to finish
+                self._scanner_clock_task.wait_until_done(timeout = 10 * 2 * self._line_length)
 
-            # # wait for the scanner counter to finish
-            # for i, ch in enumerate(self._timetagger_cbm_tasks):
-            #     self._timetagger_cbm_tasks[i].waitUntilFinished(timeout = 10 * 2 * self._line_length)
-            
-            # wait for the scanner clock to finish
-            self._scanner_clock_task.wait_until_done(timeout = 10 * 2 * self._line_length)
+                # data readout from ai channels
+                if self._scanner_ai_channels:
+                    self._analog_data = self._scanner_ai_task.read(self._line_length + 1)
+                    self._scanner_ai_task.stop()
 
-            # data readout from ai channels
-            if self._scanner_ai_channels:
-                self._analog_data = self._scanner_ai_task.read(self._line_length + 1)
-                self._scanner_ai_task.stop()
+                # stop the clock task
+                self._scanner_clock_task.stop()
+                # stop the ao task
+                self._scanner_task.stop()
+                self._nicard.samp_timing_type(self._scanner_task, 'on_demand')
 
-            # stop the clock task
-            self._scanner_clock_task.stop()
-            # stop the ao task
-            self._scanner_task.stop()
-            self._nicard.samp_timing_type(self._scanner_task, 'on_demand')
+                if pixel_clock and self._pixel_clock_channel is not None:
+                    self._nicard.disconnect_ctr_to_pfi(self._scanner_clock_channel[0], self._pixel_clock_channel[0])
 
-            if pixel_clock and self._pixel_clock_channel is not None:
-                self._nicard.disconnect_ctr_to_pfi(self._scanner_clock_channel[0], self._pixel_clock_channel[0])
+                all_data = np.full(
+                    (len(self.get_scanner_count_channels()), self._line_length), 0, dtype=np.float64)
+                for i, task in enumerate(self._timetagger_cbm_tasks):
+                    counts = np.nan_to_num(task.getData())
+                    data = np.reshape(counts,(1, self._line_length))
+                    all_data[i] = data * self._scanner_clock_frequency
+                if self._scanner_ai_channels:
+                    analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._line_length +1))
+                    all_data[len(self._timetagger_cbm_tasks):] = analog_data[:, :-1]
 
-            all_data = np.full(
-                (len(self.get_scanner_count_channels()), self._line_length), 2, dtype=np.float64)
-            for i, task in enumerate(self._timetagger_cbm_tasks):
-                counts = np.nan_to_num(task.getData())
-                data = np.reshape(counts,(1, self._line_length))
-                all_data[i] = data * self._scanner_clock_frequency
-            if self._scanner_ai_channels:
-                analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._line_length +1))
-                all_data[len(self._timetagger_cbm_tasks):] = analog_data[:, :-1]
+                # update the scanner position instance variable
+                self._current_position = np.array(line_path[:, -1])
 
-            # update the scanner position instance variable
-            self._current_position = np.array(line_path[:, -1])
-
-        except:
-            self.log.exception('Error while scanning line.')
-            return np.array([[-1.]])
-        # return values is a rate of counts/s
-        return all_data.transpose()
+            except:
+                self.log.exception('Error while scanning line.')
+                return np.array([[-1.]])
+            # return values is a rate of counts/s
+            return all_data.transpose()
 
     def close_scanner(self):
         """ Closes the scanner and cleans up afterwards.
