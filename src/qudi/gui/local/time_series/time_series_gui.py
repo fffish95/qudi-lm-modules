@@ -186,7 +186,7 @@ class TimeSeriesGui(GuiBase):
         self._mw.start_trace_Action.triggered.connect(self.start_clicked)
         self._mw.record_trace_Action.triggered.connect(self.record_clicked)
         self._mw.trace_snapshot_Action.triggered.connect(
-            self._time_series_logic.save_trace_snapshot, QtCore.Qt.QueuedConnection
+            self._time_series_logic.save_trace_snapshot, QtCore.Qt.DirectConnection
         )
 
         self._mw.trace_length_DoubleSpinBox.editingFinished.connect(self.data_window_changed)
@@ -227,11 +227,11 @@ class TimeSeriesGui(GuiBase):
         self.sigStartCounter.connect(
             self._time_series_logic.start_reading, QtCore.Qt.QueuedConnection)
         self.sigStopCounter.connect(
-            self._time_series_logic.stop_reading, QtCore.Qt.QueuedConnection)
+            self._time_series_logic.stop_reading, QtCore.Qt.DirectConnection)
         self.sigStartRecording.connect(
-            self._time_series_logic.start_recording, QtCore.Qt.QueuedConnection)
+            self._time_series_logic.start_recording, QtCore.Qt.DirectConnection)
         self.sigStopRecording.connect(
-            self._time_series_logic.stop_recording, QtCore.Qt.QueuedConnection)
+            self._time_series_logic.stop_recording, QtCore.Qt.DirectConnection)
         self.sigSettingsChanged.connect(
             self._time_series_logic.configure_settings, QtCore.Qt.QueuedConnection)
 
@@ -242,7 +242,7 @@ class TimeSeriesGui(GuiBase):
         self._time_series_logic.sigSettingsChanged.connect(
             self.update_settings, QtCore.Qt.QueuedConnection)
         self._time_series_logic.sigStatusChanged.connect(
-            self.update_status, QtCore.Qt.QueuedConnection)
+            self.update_status, QtCore.Qt.DirectConnection)
 
         self.show()
         return
@@ -259,6 +259,8 @@ class TimeSeriesGui(GuiBase):
         """ Deactivate the module
         """
         # disconnect signals
+        self.sigStopCounter.emit()
+        self.sigStopRecording.emit()
         self._pw.plotItem.vb.sigResized.disconnect()
 
         self._vsd.accepted.disconnect()
