@@ -116,7 +116,8 @@ class LaserscannerGui(GuiBase):
     sigChangeLines = QtCore.Signal(int)
     sigSaveMeasurement = QtCore.Signal(str, list, list)
 
-
+    def __init__(self, config, **kwargs):
+        super().__init__(config=config, **kwargs)
 
     def on_activate(self):
         """ Initializes all needed UI files and establishes the connectors.
@@ -126,7 +127,7 @@ class LaserscannerGui(GuiBase):
         """
         # Getting an access to all connectors:
         self._scanning_logic = self.laserscannerlogic1()
-        self._savelogic = self.savelogic()
+        self._save_logic = self.savelogic()
 
         self.initMainUI()      # initialize the main GUI
         self.initSettingsUI()  # initialize the settings GUI
@@ -704,7 +705,7 @@ class LaserscannerGui(GuiBase):
 
     def save_configuration(self):
         """ Save current statusvariable to the file"""
-        defaultconfigpath = self._scanning_logic._save_logic.get_path_for_module(module_name='sps_laserscanner_cfg')
+        defaultconfigpath = self._save_logic.get_path_for_module(module_name='sps_laserscanner_cfg')
         filename = QtWidgets.QFileDialog.getSaveFileName(
             self._mw,
             'Save Configuration',
@@ -726,7 +727,7 @@ class LaserscannerGui(GuiBase):
     def load_configuration(self):
         """ Load statusvariable to the program"""
         try:
-            defaultconfigpath = self._scanning_logic._save_logic.get_path_for_module(module_name='sps_laserscanner_cfg')
+            defaultconfigpath = self._save_logic.get_path_for_module(module_name='sps_laserscanner_cfg')
             filename = QtWidgets.QFileDialog.getOpenFileName(
                 self._mw,
                 'Load Configuration',
@@ -753,7 +754,7 @@ class LaserscannerGui(GuiBase):
         """ Reset the scan action buttons to the default active
         state when the system is idle.
         """
-        # Dissable the stop scanning button
+        # Disable the stop scanning button
         self._mw.action_stop_scanning.setEnabled(False)
 
         # Disable the start scan buttons
