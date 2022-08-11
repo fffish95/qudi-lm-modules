@@ -100,9 +100,6 @@ class LaserScannerHistoryEntry(QtCore.QObject):
         self.order_resolutions = [100,100,50]
     def restore(self, laserscanner):
         """ Write data back into laser scan logic and pull all the necessary strings"""
-        laserscanner._current_x = self.current_x
-        laserscanner._current_y = self.current_y
-        laserscanner._current_z = self.current_z
         laserscanner._current_a = self.current_a
         laserscanner._scan_range = np.copy(self.scan_range)
         laserscanner._resolution = self.resolution
@@ -154,9 +151,6 @@ class LaserScannerHistoryEntry(QtCore.QObject):
 
     def snapshot(self, laserscanner):
         """ Extract all necessary data from a laserscanner logic and keep it for later use """
-        self.current_x = laserscanner._current_x
-        self.current_y = laserscanner._current_y
-        self.current_z = laserscanner._current_z
         self.current_a = laserscanner._current_a 
         self.scan_range = np.copy(laserscanner._scan_range)
         self.resolution = laserscanner._resolution
@@ -382,7 +376,6 @@ class LaserScannerLogic(LogicBase):
         # clock frequency is not in status variables, set clock frequency
         self.set_clock_frequency()
         self._change_position('load_history')
-        self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
         self.signal_change_position.emit('history')
         self.signal_history_event.emit()
 
@@ -397,7 +390,6 @@ class LaserScannerLogic(LogicBase):
             # clock frequency is not in status variables, set clock frequency
             self.set_clock_frequency()
             self._change_position('history')
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             self.signal_change_position.emit('history')
             self.signal_history_event.emit()
 
@@ -412,7 +404,6 @@ class LaserScannerLogic(LogicBase):
             # clock frequency is not in status variables, set clock frequency
             self.set_clock_frequency()
             self._change_position('history')
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             self.signal_change_position.emit('history')
             self.signal_history_event.emit()
 
@@ -767,10 +758,8 @@ class LaserScannerLogic(LogicBase):
                 if len(self.history) > self.max_history_length:
                     self.history.pop(0)
                 self.history_index = len(self.history) - 1
-                self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
+                #self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
                 return
-
-
 
         try:
             if self._custom_scan and self._custom_scan_mode.value < 2 :
@@ -839,7 +828,7 @@ class LaserScannerLogic(LogicBase):
         if self._scan_counter % self._custom_scan_sweeps_per_action == 0:
             self.kill_scanner()
             self.set_position(x = self._XYZ[0][int(self._xyz_counter[0])], y = self._XYZ[1][int(self._xyz_counter[1])], z = self._XYZ[2][int(self._xyz_counter[2])])                
-            self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
+            #self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
             self.start_scanner(tag = 'custom_scan')
     
     def custom_scan_xyz_process(self):
@@ -877,7 +866,7 @@ class LaserScannerLogic(LogicBase):
                 self.initialise_data_matrix()
     
     def custom_scan_xyz_stop(self):
-        self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
+        #self._confocal_logic.set_position(tag='laserscanner', x = self._current_x, y = self._current_y, z = self._current_z)
         self._custom_scan = False
         self._order_3_counter = 0
         self._confocal_logic.signal_custom_scan_stopped.emit()
@@ -939,15 +928,12 @@ class LaserScannerLogic(LogicBase):
             parameters['X_min'] = self._custom_scan_x_range[0]
             parameters['X_max'] = self._custom_scan_x_range[1]
             parameters['X_order'] = self._xyz_orders[0]
-            parameters['current_x'] = self._current_x
             parameters['Y_min'] = self._custom_scan_y_range[0]
             parameters['Y_max'] = self._custom_scan_y_range[1]
             parameters['Y_order'] = self._xyz_orders[1]
-            parameters['current_y'] = self._current_y
             parameters['Z_min'] = self._custom_scan_z_range[0]
             parameters['Z_max'] = self._custom_scan_z_range[1]
             parameters['Z_order'] = self._xyz_orders[2]
-            parameters['current_z'] = self._current_z
             parameters['order_1_resolution'] = self._order_resolutions[0]
             parameters['order_2_resolution'] = self._order_resolutions[1]
             parameters['order_3_resolution'] = self._order_resolutions[2]
