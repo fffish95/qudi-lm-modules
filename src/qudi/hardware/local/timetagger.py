@@ -13,24 +13,6 @@ class TT(Base):
     tagger:
         module.Class: 'local.timetagger.timetagger.TT'
         options:
-            hist:
-                channel: 1
-                trigger_channel: 5
-                bins_width: 1000    #ps
-                number_of_bins: 500
-            
-            corr:
-                channel_start: 1
-                channel_stop: 2
-                bins_width: 1000
-                number_of_bins: 1000
-
-            counter:
-                channels: [1, 2]
-                bins_width: 1000000000000
-                n_values: 100
-            
-            
             channels_params:
                 ch1:
                     delay: 0
@@ -49,24 +31,14 @@ class TT(Base):
                     - 'ch3'
                     - 'ch4'
             
-            conditional_filter:
-                trigger:
-                    - 'ch1'
-                    - 'ch2'
-                filtered:
-                    - 'ch8'
             
 
     """
     # config options
-    _hist = ConfigOption('hist', False, missing='warn')
-    _corr = ConfigOption('corr', False, missing='warn')
-    _counter = ConfigOption('counter', False, missing='warn')
     _test_channels = ConfigOption('test_channels', False, missing='nothing')
-    _channels_params = ConfigOption('channels_params', False, missing='warn')
+    _channels_params = ConfigOption('channels_params', False, missing='nothing')
     _maxDumps =  ConfigOption('maxDumps', -1, missing='nothing')
     _combined_channels = ConfigOption('combined_channels', missing = 'error')
-    _conditonal_filter = ConfigOption('conditional_filter', False, missing='nothing')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -90,34 +62,26 @@ class TT(Base):
                 self.tagger.setTestSignal(i, True)
 
         # set specified in the cfg channels params
-        for channel, params in self._channels_params.items():
-            channel = self.channel_codes[channel]
-            if 'delay' in params.keys():
-                self.delay_channel(delay=params['delay'], channel = channel)
-            if 'triggerLevel' in params.keys():
-                self.tagger.setTriggerLevel(channel, params['triggerLevel'])
+        if self._channels_params:
+            for channel, params in self._channels_params.items():
+                channel = self.channel_codes[channel]
+                if 'delay' in params.keys():
+                    self.delay_channel(delay=params['delay'], channel = channel)
+                if 'triggerLevel' in params.keys():
+                    self.tagger.setTriggerLevel(channel, params['triggerLevel'])
 
         #Create combine channels:
-        for key, channels in self._combined_channels.items():
+        self.__combined_channels = self._combined_channels.copy()
+        for key, channels in self.__combined_channels.items():
             channels_array = []
             for i in range(len(channels)):
                 channels_array.append(self.channel_codes[channels[i]])
-            self._combined_channels.update({key:self.combiner(channels_array)})
+            self.__combined_channels.update({key:self.combiner(channels_array)})
 
         #Append Channel codes with combined channels
-        for chn in self._combined_channels.keys():
-            self.channel_codes[chn]=self._combined_channels[chn].getChannel()
-        
-        #Set Conditional Filter
-        if self._conditonal_filter:
-            self.trigger_channels_array = []
-            self.filtered_channels_array = []
-            for chn in self._conditonal_filter['trigger']:
-                self.trigger_channels_array.append(self.channel_codes[chn])
-            for chn in self._conditonal_filter['filtered']:
-                self.filtered_channels_array.append(self.channel_codes[chn])
-            self.tagger.setConditionalFilter(trigger = self.trigger_channels_array, filtered = self.filtered_channels_array)
-
+        for chn in self.__combined_channels.keys():
+            self.channel_codes[chn]=self.__combined_channels[chn].getChannel()
+    
 
     def on_deactivate(self):
         freeTimeTagger(self.tagger)
@@ -134,14 +98,11 @@ class TT(Base):
         get data by .getData()
         get time index by .getIndex()
         """
-        for key, value in kwargs.items():
-            if key in self._hist.keys():
-                self._hist.update({key:int(value)})
         return Histogram(self.tagger,
-                            self._hist['channel'],
-                            self._hist['trigger_channel'],
-                            self._hist['bins_width'],
-                            self._hist['number_of_bins'])
+                            kwargs['channel'],
+                            kwargs['trigger_channel'],
+                            kwargs['bins_width'],
+                            kwargs['number_of_bins'])
     
     def correlation(self, **kwargs):  
         """
@@ -154,14 +115,11 @@ class TT(Base):
         get normalized g2 by .getDataNormalized()
         get time index by .getIndex()
         """
-        for key, value in kwargs.items():
-            if key in self._corr.keys():
-                self._corr.update({key:value})
         return Correlation(self.tagger,
-                            self._corr['channel_stop'],
-                            self._corr['channel_start'],
-                            self._corr['bins_width'],
-                            self._corr['number_of_bins'])
+                            kwargs['channel_stop'],
+                            kwargs['channel_start'],
+                            kwargs['bins_width'],
+                            kwargs['number_of_bins'])
 
 
     def delay_channel(self, channel, delay):
@@ -172,18 +130,6 @@ class TT(Base):
         """
         self.tagger.setInputDelay(delay=delay, channel=channel)
 
-        
-    def countrate(self, channels=None):
-        """
-        Measures the average count rate on one or more channels.
-        get data by .getData(). The output is 1D_array giving the counts per second on the specified channels starting from the very first tag arriving after the instantiation or last call to clear() of the measurement.
-        """
-        if channels == None:
-            channels = self._counter['channels']
-        
-        return Countrate(self.tagger,
-                                channels)
-
     def counter(self, **kwargs):
         """
         Using a circular buffer to record countrate.
@@ -191,14 +137,14 @@ class TT(Base):
         get data by .getData(). The output is 2D_array giving the current values of the circular buffer for each channel.
         """
         for key, value in kwargs.items():
-            if key in self._counter.keys():
-                self._counter.update({key:value})
             if key == 'refresh_rate' and value != None:
-                self._counter['bins_width'] = int(1e12/value)
+                bins_width = int(1e12/value)
+            if key == 'bins_width' and value != None:
+                bins_width = value
         return Counter(self.tagger,
-                                self._counter['channels'],
-                                self._counter['bins_width'],
-                                self._counter['n_values'])
+                                kwargs['channels'],
+                                bins_width,
+                                kwargs['n_values'])
 
 
     def combiner(self, channels):
@@ -225,8 +171,6 @@ class TT(Base):
         """
         Writes the time-tag-stream into a file in a binary format with a lossless compression.
         """
-        if apdChans is None:
-            apdChans = self._counter["channels"]
         if filteredChans == []:
             self.tagger.setConditionalFilter(trigger=[], filtered=[])
         else:
