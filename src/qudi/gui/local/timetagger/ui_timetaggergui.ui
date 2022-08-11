@@ -1,0 +1,1105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TimeTaggerMainWindow</class>
+ <widget class="QMainWindow" name="TimeTaggerMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1315</width>
+    <height>860</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>150</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::DefaultContextMenu</enum>
+  </property>
+  <property name="windowTitle">
+   <string>qudi: TimeTagger</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="maximumSize">
+    <size>
+     <width>3000</width>
+     <height>2000</height>
+    </size>
+   </property>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1315</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionSave_images"/>
+    <addaction name="actionSave_configuration"/>
+    <addaction name="actionLoad_configuration"/>
+    <addaction name="separator"/>
+    <addaction name="action_Exit"/>
+   </widget>
+   <widget class="QMenu" name="menu_Options">
+    <property name="title">
+     <string>O&amp;ptions</string>
+    </property>
+    <addaction name="action_Settings"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionAutocorrelation_view"/>
+    <addaction name="actionHistogram_view"/>
+    <addaction name="actionWriteFiles_view"/>
+   </widget>
+   <addaction name="menu_File"/>
+   <addaction name="menuView"/>
+   <addaction name="menu_Options"/>
+  </widget>
+  <widget class="QToolBar" name="toolbar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>24</width>
+     <height>24</height>
+    </size>
+   </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonTextUnderIcon</enum>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="action_start"/>
+   <addaction name="action_stop"/>
+  </widget>
+  <widget class="QDockWidget" name="Autocorr_DockWidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>500</width>
+     <height>333</height>
+    </size>
+   </property>
+   <property name="windowTitle">
+    <string>Autocorrelation</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_2">
+    <layout class="QGridLayout" name="gridLayout_4">
+     <item row="0" column="0">
+      <widget class="ScanPlotWidget" name="autocorr_PlotWidget">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>293</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>178</width>
+         <height>100000</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>Settings</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="7" column="0">
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>550</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="3" column="0">
+         <widget class="QComboBox" name="corr_channels_ComboBox"/>
+        </item>
+        <item row="4" column="0">
+         <layout class="QFormLayout" name="formLayout">
+          <item row="1" column="0">
+           <widget class="QLabel" name="corrBinWidthLabel">
+            <property name="text">
+             <string>Bin Width</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="corrBinWidthDoubleSpinBox">
+            <property name="suffix">
+             <string> ps</string>
+            </property>
+            <property name="decimals">
+             <number>0</number>
+            </property>
+            <property name="minimum">
+             <double>1.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>100000000.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="6" column="0">
+         <widget class="QGroupBox" name="corrCrosshair_groupBox">
+          <property name="title">
+           <string>Crosshair</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="1" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QLabel" name="corrCrosshairXlabel">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>X:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="corrCrosshairXdoubleSpinBox">
+               <property name="minimum">
+                <double>-9999999999999999635896294965248.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>9999999999999999583119736832.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QRadioButton" name="corrCrosshair_radioButton">
+               <property name="text">
+                <string>on/off</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="corrCrosshairSize_label">
+               <property name="text">
+                <string>Size</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="corrCrosshairSizedoubleSpinBox">
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.001000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QLabel" name="corrCrosshairYlabel">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Y:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="corrCrosshairYdoubleSpinBox">
+               <property name="minimum">
+                <double>-9999999999999.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>999999999999999.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QRadioButton" name="corr_accumulate_RadioButton">
+          <property name="text">
+           <string>Accumulate</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroup</string>
+          </attribute>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item>
+           <widget class="QLabel" name="corrRecordLengthLabel">
+            <property name="text">
+             <string>Record Length</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="corrRecordLengthDoubleSpinBox">
+            <property name="suffix">
+             <string> μs</string>
+            </property>
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <double>99999999999999996863366107917975552.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="0">
+         <widget class="QRadioButton" name="corr_refresh_RadioButton">
+          <property name="text">
+           <string>Refresh</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroup</string>
+          </attribute>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QToolBar" name="historybar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>24</width>
+     <height>24</height>
+    </size>
+   </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonTextUnderIcon</enum>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionBack"/>
+   <addaction name="actionForward"/>
+  </widget>
+  <widget class="QDockWidget" name="Histogram_DockWidget">
+   <property name="windowTitle">
+    <string>Histogram</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_5">
+    <layout class="QGridLayout" name="gridLayout_10">
+     <item row="0" column="0">
+      <widget class="ScanPlotWidget" name="hist_PlotWidget">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>293</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>178</width>
+         <height>100000</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>Settings</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="6" column="0">
+         <widget class="QGroupBox" name="histCrosshair_groupBox">
+          <property name="title">
+           <string>Crosshair</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_2">
+           <item row="1" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QLabel" name="histCrosshairXlabel">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>X:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="histCrosshairXdoubleSpinBox">
+               <property name="minimum">
+                <double>-10000000000000000905969664.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>99999999999999991611392.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_8">
+             <item>
+              <widget class="QRadioButton" name="histCrosshair_radioButton">
+               <property name="text">
+                <string>on/off</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="histCrosshairSize_label">
+               <property name="text">
+                <string>Size</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="histCrosshairSizedoubleSpinBox">
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.001000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <item>
+              <widget class="QLabel" name="histCrosshairYlabel">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Y:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="histCrosshairYdoubleSpinBox">
+               <property name="minimum">
+                <double>-9999999999999999583119736832.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>99999999999999996863366107917975552.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QLabel" name="histBinWidthLabel">
+            <property name="text">
+             <string>Record Length</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="histRecordLengthDoubleSpinBox">
+            <property name="suffix">
+             <string> μs</string>
+            </property>
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="minimum">
+             <double>0.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>9999999999999999635896294965248.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="3" column="0">
+         <widget class="QComboBox" name="hist_channels_ComboBox"/>
+        </item>
+        <item row="0" column="0">
+         <widget class="QRadioButton" name="hist_refresh_RadioButton">
+          <property name="text">
+           <string>Refresh</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroup_2</string>
+          </attribute>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <layout class="QFormLayout" name="formLayout_5">
+          <item row="1" column="0">
+           <widget class="QLabel" name="histRecordLengthLabel">
+            <property name="text">
+             <string>Bin Width</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="histBinWidthDoubleSpinBox">
+            <property name="suffix">
+             <string> ps</string>
+            </property>
+            <property name="decimals">
+             <number>0</number>
+            </property>
+            <property name="minimum">
+             <double>1.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>100000000.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="7" column="0">
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>550</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="1" column="0">
+         <widget class="QRadioButton" name="hist_accumulate_RadioButton">
+          <property name="text">
+           <string>Accumulate</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroup_2</string>
+          </attribute>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="WriteFiles_DockWidget">
+   <property name="windowTitle">
+    <string>WriteFiles</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_6">
+    <layout class="QGridLayout" name="gridLayout_9">
+     <item row="0" column="0">
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QFormLayout" name="formLayout_6">
+         <item row="0" column="0">
+          <widget class="QLabel" name="writeintofileTag_label">
+           <property name="text">
+            <string>Tag</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="writeintofileTagLineEdit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="placeholderText">
+            <string>SampleName</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Expanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>48</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="writeChannels_PushButton">
+           <property name="text">
+            <string>Channels</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="measure_time_label">
+           <property name="text">
+            <string>Measure time</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="measure_time_OutputWidget">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="measure_time_unit_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>s</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="total_size_label">
+           <property name="text">
+            <string>Total size</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="total_size_OutputWidget">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="total_size_unit_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>GB</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="writeintoFile_PushButton">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Write into File</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <action name="action_Settings">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/configure.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/configure.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Settings</string>
+   </property>
+  </action>
+  <action name="action_Exit">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/application-exit.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/application-exit.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Close</string>
+   </property>
+  </action>
+  <action name="action_start">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/start-counter.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/start-counter.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Start</string>
+   </property>
+   <property name="toolTip">
+    <string>Shortcut: Shift+S</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+S</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WidgetWithChildrenShortcut</enum>
+   </property>
+  </action>
+  <action name="action_stop">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/stop-counter.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/stop-counter.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Shortcut: Shift+E</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+E</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WindowShortcut</enum>
+   </property>
+  </action>
+  <action name="actionBack">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-previous.svgz</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-previous.svgz</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Back</string>
+   </property>
+   <property name="toolTip">
+    <string>Go back in scan history. Shortcut:Ctrl+Z</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="actionForward">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-next.svgz</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/go-next.svgz</iconset>
+   </property>
+   <property name="text">
+    <string>Forward</string>
+   </property>
+   <property name="toolTip">
+    <string>Go forward in scan history. Shortcut: Ctrl+R</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionSave_images">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Save images</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::TextHeuristicRole</enum>
+   </property>
+  </action>
+  <action name="actionSave_configuration">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-save.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Save configuration</string>
+   </property>
+  </action>
+  <action name="actionLoad_configuration">
+   <property name="icon">
+    <iconset>
+     <normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-open.svgz</normaloff>../../../../../../../../Development/qudi_pyside/pyside2/src/qudi/qudi/core/artwork/icons/document-open.svgz</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Load configuration</string>
+   </property>
+  </action>
+  <action name="actionHistogram_view">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Histogram</string>
+   </property>
+   <property name="toolTip">
+    <string>Shortcut: Alt+H</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+H</string>
+   </property>
+  </action>
+  <action name="actionWriteFiles_view">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;WriteFiles</string>
+   </property>
+   <property name="toolTip">
+    <string>Shortcut: Alt+W</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+W</string>
+   </property>
+  </action>
+  <action name="actionAutocorrelation_view">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Autocorr</string>
+   </property>
+   <property name="toolTip">
+    <string>Shortcut: Alt+A</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+A</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ScanPlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>qudi.util.qtwidgets.scan_plotwidget</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>action_Exit</sender>
+   <signal>triggered()</signal>
+   <receiver>TimeTaggerMainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>531</x>
+     <y>347</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionHistogram_view</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>Histogram_DockWidget</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>249</x>
+     <y>547</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>Histogram_DockWidget</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>actionHistogram_view</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>249</x>
+     <y>547</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionWriteFiles_view</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>WriteFiles_DockWidget</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>249</x>
+     <y>765</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>WriteFiles_DockWidget</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>actionWriteFiles_view</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>249</x>
+     <y>765</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionAutocorrelation_view</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>Autocorr_DockWidget</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>258</x>
+     <y>210</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>Autocorr_DockWidget</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>actionAutocorrelation_view</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>258</x>
+     <y>210</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
+ </buttongroups>
+</ui>
