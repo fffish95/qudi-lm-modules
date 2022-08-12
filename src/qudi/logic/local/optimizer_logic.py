@@ -48,7 +48,7 @@ class OptimizerLogic(LogicBase):
     hw_settle_time = StatusVar('settle_time', 0.1)
     optimization_sequence = StatusVar(default=['XY', 'Z'])
     do_surface_subtraction = StatusVar('surface_subtraction', False)
-    surface_subtr_scan_offset = StatusVar('surface_subtraction_offset', 1e-6)
+    surface_subtr_scan_offset = StatusVar('surface_subtraction_offset', 1e-6) # not do z optimization at peak but at mountainside
     opt_channel = StatusVar('optimization_channel', 0)
 
     # "private" signals to keep track of activities here in the optimizer logic

@@ -35,6 +35,7 @@ class ScannerTiltInterfuse(ConfocalScannerInterface):
         """ Initialisation performed during activation of the module.
         """
         self._scanning_device = self.confocalscanner1()
+        self._channel_labelsandunits = copy.deepcopy(self._scanning_device._channel_labelsandunits)
 
         self.tilt_variable_ax = 1
         self.tilt_variable_ay = 1
