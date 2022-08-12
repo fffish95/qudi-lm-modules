@@ -212,6 +212,8 @@ class TimetaggerSettingsWidget(QtWidgets.QWidget):
         self.update_hist_channels_display()
 
     def corr_channels_delete(self):
+        if len(self._corr_params) == 1: # Will cause problem, if _****_params is empty; there will be no stored information about binwidth and binnumbers.
+            return
         key = self._corr_del_button_hashmap[self.sender()]['key']
         layout = self._corr_del_button_hashmap[self.sender()]['layout']
 
@@ -219,6 +221,8 @@ class TimetaggerSettingsWidget(QtWidgets.QWidget):
         self.deleteItemsOfLayout(layout)
 
     def hist_channels_delete(self):
+        if len(self._hist_params) == 1: # Will cause problem, if _****_params is empty; there will be no stored information about binwidth and binnumbers.
+            return
         key = self._hist_del_button_hashmap[self.sender()]['key']
         layout = self._hist_del_button_hashmap[self.sender()]['layout']
 

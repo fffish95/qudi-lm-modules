@@ -123,19 +123,15 @@ class TTGui(GuiBase):
 
         # Get the plots for the display from the logic
 
-        if len(self._timetagger_logic._autocorr_params) != 0:
-            raw_data_autocorr_x = self._timetagger_logic.autocorr_x
-            raw_data_autocorr_y = self._timetagger_logic.autocorr_y[self._autocorr_channel, :]
-        else:
-            raw_data_autocorr_x = np.arange(0,1000,1)
-            raw_data_autocorr_y = np.zeros((1,1000))
 
-        if len(self._timetagger_logic._histogram_params) != 0:
-            raw_data_histogram_x = self._timetagger_logic.histogram_x
-            raw_data_histogram_y = self._timetagger_logic.histogram_y[self._histogram_channel, :]
-        else:
-            raw_data_histogram_x = np.arange(0,1000,1)
-            raw_data_histogram_y = np.zeros((1,1000))
+        raw_data_autocorr_x = self._timetagger_logic.autocorr_x
+        raw_data_autocorr_y = self._timetagger_logic.autocorr_y[self._autocorr_channel, :]
+
+
+
+        raw_data_histogram_x = self._timetagger_logic.histogram_x
+        raw_data_histogram_y = self._timetagger_logic.histogram_y[self._histogram_channel, :]
+
 
 
         # Load the plots in the display
@@ -205,21 +201,17 @@ class TTGui(GuiBase):
         self._mw.hist_channels_ComboBox.activated.connect(self.update_histogram_channel)
 
         # Take the default values from logic:
-        if len(self._timetagger_logic._autocorr_params) != 0:
-            self._mw.corrBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'])
-            Record_length = float(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'] * list(self._timetagger_logic._autocorr_params.values())[0]['number_of_bins']/1000) 
-            self._mw.corrRecordLengthDoubleSpinBox.setValue(Record_length)
-        else:
-            self._mw.corrBinWidthDoubleSpinBox.cleanText()
-            self._mw.corrRecordLengthDoubleSpinBox.cleanText()
 
-        if len(self._timetagger_logic._histogram_params) != 0:
-            self._mw.histBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'])
-            Record_length = float(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'] * list(self._timetagger_logic._histogram_params.values())[0]['number_of_bins']/1000) 
-            self._mw.histRecordLengthDoubleSpinBox.setValue(Record_length)
-        else:
-            self._mw.histBinWidthDoubleSpinBox.cleanText()
-            self._mw.histRecordLengthDoubleSpinBox.cleanText()
+        self._mw.corrBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'])
+        Record_length = float(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'] * list(self._timetagger_logic._autocorr_params.values())[0]['number_of_bins']/1000) 
+        self._mw.corrRecordLengthDoubleSpinBox.setValue(Record_length)
+
+
+
+        self._mw.histBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'])
+        Record_length = float(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'] * list(self._timetagger_logic._histogram_params.values())[0]['number_of_bins']/1000) 
+        self._mw.histRecordLengthDoubleSpinBox.setValue(Record_length)
+
         
         if self._timetagger_logic._autocorr_accumulate:
             self._mw.corr_accumulate_RadioButton.setChecked(True)
@@ -374,10 +366,10 @@ class TTGui(GuiBase):
 
     def update_corrRecordlength(self):
         corrRecordlength = self._mw.corrRecordLengthDoubleSpinBox.value()
-        if len(self._timetagger_logic._autocorr_params) != 0:
-            corrNumberofbins = int(corrRecordlength * 1000 / list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'])
-            for key, value in self._timetagger_logic._autocorr_params.items():
-                value['number_of_bins'] = corrNumberofbins
+
+        corrNumberofbins = int(corrRecordlength * 1000 / list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'])
+        for key, value in self._timetagger_logic._autocorr_params.items():
+            value['number_of_bins'] = corrNumberofbins
 
     def update_histBinwidth(self):
         histBinwidth = self._mw.histBinWidthDoubleSpinBox.value()
@@ -386,10 +378,10 @@ class TTGui(GuiBase):
 
     def update_histRecordlength(self):
         histRecordlength = self._mw.histRecordLengthDoubleSpinBox.value()
-        if len(self._timetagger_logic._histogram_params) != 0:
-            histNumberofbins = int(histRecordlength * 1000 / list(self._timetagger_logic._histogram_params.values())[0]['bins_width'])
-            for key, value in self._timetagger_logic._histogram_params.items():
-                value['number_of_bins'] = histNumberofbins
+
+        histNumberofbins = int(histRecordlength * 1000 / list(self._timetagger_logic._histogram_params.values())[0]['bins_width'])
+        for key, value in self._timetagger_logic._histogram_params.items():
+            value['number_of_bins'] = histNumberofbins
 
     def update_writeintofileTag(self):
         if len(self._mw.writeintofileTagLineEdit.text()) != 0:
@@ -478,15 +470,15 @@ class TTGui(GuiBase):
         self._mw.histCrosshairYdoubleSpinBox.setEnabled(False)
 
     def refresh_plots(self):
-        if len(self._timetagger_logic._autocorr_params) != 0:
-            _data_autocorr_x = self._timetagger_logic.autocorr_x
-            _data_autocorr_y = self._timetagger_logic.autocorr_y[self._autocorr_channel, :]
-            self.autocorr_plot.setData(_data_autocorr_x,_data_autocorr_y)
+
+        _data_autocorr_x = self._timetagger_logic.autocorr_x
+        _data_autocorr_y = self._timetagger_logic.autocorr_y[self._autocorr_channel, :]
+        self.autocorr_plot.setData(_data_autocorr_x,_data_autocorr_y)
         
-        if len(self._timetagger_logic._histogram_params) != 0:
-            _data_histogram_x = self._timetagger_logic.histogram_x
-            _data_histogram_y = self._timetagger_logic.histogram_y[self._histogram_channel, :]
-            self.histogram_plot.setData(_data_histogram_x,_data_histogram_y)
+
+        _data_histogram_x = self._timetagger_logic.histogram_x
+        _data_histogram_y = self._timetagger_logic.histogram_y[self._histogram_channel, :]
+        self.histogram_plot.setData(_data_histogram_x,_data_histogram_y)
 
 
     def refresh_writeintofilestatus(self):
@@ -674,21 +666,15 @@ class TTGui(GuiBase):
 
     def history_event(self):
         # Take the default values from logic:
-        if len(self._timetagger_logic._autocorr_params) != 0:
-            self._mw.corrBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'])
-            Record_length = float(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'] * list(self._timetagger_logic._autocorr_params.values())[0]['number_of_bins']/1000) 
-            self._mw.corrRecordLengthDoubleSpinBox.setValue(Record_length)
-        else:
-            self._mw.corrBinWidthDoubleSpinBox.cleanText()
-            self._mw.corrRecordLengthDoubleSpinBox.cleanText()
+        self._mw.corrBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'])
+        Record_length = float(list(self._timetagger_logic._autocorr_params.values())[0]['bins_width'] * list(self._timetagger_logic._autocorr_params.values())[0]['number_of_bins']/1000) 
+        self._mw.corrRecordLengthDoubleSpinBox.setValue(Record_length)
 
-        if len(self._timetagger_logic._histogram_params) != 0:
-            self._mw.histBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'])
-            Record_length = float(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'] * list(self._timetagger_logic._histogram_params.values())[0]['number_of_bins']/1000) 
-            self._mw.histRecordLengthDoubleSpinBox.setValue(Record_length)
-        else:
-            self._mw.histBinWidthDoubleSpinBox.cleanText()
-            self._mw.histRecordLengthDoubleSpinBox.cleanText()
+
+        self._mw.histBinWidthDoubleSpinBox.setValue(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'])
+        Record_length = float(list(self._timetagger_logic._histogram_params.values())[0]['bins_width'] * list(self._timetagger_logic._histogram_params.values())[0]['number_of_bins']/1000) 
+        self._mw.histRecordLengthDoubleSpinBox.setValue(Record_length)
+
         
         if self._timetagger_logic._autocorr_accumulate:
             self._mw.corr_accumulate_RadioButton.setChecked(True)
