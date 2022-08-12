@@ -571,10 +571,13 @@ class TTGui(GuiBase):
         # the UI file.
         self._mw.autocorr_PlotWidget.addItem(self.autocorr_plot)
         self._mw.autocorr_PlotWidget.showGrid(x=True, y=True, alpha=0.8)
+        self._mw.autocorr_PlotWidget.setLabel('left', 'Coincidence', units='a.u.')
+        self._mw.autocorr_PlotWidget.setLabel('bottom', 'time', units='μs')
 
         self._mw.hist_PlotWidget.addItem(self.histogram_plot)
         self._mw.hist_PlotWidget.showGrid(x=True, y=True, alpha=0.8)
-
+        self._mw.hist_PlotWidget.setLabel('left', 'Signal', units='a.u.')
+        self._mw.hist_PlotWidget.setLabel('bottom', 'time', units='μs')
         # Set Cursor
         if self._autocorr_crosshair:
             self._mw.corrCrosshair_radioButton.setChecked(True)

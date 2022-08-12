@@ -364,21 +364,45 @@
            <widget class="QComboBox" name="channel_ComboBox"/>
           </item>
           <item>
-           <widget class="QSpinBox" name="cb_max_SpinBox">
+           <widget class="ScienDSpinBox" name="cb_max_SpinBox">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
-             </sizepolicy>
+              </sizepolicy>
+            </property>
+            <property name="maximumSize">
+              <size>
+              <width>100</width>
+              <height>16777215</height>
+              </size>
+            </property>
+            <property name="mouseTracking">
+              <bool>true</bool>
+            </property>
+            <property name="acceptDrops">
+              <bool>true</bool>
+            </property>
+            <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="suffix">
+              <string/>
+            </property>
+            <property name="decimals">
+              <number>2</number>
             </property>
             <property name="minimum">
-             <number>0</number>
+              <double>-1000000000.000000000000000</double>
             </property>
             <property name="maximum">
-             <number>999999999</number>
+              <double>1000000000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+              <double>0.010000000000000</double>
             </property>
             <property name="value">
-             <number>100000</number>
+              <double>100000.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -444,12 +468,45 @@
            </layout>
           </item>
           <item>
-           <widget class="QSpinBox" name="cb_min_SpinBox">
+           <widget class="ScienDSpinBox" name="cb_min_SpinBox">
+            <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+              </sizepolicy>
+            </property>
+            <property name="maximumSize">
+              <size>
+              <width>100</width>
+              <height>16777215</height>
+              </size>
+            </property>
+            <property name="mouseTracking">
+              <bool>true</bool>
+            </property>
+            <property name="acceptDrops">
+              <bool>true</bool>
+            </property>
+            <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="suffix">
+              <string/>
+            </property>
+            <property name="decimals">
+              <number>2</number>
+            </property>
+            <property name="minimum">
+              <double>-1000000000.000000000000000</double>
+            </property>
             <property name="maximum">
-             <number>999999999</number>
+              <double>1000000000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+              <double>0.010000000000000</double>
             </property>
             <property name="value">
-             <number>100</number>
+              <double>1.000000000000000</double>
             </property>
            </widget>
           </item>
