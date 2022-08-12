@@ -128,7 +128,7 @@
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
          </property>
          <property name="suffix">
-          <string>c/s</string>
+          <string/>
          </property>
          <property name="decimals">
           <number>2</number>
@@ -138,6 +138,9 @@
          </property>
          <property name="maximum">
           <double>1000000000.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.010000000000000</double>
          </property>
          <property name="value">
           <double>100000.000000000000000</double>
@@ -237,7 +240,7 @@
           <bool>true</bool>
          </property>
          <property name="suffix">
-          <string>c/s</string>
+          <string/>
          </property>
          <property name="decimals">
           <number>2</number>
@@ -247,6 +250,9 @@
          </property>
          <property name="maximum">
           <double>1000000000.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.010000000000000</double>
          </property>
          <property name="value">
           <double>1000.000000000000000</double>
@@ -1284,7 +1290,7 @@
             <bool>true</bool>
            </property>
            <property name="suffix">
-            <string>c/s</string>
+            <string/>
            </property>
            <property name="decimals">
             <number>2</number>
@@ -1294,6 +1300,9 @@
            </property>
            <property name="maximum">
             <double>1000000000.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.010000000000000</double>
            </property>
            <property name="value">
             <double>100000.000000000000000</double>
@@ -1399,7 +1408,7 @@
             <bool>true</bool>
            </property>
            <property name="suffix">
-            <string>c/s</string>
+            <string/>
            </property>
            <property name="decimals">
             <number>2</number>
@@ -1409,6 +1418,9 @@
            </property>
            <property name="maximum">
             <double>10000000.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.010000000000000</double>
            </property>
            <property name="value">
             <double>1000.000000000000000</double>

@@ -35,6 +35,7 @@ from qudi.core.statusvariable import StatusVar
 from qudi.util.mutex import Mutex
 from qudi.core.module import LogicBase
 from PySide2 import QtCore
+import copy
 
 
 class CustomScanMode(Enum):
@@ -312,7 +313,10 @@ class LaserScannerLogic(LogicBase):
         self._save_logic = self.savelogic()
 
         # Reads in the maximal scanning range. 
-        self.a_range = self._scanning_device.get_position_range()[3]
+        self.a_range = self._scanning_device.get_position_range()[3]        
+
+        # Reads in channel labels and units. 
+        self._channel_labelsandunits = copy.deepcopy(self._scanning_device._channel_labelsandunits)
 
         # restore history in StatusVariables
         self.load_history_config()
@@ -945,7 +949,9 @@ class LaserScannerLogic(LogicBase):
                                      fit_freq_vals = self.plot_x,
                                      fit_count_vals = fit_y,
                                      cbar_range=colorscale_range,
-                                     percentile_range=percentile_range,)
+                                     percentile_range=percentile_range,
+                                     label = self._channel_labelsandunits[ch]['label'],
+                                     unit = self._channel_labelsandunits[ch]['unit'])
                 for n, ch in enumerate(self.get_scanner_count_channels())}
         # Save the image data and figure
         for n, ch in enumerate(self.get_scanner_count_channels()):
@@ -973,7 +979,9 @@ class LaserScannerLogic(LogicBase):
                                      fit_freq_vals = self.plot_x,
                                      fit_count_vals = fit_y,
                                      cbar_range=colorscale_range,
-                                     percentile_range=percentile_range,)
+                                     percentile_range=percentile_range,
+                                     label = self._channel_labelsandunits[ch]['label'],
+                                     unit = self._channel_labelsandunits[ch]['unit'])
                 for n, ch in enumerate(self.get_scanner_count_channels())}
         # Save the image data and figure
         for n, ch in enumerate(self.get_scanner_count_channels()):
@@ -1022,7 +1030,7 @@ class LaserScannerLogic(LogicBase):
 
         return 0
 
-    def draw_figure(self, matrix_data, freq_data, count_data, fit_freq_vals, fit_count_vals, cbar_range=None, percentile_range=None):
+    def draw_figure(self, matrix_data, freq_data, count_data, fit_freq_vals, fit_count_vals, cbar_range=None, percentile_range=None, label = None, unit = None):
         """ Draw the summary figure to save with the data.
 
         @param: list cbar_range: (optional) [color_scale_min, color_scale_max].
@@ -1059,7 +1067,7 @@ class LaserScannerLogic(LogicBase):
             fit_freq_vals = fit_freq_vals / 1000
             prefix_index = prefix_index + 1
 
-        mw_prefix = prefix[prefix_index]
+        mw_prefix = prefix[prefix_index+2]
 
         # Rescale matrix counts data with SI prefix
         prefix_index = 0
@@ -1083,7 +1091,7 @@ class LaserScannerLogic(LogicBase):
         if max(fit_count_vals) > 0:
             ax_mean.plot(fit_freq_vals, fit_count_vals, marker='None')
 
-        ax_mean.set_ylabel('Fluorescence (' + counts_prefix + 'c/s)')
+        ax_mean.set_ylabel(label + ' (' + counts_prefix + unit + ')')
         ax_mean.set_xlim(np.min(freq_data), np.max(freq_data))
 
         matrixplot = ax_matrix.imshow(
@@ -1102,7 +1110,7 @@ class LaserScannerLogic(LogicBase):
             interpolation='nearest')
 
         ax_matrix.set_xlabel('Frequency (' + mw_prefix + 'Hz)')
-        ax_matrix.set_ylabel('Scan #')
+        ax_matrix.set_ylabel('Scan lines')
 
         # Adjust subplots to make room for colorbar
         fig.subplots_adjust(right=0.8)
@@ -1111,8 +1119,8 @@ class LaserScannerLogic(LogicBase):
         cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
 
         # Draw colorbar
-        cbar = fig.colorbar(matrixplot, cax=cbar_ax)
-        cbar.set_label('Fluorescence (' + cbar_prefix + 'c/s)')
+        cbar = fig.colorbar(matrixplot, cax=cbar_ax, fraction=0.046, pad=0.08, shrink=0.75)
+        cbar.set_label(label +' (' + cbar_prefix + unit + ')')
 
         # remove ticks from colorbar for cleaner image
         cbar.ax.tick_params(which='both', length=0)

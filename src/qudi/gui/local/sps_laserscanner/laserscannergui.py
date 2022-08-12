@@ -219,10 +219,12 @@ class LaserscannerGui(GuiBase):
         # the UI file.
         self._mw.trace_plot_y_sum_ViewWidget.addItem(self.trace_plot_y_sum_image)
         self._mw.trace_plot_y_sum_ViewWidget.showGrid(x=True, y=True, alpha=0.8)
+        self._mw.trace_plot_y_sum_ViewWidget.setLabel('bottom', 'Frequency', units='MHz')
 
 
         self._mw.trace_plot_y_ViewWidget.addItem(self.trace_plot_y_image)
         self._mw.trace_plot_y_ViewWidget.showGrid(x=True, y=True, alpha=0.8)
+        self._mw.trace_plot_y_ViewWidget.setLabel('bottom', 'Frequency', units='MHz')
 
         self._mw.trace_scan_matrix_ViewWidget.addItem(self.trace_scan_matrix_image)
 
@@ -394,7 +396,6 @@ class LaserscannerGui(GuiBase):
         self._mw.cb_ViewWidget.addItem(self.scan_cb)
         self._mw.cb_ViewWidget.hideAxis('bottom')
         self._mw.cb_ViewWidget.hideAxis('left')
-        self._mw.cb_ViewWidget.setLabel('right', 'Fluorescence', units='c/s')
 
         # all other components:
         self.enable_scan_actions()
@@ -617,7 +618,8 @@ class LaserscannerGui(GuiBase):
 
     def refresh_trace_plots(self):        
         """ Refresh the trace-matrix image """
-
+        self._mw.trace_plot_y_sum_ViewWidget.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['unit'])
+        self._mw.trace_plot_y_ViewWidget.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['unit'])
         trace_image_data = self._scanning_logic.trace_scan_matrix[:self._scanning_logic._scan_counter, :, 4 + self._channel]
         cb_range = self.get_cb_range()
         
@@ -870,6 +872,7 @@ class LaserscannerGui(GuiBase):
         and higherst value in the image or predefined ranges. Note that you can
         invert the colorbar if the lower border is bigger then the higher one.
         """
+        self._mw.cb_ViewWidget.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['unit'])
         cb_range = self.get_cb_range()
         self.scan_cb.set_limits(cb_range[0], cb_range[1])
 

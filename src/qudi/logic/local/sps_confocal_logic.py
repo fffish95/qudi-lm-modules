@@ -32,6 +32,7 @@ from qudi.core.module import LogicBase
 from qudi.util.mutex import Mutex
 from qudi.core.connector import Connector
 from qudi.core.statusvariable import StatusVar
+import copy
 
 
 class OldConfigFileError(Exception):
@@ -319,6 +320,8 @@ class ConfocalLogic(LogicBase):
         self.x_range = self._scanning_device.get_position_range()[0]
         self.y_range = self._scanning_device.get_position_range()[1]
         self.z_range = self._scanning_device.get_position_range()[2]
+        # Reads in channel labels and units. 
+        self._channel_labelsandunits = copy.deepcopy(self._scanning_device._channel_labelsandunits)
 
         # restore history in StatusVariables
         self.load_history_config()
@@ -974,7 +977,9 @@ class ConfocalLogic(LogicBase):
                                      scan_axis=axes,
                                      cbar_range=colorscale_range,
                                      percentile_range=percentile_range,
-                                     crosshair_pos=crosshair_pos)
+                                     crosshair_pos=crosshair_pos,
+                                     label = self._channel_labelsandunits[ch]['label'],
+                                     unit = self._channel_labelsandunits[ch]['unit'])
                 for n, ch in enumerate(self.get_scanner_count_channels())}
 
         # Save the image data and figure
@@ -1088,7 +1093,9 @@ class ConfocalLogic(LogicBase):
                                      scan_axis=axes,
                                      cbar_range=colorscale_range,
                                      percentile_range=percentile_range,
-                                     crosshair_pos=crosshair_pos)
+                                     crosshair_pos=crosshair_pos,
+                                     label = self._channel_labelsandunits[ch]['label'],
+                                     unit = self._channel_labelsandunits[ch]['unit'])
                 for n, ch in enumerate(self.get_scanner_count_channels())}
 
         # Save the image data and figure
@@ -1138,7 +1145,7 @@ class ConfocalLogic(LogicBase):
         self.signal_depth_data_saved.emit()
         return
 
-    def draw_figure(self, data, image_extent, scan_axis=None, cbar_range=None, percentile_range=None,  crosshair_pos=None):
+    def draw_figure(self, data, image_extent, scan_axis=None, cbar_range=None, percentile_range=None,  crosshair_pos=None, label=None, unit = None):
         """ Create a 2-D color map figure of the scan image.
 
         @param: array data: The NxM array of count values from a scan with NxM pixels.
@@ -1243,8 +1250,8 @@ class ConfocalLogic(LogicBase):
                         )
 
         # Draw the colorbar
-        cbar = plt.colorbar(cfimage, shrink=0.8)#, fraction=0.046, pad=0.08, shrink=0.75)
-        cbar.set_label('Fluorescence (' + c_prefix + 'c/s)')
+        cbar = plt.colorbar(cfimage, fraction=0.046, pad=0.08, shrink=0.75)
+        cbar.set_label(label + ' (' + c_prefix + unit + ')')
 
         # remove ticks from colorbar for cleaner image
         cbar.ax.tick_params(which=u'both', length=0)

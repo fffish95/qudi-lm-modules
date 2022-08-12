@@ -65,20 +65,21 @@ class NITTConfocalScanner(Base):
                 - [-10,10]
 
     """
-
     nicard = Connector(interface = "NICard")
     timetagger = Connector(interface = "TT")
-
     # config options
     _scanner_ao_channels = ConfigOption('scanner_ao_channels', missing='error')
     _scanner_voltage_ranges = ConfigOption('scanner_voltage_ranges', missing='error')
     _scanner_position_ranges = ConfigOption('scanner_position_ranges', missing='error')
     _scanner_clock_channel = ConfigOption('scanner_clock_channel', missing='error') 
     _pixel_clock_channel = ConfigOption('pixel_clock_channel', None, missing='nothing')
-    _timetagger_channels = ConfigOption('timetagger_channels', missing='error')
-    _timetagger_cbm_begin_channel = ConfigOption('timetagger_cbm_begin_channel', missing='error')
+    _timetagger_channels = ConfigOption('timetagger_channels', list(), missing='info')
+    _timetagger_cbm_begin_channel = ConfigOption('timetagger_cbm_begin_channel', missing='info')
     _scanner_ai_channels = ConfigOption('scanner_ai_channels', list(), missing='nothing')
     _ai_voltage_ranges = ConfigOption('ai_voltage_ranges', None, missing='nothing')
+    _channel_labelsandunits = ConfigOption('channel_labelsandunits', missing='error')
+
+
 
 
     def on_activate(self):

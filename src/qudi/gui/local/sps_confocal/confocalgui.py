@@ -266,7 +266,7 @@ class ConfocalGui(GuiBase):
         self._mw.depth_refocus_ViewWidget_2.addItem(self.depth_refocus_fit_image)
 
         self._mw.depth_refocus_ViewWidget_2.setLabel('bottom', 'Z position', units='m')
-        self._mw.depth_refocus_ViewWidget_2.setLabel('left', 'Fluorescence', units='c/s')
+
 
         # Add crosshair to the xy refocus scan
         self._mw.xy_refocus_ViewWidget_2.toggle_crosshair(True, movable=False)
@@ -610,12 +610,10 @@ class ConfocalGui(GuiBase):
         self.depth_cb = ColorBarItem(cmap = self.cmap)
         self._mw.xy_cb_ViewWidget.addItem(self.xy_cb)
         self._mw.xy_cb_ViewWidget.hideAxis('bottom')
-        self._mw.xy_cb_ViewWidget.setLabel('left', 'Fluorescence', units='c/s')
         self._mw.xy_cb_ViewWidget.setMouseEnabled(x=False, y=False)
 
         self._mw.depth_cb_ViewWidget.addItem(self.depth_cb)
         self._mw.depth_cb_ViewWidget.hideAxis('bottom')
-        self._mw.depth_cb_ViewWidget.setLabel('left', 'Fluorescence', units='c/s')
         self._mw.depth_cb_ViewWidget.setMouseEnabled(x=False, y=False)
 
         self._mw.sigPressKeyBoard.connect(self.keyPressEvent)
@@ -786,6 +784,7 @@ class ConfocalGui(GuiBase):
         and higherst value in the image or predefined ranges. Note that you can
         invert the colorbar if the lower border is bigger then the higher one.
         """
+        self._mw.xy_cb_ViewWidget.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._mw.xy_channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._mw.xy_channel_ComboBox.currentText())]['unit'])
         cb_range = self.get_xy_cb_range()
         self.xy_cb.set_limits(cb_range[0], cb_range[1])
 
@@ -796,6 +795,7 @@ class ConfocalGui(GuiBase):
         and higherst value in the image or predefined ranges. Note that you can
         invert the colorbar if the lower border is bigger then the higher one.
         """
+        self._mw.depth_cb_ViewWidget.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._mw.depth_channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._mw.depth_channel_ComboBox.currentText())]['unit'])
         cb_range = self.get_depth_cb_range()
         self.depth_cb.set_limits(cb_range[0], cb_range[1])
 
@@ -1522,6 +1522,7 @@ class ConfocalGui(GuiBase):
         ##########
         # Updating the xy optimizer image with color scaling based only on nonzero data
         xy_optimizer_image = self._optimizer_logic.xy_refocus_image[:, :, 3 + self._optimizer_logic.opt_channel]
+        self._mw.depth_refocus_ViewWidget_2.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._osd.opt_channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._osd.opt_channel_ComboBox.currentText())]['unit'])
 
         # If the Z scan is done first, then the XY image has only zeros and there is nothing to draw.
         if np.count_nonzero(xy_optimizer_image) > 0:
