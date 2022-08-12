@@ -132,18 +132,14 @@ class TimetaggerPull(QtCore.QObject):
             self.histogram_tasks = list()
             for key, value in self._parentclass._histogram_params.items():
                 self.histogram_tasks.append(self._parentclass._timetagger.histogram(**value))
-            if len(self._parentclass._autocorr_params) != 0:
-                self.autocorr_all_data = np.zeros((len(self._parentclass._autocorr_params), list(self._parentclass._autocorr_params.values())[0]['number_of_bins']))
-                self.autocorr_x = self.autocorr_tasks[0].getIndex()/1e3
-            else:
-                self.autocorr_all_data = np.zeros((1,1000))
-                self.autocorr_x = np.arange(0,1000,1)
-            if len(self._parentclass._histogram_params) != 0:
-                self.histogram_all_data = np.zeros((len(self._parentclass._histogram_params), list(self._parentclass._histogram_params.values())[0]['number_of_bins']))
-                self.histogram_x = self.histogram_tasks[0].getIndex()/1e3
-            else:
-                self.histogram_all_data = np.zeros((1,1000))
-                self.histogram_x = np.arange(0,1000,1)
+
+            self.autocorr_all_data = np.zeros((len(self._parentclass._autocorr_params), list(self._parentclass._autocorr_params.values())[0]['number_of_bins']))
+            self.autocorr_x = self.autocorr_tasks[0].getIndex()/1e3
+
+
+            self.histogram_all_data = np.zeros((len(self._parentclass._histogram_params), list(self._parentclass._histogram_params.values())[0]['number_of_bins']))
+            self.histogram_x = self.histogram_tasks[0].getIndex()/1e3
+
             # every _refresh_time (ms) send out the signal
             self.timer.timeout.connect(self._measure_thread)
             self.timer.start(self._parentclass._refresh_time)
