@@ -19,7 +19,6 @@ class TT(Base):
                     # trigger_level: 2 # range 0.5V-2.5V, with 50 Ohms impedance usually half input Volts is read out
 
             test_channels: [1,2,8] #[1,2,3,4,5,6,7]#[1,2, 4, -4]
-            maxDumps: -1
             combined_channels: # Alias for combined channels must not start with 'ch'
                 DetectorChans:
                     - 'ch1'
@@ -37,7 +36,6 @@ class TT(Base):
     # config options
     _test_channels = ConfigOption('test_channels', False, missing='nothing')
     _channels_params = ConfigOption('channels_params', False, missing='nothing')
-    _maxDumps =  ConfigOption('maxDumps', -1, missing='nothing')
     _combined_channels = ConfigOption('combined_channels', missing = 'error')
 
     def __init__(self, **kwargs):
