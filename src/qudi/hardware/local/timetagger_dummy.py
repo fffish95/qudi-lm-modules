@@ -1,5 +1,3 @@
-from TimeTagger import createTimeTagger, freeTimeTagger, Correlation, Histogram, Counter, CountBetweenMarkers, FileWriter, Countrate, Combiner, TimeDifferences
-from qudi.core.configoption import ConfigOption
 from qudi.core.module import Base
 
 
@@ -10,8 +8,8 @@ class TT(Base):
 
     Example config for copy-paste: 
 
-    tagger:
-        module.Class: 'local.timetagger.timetagger.TT' 
+    tagger_dummy: # Use tagger_dummy for sps_setup when you don't have timetagger connected.
+        module.Class: 'local.timetagger_dummy.TT'
 
     """
 
