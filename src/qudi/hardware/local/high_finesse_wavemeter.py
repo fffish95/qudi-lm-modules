@@ -28,10 +28,10 @@ import ctypes   # is a foreign function library for Python. It provides C
                 # or shared libraries. It can be used to wrap these libraries
                 # in pure Python.
 
-from interface.wavemeter_interface import WavemeterInterface
-from core.module import Base
-from core.configoption import ConfigOption
-from core.util.mutex import Mutex
+from qudi.interface.wavemeter_interface import WavemeterInterface
+from qudi.core.module import Base
+from qudi.core.configoption import ConfigOption
+from qudi.util.mutex import Mutex
 
 
 class HardwarePull(QtCore.QObject):
@@ -77,7 +77,7 @@ class HardwarePull(QtCore.QObject):
 
 
 
-class HighFinesseWavemeter(Base,WavemeterInterface):
+class HighFinesseWavemeter(WavemeterInterface):
     """ Hardware class to controls a High Finesse Wavemeter.
 
     Example config for copy-paste:
@@ -166,17 +166,8 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
         # return data type of the SetDeviationMode function of the wavemeter
         self._wavemeterdll.SetDeviationMode.restype = ctypes.c_bool
         # parameter data type of the SetDeviationMode function of the wavemeter
-        self._wavemeterdll.SetDeviationMode.argtypes = [ctypes.c_ushort]
+        self._wavemeterdll.SetDeviationMode.argtypes = [ctypes.c_long]
 
-        # return data type of the GetDeviationReference function of the wavemeter
-        self._wavemeterdll.GetDeviationReference.restype = ctypes.c_double
-        # parameter data type of the GetDeviationMode function of the wavemeter
-        self._wavemeterdll.GetDeviationReference.argtypes = [ctypes.c_double]
-
-        # return data type of the SetDeviationReference function of the wavemeter
-        self._wavemeterdll.SetDeviationReference.restype = ctypes.c_double
-        # parameter data type of the SetDeviationMode function of the wavemeter
-        self._wavemeterdll.SetDeviationReference.argtypes = [ctypes.c_ushort]
 
         # create an indepentent thread for the hardware communication
         self.hardware_thread = QtCore.QThread()
@@ -195,7 +186,7 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
 
     def on_deactivate(self):
         if self.module_state() != 'idle' and self.module_state() != 'deactivated':
-            self.stop_acqusition()
+            self.stop_acquisition()
         self.hardware_thread.quit()
         self.sig_handle_timer.disconnect()
         self._hardware_pull.sig_wavelength.disconnect()
@@ -219,7 +210,7 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
         self._current_wavelength = wavelength1
         self._current_wavelength2 = wavelength2
 
-    def start_acqusition(self):
+    def start_acquisition(self):
         """ Method to start the wavemeter software.
 
         @return int: error code (0:OK, -1:error)
@@ -228,12 +219,12 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
         """
 
         # first check its status
-        if self.module_state() == 'running':
+        if self.module_state() == 'locked':
             self.log.error('Wavemeter busy')
             return -1
 
 
-        self.module_state.run()
+        self.module_state.lock()
         # actually start the wavemeter
         self._wavemeterdll.Operation(self._cCtrlStartMeasurment) #starts measurement
 
@@ -242,7 +233,7 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
 
         return 0
 
-    def stop_acqusition(self):
+    def stop_acquisition(self):
         """ Stops the Wavemeter from measuring and kills the thread that queries the data.
 
         @return int: error code (0:OK, -1:error)
@@ -255,7 +246,7 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
             # stop the measurement thread
             self.sig_handle_timer.emit(False)
             # set status to idle again
-            self.module_state.stop()
+            self.module_state.unlock()
 
         # Stop the actual wavemeter measurement
         self._wavemeterdll.Operation(self._cCtrlStop)
@@ -309,3 +300,46 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
         self._measurement_timing=float(timing)
         return 0
 
+
+    def get_reference_course(self, channel = 1) -> str:
+        """
+        Arguments: channel
+        Returns: the string corresponing to the reference set on the WLM.
+        For example, constant reference: '619.1234'
+        Or a sawtooth with a center at '619.1234 + 0.001 * sawtooth(t/10)'
+        """
+        string_buffer = ctypes.create_string_buffer(1024)
+        xp = ctypes.cast(string_buffer, ctypes.POINTER(ctypes.c_char))
+        self._wavemeterdll.GetPIDCourseNum.restype = ctypes.c_long
+        self._wavemeterdll.GetPIDCourseNum.argtypes = [ctypes.c_long, xp]
+        self._wavemeterdll.GetPIDCourseNum(channel, string_buffer)
+        return string_buffer.value
+
+    def set_reference_course(self,function:str, channel = 1):
+        """
+        Arguments: the string corresponing to the reference set on the WLM.
+        For example, constant reference: '619.1234'
+        Or a sawtooth with a center at '619.1234 + 0.001 * sawtooth(t/10)'
+        Returns: None
+        """ 
+        if '+' and '*' in function:
+            if function.index('+') < function.index('*'):
+                center_wavelength,  scan_params= function.split('+', 1)
+                scan_amplitude, scan_function = scan_params.split('*', 1)
+                self.reference_course_center = float(center_wavelength)
+                self.reference_course_amplitude = float(scan_amplitude)
+            else:
+                raise Exception("Center wavelength should go before scan parameters.\nPlease, comply to the format: c_lambda + amplitude * func (t / scan_speed)")
+        else:
+            self.reference_course_center = float(function)
+            self.reference_course_amplitude = None
+        if self.reference_course_center < 0:
+            raise Exception("No signal at the wavelengthmeter!")
+        else:
+            string_buffer = ctypes.create_string_buffer(1024)
+            xp = ctypes.cast(string_buffer, ctypes.POINTER(ctypes.c_char))
+            self._wavemeterdll.SetPIDCourseNum.restype = ctypes.c_long
+            self._wavemeterdll.SetPIDCourseNum.argtypes = [ctypes.c_long, xp]
+            string_buffer.value = "{}".format(function).encode()
+            self._wavemeterdll.SetPIDCourseNum(channel, string_buffer)
+        #!TODO split function into center_wavelength , scanning function.!
