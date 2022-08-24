@@ -38,7 +38,7 @@ class HardwarePull(QtCore.QObject):
     """ Helper class for running the hardware communication in a separate thread. """
 
     # signal to deliver the wavelength to the parent class
-    sig_wavelength = QtCore.Signal(float, float)
+    sig_wavelength = QtCore.Signal(float, bool)
 
     def __init__(self, parentclass):
         super().__init__()
@@ -67,13 +67,17 @@ class HardwarePull(QtCore.QObject):
         """
 
         # update as long as the state is busy
-        if self._parentclass.module_state() == 'running':
+        if self._parentclass.module_state() == 'locked':
             # get the current wavelength from the wavemeter
-            temp1=float(self._parentclass._wavemeterdll.GetWavelength(0))
-            temp2=float(self._parentclass._wavemeterdll.GetWavelength(0))
+            wavelength=float(self._parentclass._wavemeterdll.GetWavelength(0))
+            setpoint = self._parentclass.get_reference_course()
+            if self._parentclass.get_deviation_mode() and abs(setpoint - wavelength) < 0.00003:
+                is_stable = True
+            else:
+                is_stable = False
 
             # send the data to the parent via a signal
-            self.sig_wavelength.emit(temp1, temp2)
+            self.sig_wavelength.emit(wavelength, is_stable)
 
 
 
@@ -102,9 +106,12 @@ class HighFinesseWavemeter(WavemeterInterface):
     _cCtrlStop                   = ctypes.c_uint16(0x00)
     # this following flag is modified to override every existing file
     _cCtrlStartMeasurment        = ctypes.c_uint16(0x1002)
-    _cReturnWavelangthAir        = ctypes.c_long(0x0001)
+    
     _cReturnWavelangthVac        = ctypes.c_long(0x0000)
-
+    _cReturnWavelangthAir        = ctypes.c_long(0x0001)
+    _cReturnFrequency        = ctypes.c_long(0x0002)
+    _cReturnWavenumber        = ctypes.c_long(0x0003)
+    _cReturnPhotonEnergy        = ctypes.c_long(0x0004)
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
@@ -115,6 +122,7 @@ class HighFinesseWavemeter(WavemeterInterface):
         # the current wavelength read by the wavemeter in nm (vac)
         self._current_wavelength = 0.0
         self._current_wavelength2 = 0.0
+        self._is_stable = False
 
 
     def on_activate(self):
@@ -168,6 +176,17 @@ class HighFinesseWavemeter(WavemeterInterface):
         # parameter data type of the SetDeviationMode function of the wavemeter
         self._wavemeterdll.SetDeviationMode.argtypes = [ctypes.c_long]
 
+        # return data type of the GetOperationState function of the wavemeter
+        self._wavemeterdll.GetOperationState.restype = ctypes.c_ushort
+        # parameter data type of the GetOperationState function of the wavemeter
+        self._wavemeterdll.GetOperationState.argtypes = [ctypes.c_ushort]
+
+        # return data type of the SetExposureMode function of the wavemeter
+        self._wavemeterdll.SetExposureMode.restype = ctypes.c_long
+        # parameter data type of the SetExposureMode function of the wavemeter
+        self._wavemeterdll.SetExposureMode.argtypes = [ctypes.c_bool]
+
+
 
         # create an indepentent thread for the hardware communication
         self.hardware_thread = QtCore.QThread()
@@ -204,11 +223,11 @@ class HighFinesseWavemeter(WavemeterInterface):
     # Methods of the main class
     #############################################
 
-    def handle_wavelength(self, wavelength1, wavelength2):
+    def handle_wavelength(self, wavelength, is_stable):
         """ Function to save the wavelength, when it comes in with a signal.
         """
-        self._current_wavelength = wavelength1
-        self._current_wavelength2 = wavelength2
+        self._current_wavelength = wavelength
+        self._is_stable = is_stable
 
     def start_acquisition(self):
         """ Method to start the wavemeter software.
@@ -222,7 +241,6 @@ class HighFinesseWavemeter(WavemeterInterface):
         if self.module_state() == 'locked':
             self.log.error('Wavemeter busy')
             return -1
-
 
         self.module_state.lock()
         # actually start the wavemeter
@@ -248,40 +266,81 @@ class HighFinesseWavemeter(WavemeterInterface):
             # set status to idle again
             self.module_state.unlock()
 
+        # turn off regulation
+        self.set_deviation_mode(False)
+
         # Stop the actual wavemeter measurement
         self._wavemeterdll.Operation(self._cCtrlStop)
 
         return 0
+    
+    def set_exposure_mode(self, mode):
+        self._wavemeterdll.SetExposureMode(mode)
 
-    def get_current_wavelength(self, kind="air"):
-        """ This method returns the current wavelength.
 
-        @param string kind: can either be "air" or "vac" for the wavelength in air or vacuum, respectively.
-
-        @return float: wavelength (or negative value for errors)
+    def is_measuring(self):
         """
-        if kind in "air":
-            # for air we need the convert the current wavelength. The Wavemeter DLL already gives us a nice tool do do so.
-            return float(self._wavemeterdll.ConvertUnit(self._current_wavelength,self._cReturnWavelangthVac,self._cReturnWavelangthAir))
-        if kind in "vac":
-            # for vacuum just return the current wavelength
-            return float(self._current_wavelength)
-        return -2.0
-
-    def get_current_wavelength2(self, kind="air"):
-        """ This method returns the current wavelength of the second input channel.
-
-        @param string kind: can either be "air" or "vac" for the wavelength in air or vacuum, respectively.
-
-        @return float: wavelength (or negative value for errors)
+        self._wavemeterdll.GetOperationState(0) gives out:
+        0 for stoped
+        1 for Adjustment
+        2 for Measurement
         """
-        if kind in "air":
-            # for air we need the convert the current wavelength. The Wavemeter DLL already gives us a nice tool do do so.
-            return float(self._wavemeterdll.ConvertUnit(self._current_wavelength2,self._cReturnWavelangthVac,self._cReturnWavelangthAir))
-        if kind in "vac":
-            # for vacuum just return the current wavelength
-            return float(self._current_wavelength2)
-        return -2.0
+        return self._wavemeterdll.GetOperationState(0) == 2
+
+    
+
+    def get_current_wavelength(self):
+        """ This method returns the current wavelength in Vac.
+        """
+        return self._current_wavelength
+
+    def get_current_wavelength2(self):
+        pass
+
+
+    def convert_unit(self,value, from_ , to_):
+        """
+        Convert unit between:
+        'WavelengthVac'[nm], 
+        'WavelengthAir'[nm],
+        'Frequency'[THz],
+        'Wavenumber'[1/cm],
+        'PhotonEnergy'[eV]
+        """
+        if from_ in 'WavelengthVac':
+            _from_ =  self._cReturnWavelangthVac
+        elif from_ in 'WavelengthAir':
+            _from_ =  self._cReturnWavelangthAir
+        elif from_ in 'Frequency':
+            _from_ =  self._cReturnFrequency
+        elif from_ in 'Wavenumber':
+            _from_ = self._cReturnWavenumber
+        elif from_ in 'PhotonEnergy':
+            _from_ = self._cReturnPhotonEnergy
+        else:
+            return -2
+
+        if to_ in 'WavelengthVac':
+            _to_ =  self._cReturnWavelangthVac
+        elif to_ in 'WavelengthAir':
+            _to_ =  self._cReturnWavelangthAir
+        elif to_ in 'Frequency':
+            _to_ =  self._cReturnFrequency
+        elif to_ in 'Wavenumber':
+            _to_ = self._cReturnWavenumber
+        elif to_ in 'PhotonEnergy':
+            _to_ = self._cReturnPhotonEnergy
+        else:
+            return -2
+
+        return float(self._wavemeterdll.ConvertUnit(value,_from_,_to_))
+
+
+    def get_deviation_mode(self):
+        return self._wavemeterdll.GetDeviationMode(0)
+
+    def set_deviation_mode(self, mode):
+        self._wavemeterdll.SetDeviationMode(mode)
 
     def get_timing(self):
         """ Get the timing of the internal measurement thread.
@@ -313,33 +372,21 @@ class HighFinesseWavemeter(WavemeterInterface):
         self._wavemeterdll.GetPIDCourseNum.restype = ctypes.c_long
         self._wavemeterdll.GetPIDCourseNum.argtypes = [ctypes.c_long, xp]
         self._wavemeterdll.GetPIDCourseNum(channel, string_buffer)
-        return string_buffer.value
+        return float(string_buffer.value)
+    
 
-    def set_reference_course(self,function:str, channel = 1):
+    def set_reference_course(self, reference, channel = 1):
         """
-        Arguments: the string corresponing to the reference set on the WLM.
-        For example, constant reference: '619.1234'
-        Or a sawtooth with a center at '619.1234 + 0.001 * sawtooth(t/10)'
+        Arguments: the reference set on the WLM.
         Returns: None
         """ 
-        if '+' and '*' in function:
-            if function.index('+') < function.index('*'):
-                center_wavelength,  scan_params= function.split('+', 1)
-                scan_amplitude, scan_function = scan_params.split('*', 1)
-                self.reference_course_center = float(center_wavelength)
-                self.reference_course_amplitude = float(scan_amplitude)
-            else:
-                raise Exception("Center wavelength should go before scan parameters.\nPlease, comply to the format: c_lambda + amplitude * func (t / scan_speed)")
-        else:
-            self.reference_course_center = float(function)
-            self.reference_course_amplitude = None
-        if self.reference_course_center < 0:
+
+        if reference < 0:
             raise Exception("No signal at the wavelengthmeter!")
         else:
             string_buffer = ctypes.create_string_buffer(1024)
             xp = ctypes.cast(string_buffer, ctypes.POINTER(ctypes.c_char))
             self._wavemeterdll.SetPIDCourseNum.restype = ctypes.c_long
             self._wavemeterdll.SetPIDCourseNum.argtypes = [ctypes.c_long, xp]
-            string_buffer.value = "{}".format(function).encode()
+            string_buffer.value = "{}".format(reference).encode()
             self._wavemeterdll.SetPIDCourseNum(channel, string_buffer)
-        #!TODO split function into center_wavelength , scanning function.!
