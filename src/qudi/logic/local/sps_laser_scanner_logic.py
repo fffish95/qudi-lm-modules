@@ -225,8 +225,6 @@ class LaserScannerLogic(LogicBase):
         self._scan_counter = 0
         self.stopRequested = False
         self._custom_scan = False
-        self._power_record = False
-        self._lines_power = []
         self._move_to_start = True
 
 
