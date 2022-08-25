@@ -331,6 +331,7 @@ class NICard(Base):
             for i, chn in enumerate(channels):
                 chn = chn.lower()
                 chn_name = '/{0}/{1}'.format(self._device_name, chn)
+                print(chn_name)
                 task.do_channels.add_do_chan(lines=chn_name)
         except:
             self.terminate_all_tasks()
@@ -338,6 +339,28 @@ class NICard(Base):
             return -1
         self._do_task_handles.append(task)
         return task
+
+    def close_do_task(self, taskname = None):
+        if taskname is None:
+            self.log.error('Need taskname to close the do task.')
+            return -1        
+        else:
+            for i, task in enumerate(self._do_task_handles):
+                if task.name == taskname:
+                    try:
+                        if not task.is_task_done():
+                            task.stop()
+                        task.close()
+                    except ni.DaqError:
+                        self.log.exception('Error while trying to terminate do task {0}'.format(taskname))
+                        return -1
+                    finally:
+                        self._do_task_handles.remove(task)
+                        return 0
+                elif i == len(self._do_task_handles)-1:
+                    self.log.info('cant close do task {0}, because it does not exist'.format(taskname))
+                    return 0
+
 
 
     def create_di_task(self, taskname = None, channels = None):

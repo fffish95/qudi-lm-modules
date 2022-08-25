@@ -243,8 +243,9 @@ class HighFinesseWavemeter(WavemeterInterface):
             return -1
 
         self.module_state.lock()
-        # actually start the wavemeter
-        self._wavemeterdll.Operation(self._cCtrlStartMeasurment) #starts measurement
+        if not self.is_measuring():
+            # actually start the wavemeter
+            self._wavemeterdll.Operation(self._cCtrlStartMeasurment) #starts measurement
 
         # start the measuring thread
         self.sig_handle_timer.emit(True)
