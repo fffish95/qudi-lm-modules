@@ -196,8 +196,7 @@ class LaserScannerLogic(LogicBase):
     _oneline_scanner_frequency = StatusVar(default=20000)
     _goto_speed = StatusVar(default=100)
     _statusVariables = StatusVar(default=OrderedDict())
-    _current_custom_scan_mode = StatusVar(default=0)
-    _custom_scan_measurements_per_action = StatusVar(default=1)
+    _current_custom_scan_mode = StatusVar(default=[])
     max_history_length = StatusVar(default=10)
 
 
@@ -226,8 +225,6 @@ class LaserScannerLogic(LogicBase):
         self._scan_counter = 0
         self.stopRequested = False
         self._custom_scan = False
-        self._power_record = False
-        self._lines_power = []
         self._move_to_start = True
 
 
@@ -356,7 +353,6 @@ class LaserScannerLogic(LogicBase):
     def start_scanning(self, custom_scan = False, tag = 'logic'):
         self._scan_counter = 0
         self._custom_scan = custom_scan
-        self._lines_power = []
 
         self._move_to_start = True
         self.signal_start_scanning.emit(tag)
@@ -409,7 +405,8 @@ class LaserScannerLogic(LogicBase):
             return -1
         
         if self._custom_scan:
-            self._custom_scan_logic.start_scanner_handler(current = self._current_custom_scan_mode)
+            for mode in self._current_custom_scan_mode:
+                self._custom_scan_logic.start_scanner_handler(current = mode)
                 
 
         self.initialise_data_matrix()
@@ -572,7 +569,8 @@ class LaserScannerLogic(LogicBase):
                 self.signal_trace_plots_updated.emit()
                 self.signal_retrace_plots_updated.emit()
                 if self._custom_scan:
-                    self._custom_scan_logic.stop_scanner_handler(current = self._current_custom_scan_mode)
+                    for mode in self._current_custom_scan_mode:
+                        self._custom_scan_logic.stop_scanner_handler(current = mode)
                 # add new history entry
                 new_history = LaserScannerHistoryEntry(self)
                 new_history.snapshot(self)
@@ -583,10 +581,6 @@ class LaserScannerLogic(LogicBase):
                 return
 
         try:
-            if self._power_record:
-                line_power = self._custom_scan_logic.power_measurement()
-                self._lines_power.append(line_power)
-
             if self._move_to_start:
                 self._move_to_start = False
                 move_line = self._generate_ramp(self._scanning_device.get_scanner_position()[3], self._scan_range[0])
@@ -627,7 +621,8 @@ class LaserScannerLogic(LogicBase):
 
             
             if self._custom_scan:
-                self._custom_scan_logic.process_scanner_handler(current = self._current_custom_scan_mode, scan_counter = self._scan_counter, measurements_per_action = self._custom_scan_measurements_per_action)
+                for mode in self._current_custom_scan_mode:
+                    self._custom_scan_logic.process_scanner_handler(current = mode, scan_counter = self._scan_counter)
 
             if self._scan_counter >= self._number_of_repeats:
                 self.stop_scanning()
@@ -686,12 +681,12 @@ class LaserScannerLogic(LogicBase):
         parameters['Scan_speed'] = self._scan_speed
         parameters['Resolution'] = self._resolution
         parameters['Clock_Frequency_(Hz)'] = self._clock_frequency
-        parameters['Lines_power'] = self._lines_power
 
         if self._custom_scan:
-            parameters['custom_scan_mode'] = self._custom_scan_logic.CustomScanMode[self._current_custom_scan_mode]
-            for key, value in self._custom_scan.Params[self._current_custom_scan_mode].items():
-                parameters[key] = value
+            parameters['custom_scan_mode'] = []
+            for mode in self._current_custom_scan_mode:
+                parameters['custom_scan_mode'].append(self._custom_scan_logic.CustomScanMode[mode])
+                parameters[self._custom_scan_logic.CustomScanMode[mode]] = copy.deepcopy(self._custom_scan_logic.Params[mode])
 
         fit_y = np.zeros(len(self.plot_x))
         figs = {ch: self.draw_figure(matrix_data=self.trace_scan_matrix[:self._scan_counter, :, 4 + n],
