@@ -364,9 +364,7 @@ class LaserscannerGui(GuiBase):
         self._sd.rejected.connect(self.keep_former_settings)
         self._sd.buttonBox.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(self.update_settings)
 
-        self._cssd = LaserscannerCustomScanDialog(power_record = self._scanning_logic._power_record , PowerRecordParams = self._scanning_logic._custom_scan_logic.PowerRecordParams, 
-        current = self._scanning_logic._current_custom_scan_mode, measurements_per_action = self._scanning_logic._custom_scan_measurements_per_action, 
-        CustomScanMode = self._scanning_logic._custom_scan_logic.CustomScanMode, Params = self._scanning_logic._custom_scan_logic.Params)
+        self._cssd = LaserscannerCustomScanDialog( current_modes = self._scanning_logic._current_custom_scan_mode, CustomScanMode = self._scanning_logic._custom_scan_logic.CustomScanMode, Params = self._scanning_logic._custom_scan_logic.Params)
 
         self._cssd.button_box.accepted.connect(self.update_customscan_settings)
         self._cssd.button_box.rejected.connect(self.keep_former_customscan_settings)
@@ -397,21 +395,13 @@ class LaserscannerGui(GuiBase):
 
 
     def update_customscan_settings(self):
-        self._scanning_logic._power_record = self._cssd.settings_widget._power_record
-        self._scanning_logic._custom_scan_logic.PowerRecordParams = copy.deepcopy(self._cssd.settings_widget._powerrecord_params) 
-        self._scanning_logic._current_custom_scan_mode = self._cssd.settings_widget._current_customscan_mode
-        self._scanning_logic._custom_scan_measurements_per_action = self._cssd.settings_widget._measurements_per_action
+        self._scanning_logic._current_custom_scan_mode= self._cssd.settings_widget._current_modes
         self._scanning_logic._custom_scan_logic.Params = copy.deepcopy(self._cssd.settings_widget._params) 
 
     def keep_former_customscan_settings(self):
-        self._cssd.settings_widget._power_record = self._scanning_logic._power_record
-        self._cssd.settings_widget._powerrecord_params = copy.deepcopy(self._scanning_logic._custom_scan_logic.PowerRecordParams)
-        self._cssd.settings_widget._current_customscan_mode = self._scanning_logic._current_custom_scan_mode
-        self._cssd.settings_widget._measurements_per_action = self._scanning_logic._custom_scan_measurements_per_action
+        self._cssd.settings_widget._current_modes = self._scanning_logic._current_custom_scan_mode
         self._cssd.settings_widget._params = copy.deepcopy(self._scanning_logic._custom_scan_logic.Params)
 
-        self._cssd.settings_widget.measurements_per_action_lineedit.setText('{0}'.format(self._cssd.settings_widget._measurements_per_action))
-        self._cssd.settings_widget.customscan_mode_combobox.setCurrentIndex(self._cssd.settings_widget._current_customscan_mode)
         self._cssd.settings_widget.update_dynamic_layout()
 
     def update_channel(self, index):
