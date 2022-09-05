@@ -700,7 +700,7 @@ class LaserscannerGui(GuiBase):
         """ Update the display of cursor position
         """
         self._mw.cursorpositionDoubleSpinBox.setValue(int(self.main_cursor.value()))
-        self._scanning_logic.set_position(a=self._mw.cursorpositionDoubleSpinBox.value())
+        self._scanning_logic._current_a = self._mw.cursorpositionDoubleSpinBox.value()
         self._scanning_logic._change_position('gui')
 
     def setRegionCursorPosition(self):
@@ -708,8 +708,7 @@ class LaserscannerGui(GuiBase):
         self.set_scan_range()
 
     def setCursorPosition(self):
-
-        self._scanning_logic.set_position(a=self._mw.cursorpositionDoubleSpinBox.value())
+        self._scanning_logic._current_a = self._mw.cursorpositionDoubleSpinBox.value()
         self._scanning_logic._change_position('gui')
         self.main_cursor.setValue(self._mw.cursorpositionDoubleSpinBox.value())
 
