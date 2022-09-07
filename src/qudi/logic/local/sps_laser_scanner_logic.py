@@ -57,7 +57,7 @@ class LaserScannerHistoryEntry(QtCore.QObject):
         self.current_x = laserscanner._scanning_device.get_scanner_position()[0]
         self.current_y = laserscanner._scanning_device.get_scanner_position()[1]
         self.current_z = laserscanner._scanning_device.get_scanner_position()[2]
-        self.current_a = self.a_range[0]
+        self.current_a = (self.a_range[0] + self.a_range[1]) / 2
 
         # Sets the scan range of the image to the maximal scanning range
         self.scan_range = self.a_range
@@ -261,6 +261,8 @@ class LaserScannerLogic(LogicBase):
         closing_state = LaserScannerHistoryEntry(self)
         closing_state.snapshot(self)
         self._statusVariables['history_0'] = closing_state.serialize()
+        self._current_a = (self.a_range[0] + self.a_range[1]) / 2
+        self._change_position('on_deactivate')
         return 0
     
     def save_history_config(self):
