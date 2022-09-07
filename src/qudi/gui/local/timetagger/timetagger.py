@@ -385,9 +385,9 @@ class TTGui(GuiBase):
 
     def update_writeintofileTag(self):
         if len(self._mw.writeintofileTagLineEdit.text()) != 0:
-            self._timetagger_logic.writeintofile_params['sample_name'] = self._mw.writeintofileTagLineEdit.text()
+            self._timetagger_logic._writeintofile_params['sample_name'] = self._mw.writeintofileTagLineEdit.text()
         else:
-            self._timetagger_logic.writeintofile_params['sample_name'] = 'Sample1'
+            self._timetagger_logic._writeintofile_params['sample_name'] = 'Sample1'
 
     def stop_clicked(self):
         """ Stop the measurement if the state has switched to ready. """

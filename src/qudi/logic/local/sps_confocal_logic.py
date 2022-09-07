@@ -346,6 +346,8 @@ class ConfocalLogic(LogicBase):
         for state in reversed(self.history):
             self._statusVariables['history_{0}'.format(histindex)] = state.serialize()
             histindex += 1
+        self.set_position(tag='on_deactivate', x=(self.x_range[0] + self.x_range[1]) / 2, y=(self.y_range[0] + self.y_range[1]) / 2, z=(self.z_range[0] + self.z_range[1]) / 2, a=None)
+
         return 0
 
     def save_history_config(self):

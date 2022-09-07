@@ -119,38 +119,7 @@ class SPSCustonScanLogic(LogicBase):
         tools.delay(t_delay)
 
     def power_record_start_scanner(self):
-        self.Params[self._pr_modenum]['lines_power'] = []
-        tlPM = TLPM()        
-        # connect power meter
-        deviceCount = c_uint32()
-        tlPM.findRsrc(byref(deviceCount))
-        resourceName = create_string_buffer(1024)
-        tlPM.getRsrcName(c_int(0), resourceName)
-        tlPM.open(resourceName, c_bool(True), c_bool(False))
-
-        # move the motor to the measurement point 
-        self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['running_deg'])
-        # wait until done, the longest wait time = 90*(60/4)*3 = 4050 ms
-        
-        t_delay = int(abs(self.Params[self._pr_modenum]['running_deg'] - self.Params[self._pr_modenum]['idle_deg'])*(60/4)*3)
-        tools.delay(t_delay)
-
-        # measurement
-        power_measurements = []
-        count = 0 
-        while count < self.Params[self._pr_modenum]['averages']:
-            power =  c_double()
-            tlPM.measPower(byref(power))
-            power_measurements.append(power.value)
-            count+=1
-            tools.delay(1000)
-        tlPM.close()
-        # move the motor to the idle point 
-        self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
-        tools.delay(t_delay)
-        power_measurements = np.array(power_measurements)
-        value = np.mean(power_measurements)            
-        self.Params[self._pr_modenum]['lines_power'].append(value)
+        self.Params[self._pr_modenum]['lines_power'] = []      
     
 
     def EIT_start_scanner(self):
@@ -161,7 +130,6 @@ class SPSCustonScanLogic(LogicBase):
             set_wavelength = self._wavemeter.convert_unit(self.Params[self._eit_modenum]['start_frequency(THz)'], 'Frequency', 'WavelengthVac')
             self._wavemeter.set_reference_course(set_wavelength)
             self._wavemeter.set_deviation_mode(True)
-            self.Params[self._eit_modenum]['lines_frequency'].append(self.Params[self._eit_modenum]['start_frequency(THz)'])
             # wait until wavelength is stable
             if not self.Params[self._eit_modenum]['Background_subtract']:
                 timecounter = 0
@@ -177,7 +145,7 @@ class SPSCustonScanLogic(LogicBase):
 
         if self.Params[self._eit_modenum]['Background_subtract']:
             for param in self.Params:
-                param['measurements_per_action'] += 1 # add 1 measurement per action for background substract
+                param['measurements_per_action'] *= 2 # add 1 action for background substract
             self._shutter_task = self._nicard.create_do_task(taskname = 'shutter', channels = self.Params[self._eit_modenum]['shutter_channels'])
             # Stop deviation and automatical exposure time before close the shutter
             if self.Params[self._eit_modenum]['wavelength_ramp']:
@@ -317,7 +285,7 @@ class SPSCustonScanLogic(LogicBase):
     def EIT_stop_scanner(self):
         if self.Params[self._eit_modenum]['Background_subtract']:
             for param in self.Params:
-                param['measurements_per_action'] -= 1 # remove 1 measurement per action added before
+                param['measurements_per_action'] = int(param['measurements_per_action']) # remove 1 action added before
             # keep the shutter open
             self._nicard.write_task(task= self._shutter_task, data = True)
             self._nicard.close_do_task(taskname = 'shutter')
