@@ -23,8 +23,6 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 import numpy as np
 import re
 
-import PyDAQmx as daq
-
 from qudi.core.module import Base
 from qudi.core.configoption import ConfigOption
 import nidaqmx as ni
