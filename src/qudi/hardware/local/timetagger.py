@@ -16,7 +16,7 @@ class TT(Base):
             channels_params:
                 ch1:
                     delay: 0
-                    # trigger_level: 2 # range 0.5V-2.5V, with 50 Ohms impedance usually half input Volts is read out
+                    # triggerLevel: 2 # range 0.5V-2.5V, with 50 Ohms impedance usually half input Volts is read out
 
             test_channels: [1,2,8] #[1,2,3,4,5,6,7]#[1,2, 4, -4]
             combined_channels: # Alias for combined channels must not start with 'ch'
