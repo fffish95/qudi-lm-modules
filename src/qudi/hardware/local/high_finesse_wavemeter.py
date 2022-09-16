@@ -71,7 +71,7 @@ class HardwarePull(QtCore.QObject):
             # get the current wavelength from the wavemeter
             wavelength=float(self._parentclass._wavemeterdll.GetWavelength(0))
             setpoint = self._parentclass.get_reference_course()
-            if self._parentclass.get_deviation_mode() and abs(setpoint - wavelength) < 0.00003:
+            if self._parentclass.get_deviation_mode() and abs(setpoint - wavelength) < 0.00005:
                 is_stable = True
             else:
                 is_stable = False
