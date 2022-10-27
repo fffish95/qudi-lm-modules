@@ -315,7 +315,7 @@
           <item>
            <widget class="QDoubleSpinBox" name="corrRecordLengthDoubleSpinBox">
             <property name="suffix">
-             <string> μs</string>
+             <string> ns</string>
             </property>
             <property name="decimals">
              <number>3</number>
@@ -520,7 +520,7 @@
           <item>
            <widget class="QDoubleSpinBox" name="histRecordLengthDoubleSpinBox">
             <property name="suffix">
-             <string> μs</string>
+             <string> ns</string>
             </property>
             <property name="decimals">
              <number>3</number>
