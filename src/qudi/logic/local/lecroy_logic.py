@@ -113,7 +113,7 @@ class LecroyLogic(LogicBase):
         """ Function to save the wavelength, when it comes in with a signal.
         """
         # self._dataframe_y = dataframe
-        self._dataframe_x = np.linspace(0, len(dataframe), len(dataframe))
+        # self._dataframe_x = np.linspace(0, len(dataframe), len(dataframe))
 
 
         normIndex = np.where(dataframe == np.max(dataframe))
