@@ -282,9 +282,9 @@ class TimeTaggerLogic(LogicBase):
 
         # connect the signals in and out of the threaded object
         self.signal_timetagger_pull_handle_timer.connect(self._timetagger_pull.handle_timer)
-        self._timetagger_pull.sig_TimetaggerPull.connect(self.handle_timetaggerpull)
+        self._timetagger_pull.sig_TimetaggerPull.connect(self.handle_timetaggerpull, QtCore.Qt.DirectConnection)
         self.signal_timetagger_write_handle_timer.connect(self._timetagger_write.handle_timer)
-        self._timetagger_write.sig_TimetaggerWrite.connect(self.handle_timetaggerwrtie)
+        self._timetagger_write.sig_TimetaggerWrite.connect(self.handle_timetaggerwrtie, QtCore.Qt.DirectConnection)
 
         # start the event loop for the hardware
         self.timetaggerpull_thread.start()

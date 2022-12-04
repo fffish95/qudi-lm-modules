@@ -197,7 +197,7 @@ class HighFinesseWavemeter(WavemeterInterface):
 
         # connect the signals in and out of the threaded object
         self.sig_handle_timer.connect(self._hardware_pull.handle_timer)
-        self._hardware_pull.sig_wavelength.connect(self.handle_wavelength)
+        self._hardware_pull.sig_wavelength.connect(self.handle_wavelength, QtCore.Qt.DirectConnection)
 
         # start the event loop for the hardware
         self.hardware_thread.start()
