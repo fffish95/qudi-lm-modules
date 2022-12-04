@@ -2,11 +2,14 @@ import numpy as np
 import os
 import pyqtgraph as pg
 
+from qudi.core.configoption import ConfigOption
 from qudi.core.connector import Connector
 from qudi.core.module import GuiBase
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtWidgets
 from qudi.util import uic
-from qudi.util import config
+from qudi.util.colordefs import QudiPalettePale as palette
+from qudi.util.elecsus_plot import Elecsus
+
 
 
 class RbSpectrumMainWindow(QtWidgets.QMainWindow):
@@ -34,10 +37,22 @@ class RbSpectrumGui(GuiBase):
         module.Class: 'local.Rb_spectrum.Rb_spectrum_gui.RbSpectrumGui'
         connect:
             lecroylogic: 'lecroy_scope_logic'
+        options:
+            atom: 'Rb'
+            line: 'D1'
+            bfield: 0
+            temperature: 21
+            lcell: 0.1
     """
     
     # declare connectors
     lecroylogic = Connector(interface='LecroyLogic')
+    _elecsus = Elecsus()
+    _atom = ConfigOption('atom', default='Rb')
+    _line = ConfigOption('line', default='D1')
+    _bfield = ConfigOption('bfield', default = 0)
+    _temperature = ConfigOption('temperature', default = 21)
+    _lcell = ConfigOption('lcell', default = 0.1)
 
    
     def __init__(self, *args, **kwargs):
@@ -70,22 +85,31 @@ class RbSpectrumGui(GuiBase):
         self._mw.centralwidget.hide()
         self._mw.setDockNestingEnabled(True)
 
-
-        # Get the plots for the display from the logic
-        raw_dataframe_x = self._lecroy_logic._dataframe_x
-        raw_dataframe_y = self._lecroy_logic._dataframe_y
-
+        
 
         # Load the plots in the display
-        self._plot = pg.PlotDataItem(
-            raw_dataframe_x,
-            raw_dataframe_x)
+        self._plot = pg.PlotDataItem(pen=pg.mkPen(palette.c1, cosmetic=True),
+                                    clipToView=True,
+                                    downsampleMethod='subsample',
+                                    autoDownsample=True)
+        self._plot_elecsus = pg.PlotDataItem(pen=pg.mkPen(palette.c3, cosmetic=True),
+                                    clipToView=True,
+                                    downsampleMethod='subsample',
+                                    autoDownsample=True)
         # Add the display item to the VieWidget, which was defined in
         # the UI file.
         self._mw.PlotWidget.addItem(self._plot)
+        self._mw.PlotWidget.addItem(self._plot_elecsus)
         self._mw.PlotWidget.showGrid(x=True, y=True, alpha=0.8)
         self._mw.PlotWidget.setLabel('left', 'y', units='a.u.')
         self._mw.PlotWidget.setLabel('bottom', 'x', units='a.u.')
+
+        # Elecsus plot
+        _dataframe_x = self._lecroy_logic._dataframe_x
+        p_dict = {'Elem':self._atom, 'Dline':self._line, 'Bfield':self._bfield, 'T':self._temperature, 'lcell':self._lcell}
+        detuning_range = np.linspace(-10,10,self._lecroy_logic._channel_resolution)*1e3 # GHz to MHz conversion
+        [self.transmission] = self._elecsus.plotTheory(p_dict= p_dict, detuning_range=detuning_range)
+        self._plot_elecsus.setData(_dataframe_x, self.transmission.real)
 
         # Set the state button as ready button as default setting.
         self._mw.action_stop.setEnabled(False)
