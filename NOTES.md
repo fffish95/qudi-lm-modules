@@ -16,6 +16,9 @@ python -m pip install git+https://github.com/fffish95/qudi-core.git@main
 python -m pip install -e .
 qudi-install-kernel
 
+# qt platform error in linux system
+sudo apt-get install qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools
+
 ## install arduino-python3
 conda activate qudi-env
 python -m pip install --upgrade pip
@@ -44,4 +47,4 @@ do so (now or later) by using -c with the switch command. Example:
 
 Or undo this operation with:
 
-  git switch -
+  git switch -con
