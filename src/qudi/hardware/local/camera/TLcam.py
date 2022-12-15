@@ -21,11 +21,14 @@ class TLcam(CameraInterface):
             dll_location: 'C:\\Program Files\\Thorlabs\\Scientific Imaging\\ThorCam' # path to library file
             exposure: 0.2
             gain: 0.0
+            buffer_size: 0 # the longer the buffer size, the slower you can get the first frame, the smoother in the long term measurement.
+
 
     """
     _dll_location = ConfigOption('dll_location', missing='error')
     _exposure = ConfigOption('exposure', 200000)
     _gain = ConfigOption('gain', 0.0)
+    _buffer_size = ConfigOption('buffer_size', 0)
 
     def on_activate(self):
         """ Initialisation performed during activation of the module.
@@ -70,6 +73,11 @@ class TLcam(CameraInterface):
         @return bool: True if supported, False if not
         """
         return True
+    
+    def _setup_acquisition(self):
+        self._idx = 0
+        self._missed = 0
+        self._cam.setup_acquisition(nframes = self._buffer_size)
 
     def start_live_acquisition(self):
         """ Start a continuous acquisition
@@ -80,8 +88,8 @@ class TLcam(CameraInterface):
             self._acquiring = True
             self._live = True
             try:
-                self._cam.setup_acquisition()
-                self._cam.start_acquisition()
+                self._setup_acquisition()
+                self._cam.start_acquisition(nframes = self._buffer_size)
             except:
                 self._acquiring = False
                 self._live = False
@@ -127,9 +135,23 @@ class TLcam(CameraInterface):
 
         Each pixel might be a float, integer or sub pixels
         """
+        if self._missed != self._cam._buffer.missed:
+            self._idx += 1
+            self._missed = self._cam._buffer.missed
 
-        data, _ = self._cam._buffer.buffer[-1]
-        return data
+        data, _ = self._cam._buffer.buffer[self._idx]
+        if data is not None:
+            return data
+        else:
+            self.log.info("buffer run off, restarting.")
+            self._setup_acquisition()
+            self.wait_for_next_frame()
+            data, _ = self._cam._buffer.get_frame(idx = self._idx)
+            return data
+
+
+
+
     
     def set_exposure(self, exposure):
         """ Set the exposure time in seconds
