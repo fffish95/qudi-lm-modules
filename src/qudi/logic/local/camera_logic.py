@@ -20,16 +20,52 @@ You should have received a copy of the GNU Lesser General Public License along w
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import datetime
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 from PySide2 import QtCore
 from qudi.core.connector import Connector
 from qudi.core.configoption import ConfigOption
-from qudi.util.mutex import RecursiveMutex
 from qudi.core.module import LogicBase
+from qudi.util.mutex import Mutex
 
+
+class HardwarePull(QtCore.QObject):
+    """ Helper class for running the hardware communication in a separate thread. """
+
+    # signal to deliver the wavelength to the parent class
+    sig_dataframe = QtCore.Signal(object)
+
+    def __init__(self, parentclass):
+        super().__init__()
+
+        # remember the reference to the parent class to access functions ad settings
+        self._parentclass = parentclass
+
+
+    def handle_timer(self, state_change):
+        """ Threaded method that can be called by a signal from outside to start the timer.
+
+        @param bool state: (True) starts timer, (False) stops it.
+        """
+
+        if state_change:
+            self.timer = QtCore.QTimer()
+            # every _measurement_timing (ms) send out the signal
+            exposure = max(self._parentclass._exposure, self._parentclass._minimum_exposure_time)
+            self.timer.timeout.connect(self._measure_thread)
+            self.timer.start(1000*exposure)
+        else:
+            if hasattr(self, 'timer'):
+                self.timer.stop()
+
+    def _measure_thread(self):
+        """ The threaded method querying the data from the scope.
+        """
+
+        # update as long as the state is busy
+        if self._parentclass.module_state() == 'locked':
+            # get the current dataframe from the camera
+            Dataframe=self._parentclass._camera().get_acquired_data()
+            # send the data to the parent via a signal
+            self.sig_dataframe.emit(Dataframe)
 
 class CameraLogic(LogicBase):
     """
@@ -46,14 +82,15 @@ class CameraLogic(LogicBase):
     # signals
     sigFrameChanged = QtCore.Signal(object)
     sigAcquisitionFinished = QtCore.Signal()
+    sig_handle_timer = QtCore.Signal(bool)
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
-        self.__timer = None
-        self._thread_lock = RecursiveMutex()
+        self._thread_lock = Mutex()
         self._exposure = -1
         self._gain = -1
         self._last_frame = None
+
 
     def on_activate(self):
         """ Initialisation performed during activation of the module.
@@ -61,20 +98,37 @@ class CameraLogic(LogicBase):
         camera = self._camera()
         self._exposure = camera.get_exposure()
         self._gain = camera.get_gain()
+        # create an indepentent thread for the hardware communication
+        self.hardware_thread = QtCore.QThread()
 
-        self.__timer = QtCore.QTimer()
-        self.__timer.setSingleShot(True)
-        self.__timer.timeout.connect(self.__acquire_video_frame)
+        # create an object for the hardware communication and let it live on the new thread
+        self._hardware_pull = HardwarePull(self)
+        self._hardware_pull.moveToThread(self.hardware_thread)
+
+        # connect the signals in and out of the threaded object
+        self.sig_handle_timer.connect(self._hardware_pull.handle_timer)
+        self._hardware_pull.sig_dataframe.connect(self.handle_dataframe, QtCore.Qt.DirectConnection)
+        # start the event loop for the hardware
+        self.hardware_thread.start()
+
 
     def on_deactivate(self):
         """ Perform required deactivation. """
-        self.__timer.stop()
-        self.__timer.timeout.disconnect()
-        self.__timer = None
+        if self.module_state() != 'idle' and self.module_state() != 'deactivated':
+            self.stop_acquisition()
+        self.hardware_thread.quit()
+        self.sig_handle_timer.disconnect()
+        self._hardware_pull.sig_dataframe.disconnect()
 
     @property
     def last_frame(self):
         return self._last_frame
+
+    def handle_dataframe(self, dataframe):
+        """ Function to save the wavelength, when it comes in with a signal.
+        """
+        self._last_frame = dataframe
+        self.sigFrameChanged.emit(self._last_frame)
 
     def set_exposure(self, time):
         """ Set exposure time of camera """
@@ -130,56 +184,32 @@ class CameraLogic(LogicBase):
     def _start_video(self):
         """ Start the data recording loop.
         """
-        with self._thread_lock:
-            if self.module_state() == 'idle':
-                self.module_state.lock()
-                exposure = max(self._exposure, self._minimum_exposure_time)
-                camera = self._camera()
-                if camera.support_live_acquisition():
-                    camera.start_live_acquisition()
-                else:
-                    camera.start_single_acquisition()
-                self.__timer.start(1000 * exposure)
-            else:
-                self.log.error('Unable to start video acquisition. Acquisition still in progress.')
-
+        if self.module_state() == 'locked':
+            self.log.error('Camera busy')
+            return -1
+        self.module_state.lock()
+        camera = self._camera()
+        camera.start_live_acquisition()
+        camera.wait_for_next_frame()
+        # start the measuring thread
+        self.sig_handle_timer.emit(True)
     def _stop_video(self):
         """ Stop the data recording loop.
         """
-        with self._thread_lock:
-            if self.module_state() == 'locked':
-                self.__timer.stop()
-                self._camera().stop_acquisition()
-                self.module_state.unlock()
-                self.sigAcquisitionFinished.emit()
 
-    def __acquire_video_frame(self):
-        """ Execute step in the data recording loop: save one of each control and process values
-        """
-        with self._thread_lock:
-            camera = self._camera()
-            camera.wait_for_next_frame()
-            self._last_frame = camera.get_acquired_data()
-            self.sigFrameChanged.emit(self._last_frame)
-            if self.module_state() == 'locked':
-                exposure = max(self._exposure, self._minimum_exposure_time)
-                self.__timer.start(1000 * exposure)
-                if not camera.support_live_acquisition():
-                    camera.start_single_acquisition()  # the hardware has to check it's not busy
+        # check status just for a sanity check
+        if self.module_state() == 'idle':
+            self.log.warning('Acquisition was already stopped, stopping it '
+                    'anyway!')
+        else:
+            # stop the measurement thread
+            self.sig_handle_timer.emit(False)
+            # stop acquisition
+            self._camera().stop_acquisition()
+            # set status to idle again
+            self.module_state.unlock()
+            self.sigAcquisitionFinished.emit()
+        return 0
 
     def create_tag(self, time_stamp):
         return f"{time_stamp}_captured_frame"
-
-    def draw_2d_image(self, data, cbar_range=None):
-        # Create image plot
-        fig, ax = plt.subplots()
-        cfimage = ax.imshow(data,
-                            cmap='inferno',  # FIXME: reference the right place in qudi
-                            origin='lower',
-                            interpolation='none')
-
-        if cbar_range is None:
-            cbar_range = (np.nanmin(data), np.nanmax(data))
-        cbar = plt.colorbar(cfimage, shrink=0.8)
-        cbar.ax.tick_params(which=u'both', length=0)
-        return fig
