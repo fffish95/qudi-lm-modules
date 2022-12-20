@@ -606,7 +606,7 @@ class NICard(Base):
                         'Requested sample type: {0}'.format(type(element)),
                         DAQmxErrors.UNKNOWN.value, task_name=task.name)
 
-                data = np.asarray(data, dtype=np.bool)
+                data = np.asarray(data, dtype=np.bool_)
                 return _write_digital_lines(
                     task._handle, data, number_of_samples_per_channel,
                     auto_start, timeout)
