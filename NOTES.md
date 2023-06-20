@@ -48,3 +48,14 @@ do so (now or later) by using -c with the switch command. Example:
 Or undo this operation with:
 
   git switch -con
+
+
+## errors
+sps_scanner cursor_position edited:
+
+Error while closing scanner
+Traceback (most recent call last):
+  File "C:\Users\Venus\qudi\src\qudi\hardware\local\sps_setup.py", line 450, in close_scanner
+    if not self._scanner_ai_task.is_task_done():
+AttributeError: 'int' object has no attribute 'is_task_done'
+

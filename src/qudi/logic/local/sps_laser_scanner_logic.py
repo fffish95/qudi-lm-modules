@@ -197,7 +197,7 @@ class LaserScannerLogic(LogicBase):
     _goto_speed = StatusVar(default=100)
     _statusVariables = StatusVar(default=OrderedDict())
     _current_custom_scan_mode = StatusVar(default=[])
-    max_history_length = StatusVar(default=10)
+    max_history_length = StatusVar(default=1)
 
 
     # signals
