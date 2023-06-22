@@ -1612,14 +1612,17 @@ class ConfocalGui(GuiBase):
         """ Run the save routine from the logic to save the xy confocal data."""
         self._save_dialog.show()
 
-        cb_range = self.get_xy_cb_range()
+        # colorbar range is None, unless the colorbar scaling is selected in GUI.
+        cb_range = None
+        # if not self._mw.xy_cb_manual_RadioButton.isChecked():
+        #     cb_range = self.get_depth_cb_range()
 
         # Percentile range is None, unless the percentile scaling is selected in GUI.
         pcile_range = None
-        if not self._mw.xy_cb_manual_RadioButton.isChecked():
-            low_centile = self._mw.xy_cb_low_percentile_DoubleSpinBox.value()
-            high_centile = self._mw.xy_cb_high_percentile_DoubleSpinBox.value()
-            pcile_range = [low_centile, high_centile]
+        # if not self._mw.xy_cb_centiles_RadioButton.isChecked():
+        #     low_centile = self._mw.xy_cb_low_percentile_DoubleSpinBox.value()
+        #     high_centile = self._mw.xy_cb_high_percentile_DoubleSpinBox.value()
+        #     pcile_range = [low_centile, high_centile]
 
         self._scanning_logic.save_xy_data(colorscale_range=cb_range, percentile_range=pcile_range, block=False)
 
@@ -1686,14 +1689,20 @@ class ConfocalGui(GuiBase):
         """ Run the save routine from the logic to save the xy confocal pic."""
         self._save_dialog.show()
 
-        cb_range = self.get_depth_cb_range()
+
+        # colorbar range is None, unless the colorbar scaling is selected in GUI.
+        cb_range = None
+        # if not self._mw.depth_cb_manual_RadioButton.isChecked():
+        #     cb_range = self.get_depth_cb_range()
+
+        
 
         # Percentile range is None, unless the percentile scaling is selected in GUI.
         pcile_range = None
-        if not self._mw.depth_cb_manual_RadioButton.isChecked():
-            low_centile = self._mw.depth_cb_low_percentile_DoubleSpinBox.value()
-            high_centile = self._mw.depth_cb_high_percentile_DoubleSpinBox.value()
-            pcile_range = [low_centile, high_centile]
+        # if not self._mw.depth_cb_centiles_RadioButton.isChecked():
+        #     low_centile = self._mw.depth_cb_low_percentile_DoubleSpinBox.value()
+        #     high_centile = self._mw.depth_cb_high_percentile_DoubleSpinBox.value()
+        #     pcile_range = [low_centile, high_centile]
 
         self._scanning_logic.save_depth_data(colorscale_range=cb_range, percentile_range=pcile_range, block=False)
 
