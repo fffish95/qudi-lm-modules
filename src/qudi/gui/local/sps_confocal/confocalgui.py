@@ -882,7 +882,7 @@ class ConfocalGui(GuiBase):
                 x=optimal_pos[0],
                 y=optimal_pos[1],
                 z=optimal_pos[2],
-                a=0.0
+                a=None
             )
         self.enable_scan_actions()
 
@@ -1146,7 +1146,6 @@ class ConfocalGui(GuiBase):
         self.update_input_y(v_pos)
 
         self._scanning_logic.set_position('roixy', x=h_pos, y=v_pos)
-        self._optimizer_logic.set_position('roixy', x=h_pos, y=v_pos)
 
     def update_from_roi_depth(self, pos):
         """The user manually moved the Z ROI, adjust all other GUI elements accordingly
@@ -1165,13 +1164,11 @@ class ConfocalGui(GuiBase):
             self.update_slider_x(h_pos)
             self.update_input_x(h_pos)
             self._scanning_logic.set_position('roidepth', x=h_pos, z=v_pos)
-            self._optimizer_logic.set_position('roidepth', x=h_pos, z=-v_pos)
         else:
             self.update_roi_xy(v=h_pos)
             self.update_slider_y(h_pos)
             self.update_input_y(h_pos)
             self._scanning_logic.set_position('roidepth', y=h_pos, z=v_pos)
-            self._optimizer_logic.set_position('roidepth', y=h_pos, z=-v_pos)
 
     def update_from_key(self, x=None, y=None, z=None):
         """The user pressed a key to move the crosshair, adjust all GUI elements.
@@ -1209,7 +1206,6 @@ class ConfocalGui(GuiBase):
             self.update_roi_depth(h=x_pos)
         self.update_slider_x(x_pos)
         self._scanning_logic.set_position('xinput', x=x_pos)
-        self._optimizer_logic.set_position('xinput', x=x_pos)
 
     def update_from_input_y(self):
         """ The user changed the number in the y position spin box, adjust all
@@ -1220,8 +1216,6 @@ class ConfocalGui(GuiBase):
             self.update_roi_depth(h=y_pos)
         self.update_slider_y(y_pos)
         self._scanning_logic.set_position('yinput', y=y_pos)
-        self._optimizer_logic.set_position('yinput', y=y_pos)
-
     def update_from_input_z(self):
         """ The user changed the number in the z position spin box, adjust all
            other GUI elements."""
@@ -1229,7 +1223,6 @@ class ConfocalGui(GuiBase):
         self.update_roi_depth(v=z_pos)
         self.update_slider_z(z_pos)
         self._scanning_logic.set_position('zinput', z=z_pos)
-        self._optimizer_logic.set_position('zinput', z=z_pos)
 
     def update_input_x(self, x_pos):
         """ Update the displayed x-value.
@@ -1266,7 +1259,6 @@ class ConfocalGui(GuiBase):
             self.update_roi_depth(h=x_pos)
         self.update_input_x(x_pos)
         self._scanning_logic.set_position('xslider', x=x_pos)
-        self._optimizer_logic.set_position('xslider', x=x_pos)
 
     def update_from_slider_y(self, sliderValue):
         """The user moved the y position slider, adjust the other GUI elements.
@@ -1279,7 +1271,6 @@ class ConfocalGui(GuiBase):
             self.update_roi_depth(h=y_pos)
         self.update_input_y(y_pos)
         self._scanning_logic.set_position('yslider', y=y_pos)
-        self._optimizer_logic.set_position('yslider', y=y_pos)
 
     def update_from_slider_z(self, sliderValue):
         """The user moved the z position slider, adjust the other GUI elements.
@@ -1290,7 +1281,6 @@ class ConfocalGui(GuiBase):
         self.update_roi_depth(v=z_pos)
         self.update_input_z(z_pos)
         self._scanning_logic.set_position('zslider', z=z_pos)
-        self._optimizer_logic.set_position('zslider', z=z_pos)
 
     def update_slider_x(self, x_pos):
         """ Update the x slider when a change happens.
