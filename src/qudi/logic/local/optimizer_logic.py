@@ -104,12 +104,6 @@ class OptimizerLogic(LogicBase):
 
         self._max_offset = 3.
 
-        # Sets the current position to the center of the maximal scanning range
-        self._current_x = (self.x_range[0] + self.x_range[1]) / 2
-        self._current_y = (self.y_range[0] + self.y_range[1]) / 2
-        self._current_z = (self.z_range[0] + self.z_range[1]) / 2
-        self._current_a = 0.0
-
         ###########################
         # Fit Params and Settings #
         model, params = self._fit_logic.make_gaussianlinearoffset_model()
@@ -229,7 +223,7 @@ class OptimizerLogic(LogicBase):
         if scanner_status < 0:
             self.sigRefocusFinished.emit(
                 self._caller_tag,
-                [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z, 0])
+                [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z])
             return
         self.sigRefocusStarted.emit(tag)
         self._sigDoNextOptimizationStep.emit()
@@ -257,9 +251,7 @@ class OptimizerLogic(LogicBase):
         self._X_values = np.linspace(xmin, xmax, num=self.optimizer_XY_res)
         self._Y_values = np.linspace(ymin, ymax, num=self.optimizer_XY_res)
         self._Z_values = self.optim_pos_z * np.ones(self._X_values.shape)
-        self._A_values = np.zeros(self._X_values.shape)
         self._return_X_values = np.linspace(xmax, xmin, num=self.optimizer_XY_res)
-        self._return_A_values = np.zeros(self._return_X_values.shape)
 
         self.xy_refocus_image = np.zeros((
             len(self._Y_values),
@@ -283,7 +275,6 @@ class OptimizerLogic(LogicBase):
 
         self._zimage_Z_values = np.linspace(zmin, zmax, num=self.optimizer_Z_res)
         self._fit_zimage_Z_values = np.linspace(zmin, zmax, num=self.optimizer_Z_res)
-        self._zimage_A_values = np.zeros(self._zimage_Z_values.shape)
         self.z_refocus_line = np.zeros((
             len(self._zimage_Z_values),
             len(self.get_scanner_count_channels())))
@@ -325,7 +316,7 @@ class OptimizerLogic(LogicBase):
                 self.sigImageUpdated.emit()
                 self.sigRefocusFinished.emit(
                     self._caller_tag,
-                    [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z, 0][0:n_ch])
+                    [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z])
                 return
 
         # move to the start of the first line
@@ -347,9 +338,10 @@ class OptimizerLogic(LogicBase):
         if n_ch <= 3:
             line = np.vstack((lsx, lsy, lsz)[0:n_ch])
         else:
-            line = np.vstack((lsx, lsy, lsz, np.zeros(lsx.shape)))
+            current_a = self._scanning_device.get_scanner_position()[-1]
+            line = np.vstack((lsx, lsy, lsz, current_a * np.ones(lsx.shape)))
 
-        line_counts = self._scanning_device.scan_line(line)
+        line_counts = self._scanning_device.scan_line(line, pixel_clock=True)
         if np.any(line_counts == -1):
             self.log.error('The scan went wrong, killing the scanner.')
             self.stop_refocus()
@@ -362,7 +354,7 @@ class OptimizerLogic(LogicBase):
         if n_ch <= 3:
             return_line = np.vstack((lsx, lsy, lsz))
         else:
-            return_line = np.vstack((lsx, lsy, lsz, np.zeros(lsx.shape)))
+            return_line = np.vstack((lsx, lsy, lsz, current_a * np.ones(lsx.shape)))
 
         return_line_counts = self._scanning_device.scan_line(return_line)
         if np.any(return_line_counts == -1):
@@ -507,7 +499,7 @@ class OptimizerLogic(LogicBase):
         # caller_tag
         self.sigRefocusFinished.emit(
             self._caller_tag,
-            [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z, 0])
+            [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z])
 
     def _scan_z_line(self):
         """Scans the z line for refocus."""
@@ -530,10 +522,11 @@ class OptimizerLogic(LogicBase):
         if n_ch <= 3:
             line = np.vstack((scan_x_line, scan_y_line, scan_z_line)[0:n_ch])
         else:
-            line = np.vstack((scan_x_line, scan_y_line, scan_z_line, np.zeros(scan_x_line.shape)))
+            current_a = self._scanning_device.get_scanner_position()[-1]
+            line = np.vstack((scan_x_line, scan_y_line, scan_z_line, current_a * np.ones(scan_x_line.shape)))
 
         # Perform scan
-        line_counts = self._scanning_device.scan_line(line)
+        line_counts = self._scanning_device.scan_line(line, pixel_clock=True)
         if np.any(line_counts == -1):
             self.log.error('Z scan went wrong, killing the scanner.')
             self.stop_refocus()
@@ -559,13 +552,14 @@ class OptimizerLogic(LogicBase):
                 line_bg = np.vstack(
                     (scan_x_line + self.surface_subtr_scan_offset, scan_y_line, scan_z_line)[0:n_ch])
             else:
+                current_a = self._scanning_device.get_scanner_position()[-1]
                 line_bg = np.vstack(
                     (scan_x_line + self.surface_subtr_scan_offset,
                      scan_y_line,
                      scan_z_line,
-                     np.zeros(scan_x_line.shape)))
+                     current_a * np.ones(scan_x_line.shape)))
 
-            line_bg_counts = self._scanning_device.scan_line(line_bg)
+            line_bg_counts = self._scanning_device.scan_line(line_bg, pixel_clock=True)
             if np.any(line_bg_counts[0] == -1):
                 self.log.error('The scan went wrong, killing the scanner.')
                 self.stop_refocus()
@@ -616,7 +610,7 @@ class OptimizerLogic(LogicBase):
         """Handle the steps through the specified optimization sequence
         """
 
-        # At the end fo the sequence, finish the optimization
+        # At the end of the sequence, finish the optimization
         if self._optimization_step == len(self.optimization_sequence):
             self._sigFinishedAllOptimizationSteps.emit()
             return
@@ -635,20 +629,4 @@ class OptimizerLogic(LogicBase):
             self._initialize_z_refocus_image()
             self._sigScanZLine.emit()
 
-    def set_position(self, tag, x=None, y=None, z=None, a=None):
-        """ Set focus position.
-
-            @param str tag: sting indicating who caused position change
-            @param float x: x axis position in m
-            @param float y: y axis position in m
-            @param float z: z axis position in m
-            @param float a: a axis position in m
-        """
-        if x is not None:
-            self._current_x = x
-        if y is not None:
-            self._current_y = y
-        if z is not None:
-            self._current_z = z
-        self.sigPositionChanged.emit(self._current_x, self._current_y, self._current_z)
 

@@ -637,6 +637,7 @@ class ConfocalLogic(LogicBase):
             self.module_state.unlock()
             return -1
 
+        self._current_a = self._scanning_device.get_scanner_position()[3]
         self.signal_scan_lines_next.emit()
         return 0
 
