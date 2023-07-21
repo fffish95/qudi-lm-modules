@@ -238,7 +238,10 @@ class TLPM:
 		if sizeof(c_voidp) == 4:
 			self.dll = cdll.LoadLibrary("TLPM_32.dll")
 		else:
-			self.dll = cdll.LoadLibrary("TLPM_64.dll")
+			dll_name = "TLPM_64.dll"
+			dllabspath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + dll_name
+			self.dll = cdll.LoadLibrary(dllabspath)
+			#self.dll = cdll.LoadLibrary("TLPM_64.dll")
 
 		self.devSession = c_long()
 		self.devSession.value = 0
