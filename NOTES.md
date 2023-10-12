@@ -48,3 +48,9 @@ do so (now or later) by using -c with the switch command. Example:
 Or undo this operation with:
 
   git switch -con
+
+
+## install TimeTagger in linux
+first install TimeTagger in general enviroment
+copy TimeTagger.py and other 3 _TimeTagger files from Computer/lib/python3/dist-packages to anaconda3/envs/qudi-env/lib
+copy libstdc++.so.6 from Computer/lib/x86_64-linux-gnu to anaconda3/envs/qudi-env/lib
