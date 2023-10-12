@@ -146,21 +146,21 @@ def run_event(event):
                     _pos.mov_1y_down()
                 #print('1yup')
 
-        if event.code == 2 and event.value > L5R2_BLIND:
-                with Telnet(attocube_ip, 7231) as pos:
-                    _pos= pos_controller(pos)
-                    pos.read_until(b"Authorization code:")
-                    pos.write(password)
-                    _pos.mov_nz_up(event.value)
-                #print(f'_pos.mov_nz_up({event.value})')
+        if event.code == 2 and event.value > L2R2_BLIND:
+            with Telnet(attocube_ip, 7231) as pos:
+                _pos= pos_controller(pos)
+                pos.read_until(b"Authorization code:")
+                pos.write(password)
+                _pos.mov_nz_up(event.value)
+            #print(f'_pos.mov_nz_up({event.value})')
 
         if event.code == 5 and event.value > L2R2_BLIND:
-                with Telnet(attocube_ip, 7231) as pos:
-                    _pos= pos_controller(pos)
-                    pos.read_until(b"Authorizaition code:")
-                    pos.write(password)
-                    _pos.mov_nz_down(event.value)
-                #print(f'_pos.mov_nz_down({event.value})')
+            with Telnet(attocube_ip, 7231) as pos:
+                _pos= pos_controller(pos)
+                pos.read_until(b"Authorization code:")
+                pos.write(password)
+                _pos.mov_nz_down(event.value)
+            #print(f'_pos.mov_nz_down({event.value})')
 
         if event.code == 0:                                              # left joystick moving
             if event.value > (CENTER - BLIND) and event.value < (CENTER + BLIND):   # skip printing the jittery center for the joysticks
