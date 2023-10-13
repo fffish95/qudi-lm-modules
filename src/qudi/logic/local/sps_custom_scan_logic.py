@@ -61,7 +61,7 @@ class SPSCustonScanLogic(LogicBase):
         'lines_power': []
     },{ 'Background_subtract': False,
         'wavelength_ramp': False,
-        'shutter_channels': ['pfi1'],
+        'shutter_channels': ['pfi2'],
         'start_frequency(THz)' : 630.72340,
         'step_frequency(MHz)' : 50,
         'lines_frequency': [],

@@ -28,7 +28,7 @@
      <x>0</x>
      <y>0</y>
      <width>1261</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -48,6 +48,7 @@
     </property>
     <addaction name="action_Settings"/>
     <addaction name="action_optimizer_settings"/>
+    <addaction name="action_Loopscan"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -2346,17 +2347,22 @@
     <string>Load configuration</string>
    </property>
   </action>
+  <action name="action_Loopscan">
+   <property name="text">
+    <string>Loop scan</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>PlotWidget</class>
-   <extends>QGraphicsView</extends>
-   <header>pyqtgraph</header>
-  </customwidget>
   <customwidget>
    <class>ScienDSpinBox</class>
    <extends>QDoubleSpinBox</extends>
    <header>qudi.util.widgets.scientific_spinbox</header>
+  </customwidget>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph</header>
   </customwidget>
   <customwidget>
    <class>ScanPlotWidget</class>
