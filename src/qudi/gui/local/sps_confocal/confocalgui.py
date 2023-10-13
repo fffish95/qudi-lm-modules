@@ -41,7 +41,7 @@ from qudi.util.fitsettings import FitParametersWidget
 from PySide2 import QtCore, QtGui, QtWidgets
 from qudi.util import uic
 from qudi.util.paths import get_artwork_dir
-
+from qudi.gui.local.sps_confocal.confocalgui_loopscan_dialog import ConfocalLoopScanDialog
 
 class ConfocalMainWindow(QtWidgets.QMainWindow):
     """ Create the Mainwindow based on the corresponding *.ui file. """
@@ -539,6 +539,7 @@ class ConfocalGui(GuiBase):
         # with the methods:
         self._mw.action_Settings.triggered.connect(self.menu_settings)
         self._mw.action_optimizer_settings.triggered.connect(self.menu_optimizer_settings)
+        self._mw.action_Loopscan.triggered.connect(self.menu_loopscan_settings)
         self._mw.actionSave_XY_Scan.triggered.connect(self.save_xy_scan_data)
         self._mw.actionSave_Depth_Scan.triggered.connect(self.save_depth_scan_data)
         self._mw.actionSave_configuration.triggered.connect(self.save_configuration)
@@ -638,6 +639,12 @@ class ConfocalGui(GuiBase):
         self._sd.rejected.connect(self.keep_former_settings)
         self._sd.buttonBox.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(self.update_settings)
         self._sd.hardware_switch.clicked.connect(self.switch_hardware)
+
+        self._lssd = ConfocalLoopScanDialog( current_modes = self._scanning_logic._current_loop_scan_mode, LoopScanMode = self._scanning_logic._loop_scan_logic.LoopScanMode, Params = self._scanning_logic._loop_scan_logic.Params)
+
+        self._lssd.button_box.accepted.connect(self.update_loopscan_settings)
+        self._lssd.button_box.rejected.connect(self.keep_former_loopscan_settings)
+
 
         # write the configuration to the settings window of the GUI.
         self.keep_former_settings()
@@ -901,6 +908,9 @@ class ConfocalGui(GuiBase):
         """ This method opens the settings menu. """
         self._sd.exec_()
 
+    def menu_loopscan_settings(self):
+        self._lssd.exec_()
+
     def update_settings(self):
         """ Write new settings from the gui to the file. """
         self._scanning_logic.set_clock_frequency(self._sd.clock_frequency_InputWidget.value())
@@ -935,6 +945,16 @@ class ConfocalGui(GuiBase):
         self._sd.fixed_aspect_depth_checkBox.setChecked(self.fixed_aspect_ratio_depth)
         self._sd.slider_small_step_DoubleSpinBox.setValue(float(self.slider_small_step))
         self._sd.slider_big_step_DoubleSpinBox.setValue(float(self.slider_big_step))
+
+    def update_loopscan_settings(self):
+        self._scanning_logic._current_loop_scan_mode= self._lssd.settings_widget._current_modes
+        self._scanning_logic._loop_scan_logic.Params = copy.deepcopy(self._lssd.settings_widget._params) 
+
+    def keep_former_loopscan_settings(self):
+        self._lssd.settings_widget._current_modes = self._scanning_logic._current_loop_scan_mode
+        self._lssd.settings_widget._params = copy.deepcopy(self._scanning_logic._loop_scan_logic.Params)
+
+        self._lssd.settings_widget.update_dynamic_layout()
 
     def menu_optimizer_settings(self):
         """ This method opens the settings menu. """

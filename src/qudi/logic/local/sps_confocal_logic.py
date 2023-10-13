@@ -259,6 +259,7 @@ class ConfocalLogic(LogicBase):
     # declare connectors
     confocalscanner1 = Connector(interface='ScannerTiltInterfuse')
     savelogic = Connector(interface='SaveLogic')
+    loopscanlogic1 = Connector(interface='SPSLoopScanLogic')
 
     # status vars
     _clock_frequency = StatusVar('clock_frequency', 100)
@@ -266,6 +267,7 @@ class ConfocalLogic(LogicBase):
     goto_speed = StatusVar(default=20)
     max_history_length = StatusVar(default=10)
     _statusVariables = StatusVar(default=OrderedDict())
+    _current_loop_scan_mode = StatusVar(default=[])
 
 
     # signals
@@ -315,7 +317,8 @@ class ConfocalLogic(LogicBase):
         """
         self._scanning_device = self.confocalscanner1()
         self._save_logic = self.savelogic()
-
+        self._loop_scan_logic = self.loopscanlogic1()
+        
         # Reads in the maximal scanning range. The unit of that scan range is micrometer!
         self.x_range = self._scanning_device.get_position_range()[0]
         self.y_range = self._scanning_device.get_position_range()[1]
@@ -636,6 +639,10 @@ class ConfocalLogic(LogicBase):
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
             return -1
+        
+        if self.permanent_scan:
+            for mode in self._current_loop_scan_mode:
+                self._loop_scan_logic.start_scanner_handler(current = mode)
 
         self._current_a = self._scanning_device.get_scanner_position()[3]
         self.signal_scan_lines_next.emit()
@@ -659,6 +666,7 @@ class ConfocalLogic(LogicBase):
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
             return -1
+
         return 0
 
     def continue_scanner(self):
@@ -800,6 +808,9 @@ class ConfocalLogic(LogicBase):
                     self._depth_line_pos = self._scan_counter
                 else:
                     self._xy_line_pos = self._scan_counter
+                if self.permanent_scan:
+                    for mode in self._current_loop_scan_mode:
+                        self._loop_scan_logic.stop_scanner_handler(current = mode)
                 self.add_new_history_entry()
                 return
 
@@ -916,6 +927,8 @@ class ConfocalLogic(LogicBase):
                 else:
                     self._scan_counter = 0
                     self._move_to_start = True
+                    for mode in self._current_loop_scan_mode:
+                        self._loop_scan_logic.process_scanner_handler(current = mode, scan_counter = self._scan_counter)
 
             self.signal_scan_lines_next.emit()
         except:
