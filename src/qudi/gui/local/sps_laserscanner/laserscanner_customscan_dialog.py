@@ -371,7 +371,7 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         self._params[modenum]['Background_subtract'] = self.eit_Background_subtract_radio_button.isChecked()
     
     def eit_shutter_channels_changed(self, modenum):
-        self._params[modenum]['shutter_channels'][0] = str(self.eit_step_frequency_lineedit.text())
+        self._params[modenum]['shutter_channels'][0] = str(self.eit_shutter_channels_lineedit.text())
 
 
 
