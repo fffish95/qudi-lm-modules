@@ -185,7 +185,7 @@ class ConfocalLoopScanWidget(QtWidgets.QWidget):
 
         value = self._loopscan_mode[modenum]
         sm_groupbox = QtWidgets.QGroupBox(value)
-        sm_groupbox.setLayout(ss_layout)
+        sm_groupbox.setLayout(sm_layout)
         self._loopscan_del_button_hashmap[delete_button] = {'mode':modenum, 'groupbox': sm_groupbox}
 
         return sm_groupbox  
@@ -204,7 +204,7 @@ class ConfocalLoopScanWidget(QtWidgets.QWidget):
         self._params[modenum]['trigger_channel'][0] = str(self.st_trigger_channel_lineedit.text())
 
     def st_trigger_length_changed(self, modenum):
-        self._params[modenum]['trigger_length'][0] = str(self.st_trigger_length_lineedit.text())
+        self._params[modenum]['trigger_length'] = str(self.st_trigger_length_lineedit.text())
 
     def sm_motor_channel_changed(self, modenum):
         self._params[modenum]['motor_channel'] = int(self.sm_motor_channel_lineedit.text())

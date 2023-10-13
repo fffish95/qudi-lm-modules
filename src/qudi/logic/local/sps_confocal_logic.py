@@ -928,7 +928,7 @@ class ConfocalLogic(LogicBase):
                     self._scan_counter = 0
                     self._move_to_start = True
                     for mode in self._current_loop_scan_mode:
-                        self._loop_scan_logic.process_scanner_handler(current = mode, scan_counter = self._scan_counter)
+                        self._loop_scan_logic.process_scanner_handler(current = mode)
 
             self.signal_scan_lines_next.emit()
         except:

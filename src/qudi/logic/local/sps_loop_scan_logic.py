@@ -48,8 +48,8 @@ class SPSLoopScanLogic(LogicBase):
 
     LoopScanMode = StatusVar(default = ['scan trigger', 'step motor'])
     Params =  StatusVar(default=[{
-        'trigger_channel':['pfi1']
-        'trigger_length': 500 # ms
+        'trigger_channel':['pfi1'],
+        'trigger_length': 500, # ms
     },{
         'motor_channel': 0,
         'start_deg': 0,
@@ -95,6 +95,10 @@ class SPSLoopScanLogic(LogicBase):
     def scan_trigger_start_scanner(self):
         # output a trigger before each loop
         self._trigger_task = self._nicard.create_do_task(taskname = 'trigger', channels = self.Params[self._st_modenum]['trigger_channel'])
+        self._nicard.write_task(task= self._trigger_task, data = True)
+        # keep the do on for trigger length time
+        t_delay = int(self.Params[self._st_modenum]['trigger_length'])
+        tools.delay(t_delay)
         self._nicard.write_task(task= self._trigger_task, data = False)
 
     def step_motor_start_scanner(self):
