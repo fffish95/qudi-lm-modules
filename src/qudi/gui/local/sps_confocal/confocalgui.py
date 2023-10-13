@@ -41,6 +41,7 @@ from qudi.util.fitsettings import FitParametersWidget
 from PySide2 import QtCore, QtGui, QtWidgets
 from qudi.util import uic
 from qudi.util.paths import get_artwork_dir
+import copy
 from qudi.gui.local.sps_confocal.confocalgui_loopscan_dialog import ConfocalLoopScanDialog
 
 class ConfocalMainWindow(QtWidgets.QMainWindow):
