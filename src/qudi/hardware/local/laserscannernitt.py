@@ -13,16 +13,14 @@ from qudi.util.mutex import Mutex
 
 
 
-class NITTConfocalScanner(Base):
+class LaserscannerNITT(Base):
     """ Designed for use a National Instruments device to control laser scanning and use TimeTagger to count photons.
 
     See [National Instruments X Series Documentation](@ref nidaq-x-series) for details.
 
-    stable: Kay Jahnke, Alexander Stark
-
     Example config for copy-paste:
     sps_setup:
-        module.Class: 'local.sps_setup.NITTConfocalScanner'
+        module.Class: 'local.laserscannernitt.LaserscannerNITT'
         connect:
             nicard: 'nicard'
             timetagger: 'tagger'
@@ -33,16 +31,22 @@ class NITTConfocalScanner(Base):
                 - 'AO2'
                 - 'AO3'
             scanner_voltage_ranges:
-                - [0, 5]
-                - [0, 5]
                 - [0, 3.2]
+                - [0, 3.2]
+                - [0, 3.2]
+                # - [0, 8]
+                # - [0, 8]
+                # - [0, 8]
                 - [-4, 4]
 
             scanner_position_ranges:
-                - [0, 300e-6]
-                - [0, 300e-6]
-                - [0, 20e-6]
-                - [0, 30e3]
+                - [0, 50e-6]
+                - [0, 50e-6]
+                - [0, 50e-6]
+                # - [0, 8e-6]
+                # - [0, 8e-6]
+                # - [0, 8e-6]
+                - [0, 9144]
             scanner_clock_channel:
                 - 'ctr0'
             pixel_clock_channel:
@@ -50,6 +54,7 @@ class NITTConfocalScanner(Base):
             timetagger_channels:
                 - 'ch1'
                 - 'ch2'
+                - 'ch3'
                 - 'DetectorChans'
             timetagger_cbm_begin_channel:
                 - 'ch8'
@@ -58,6 +63,15 @@ class NITTConfocalScanner(Base):
                 - 'AI1'
                 - 'AI2'
                 - 'AI3'
+            channel_labelsandunits:
+                'ch1': {'label': 'Fluorescence', 'unit': 'c/s'}
+                'ch2': {'label': 'Fluorescence', 'unit': 'c/s'}
+                'ch3': {'label': 'Fluorescence', 'unit': 'c/s'}
+                'DetectorChans': {'label': 'Fluorescence', 'unit': 'c/s'}
+                'AI0': {'label': 'Voltage', 'unit': 'V'}
+                'AI1': {'label': 'Voltage', 'unit': 'V'}
+                'AI2': {'label': 'Voltage', 'unit': 'V'}
+                'AI3': {'label': 'Voltage', 'unit': 'V'}
             ai_voltage_ranges:
                 - [-10,10]
                 - [-10,10]
@@ -102,19 +116,19 @@ class NITTConfocalScanner(Base):
             self.log.error(
                 'Specify as many scanner_position_ranges as scanner_ao_channels!')
 
-        self._scanner_task = self._nicard.create_ao_task(taskname = 'sps_setup_ao', channels = self._scanner_ao_channels, voltage_ranges = self._scanner_voltage_ranges)
+        self._scanner_task = self._nicard.create_ao_task(taskname = 'laserscannernitt_ao', channels = self._scanner_ao_channels, voltage_ranges = self._scanner_voltage_ranges)
 
 
 
     def on_deactivate(self):
         """ Deactivate the module and clean up.
         """
-        self._nicard.close_ao_task(taskname = 'sps_setup_ao')
+        self._nicard.close_ao_task(taskname = 'laserscannernitt_ao')
         self._scanner_task = None
-        self._nicard.close_co_task(taskname = 'sps_setup_scanner_clock')
+        self._nicard.close_co_task(taskname = 'laserscannernitt_scanner_clock')
         self._scanner_clock_task = None
         if self._scanner_ai_channels and self._scanner_ai_task is not None:
-            self._nicard.close_ai_task(taskname = 'sps_setup_ai')
+            self._nicard.close_ai_task(taskname = 'laserscannernitt_ai')
             self._scanner_ai_task = None
 
     def reset_hardware(self):
@@ -171,7 +185,7 @@ class NITTConfocalScanner(Base):
         if clock_channel is not None:   
             self._scanner_clock_channel = clock_channel
 
-        self._scanner_clock_task = self._nicard.create_co_task(taskname = 'sps_setup_scanner_clock', channels = self._scanner_clock_channel, freq = self._scanner_clock_frequency, duty_cycle = 0.5)
+        self._scanner_clock_task = self._nicard.create_co_task(taskname = 'laserscannernitt_scanner_clock', channels = self._scanner_clock_channel, freq = self._scanner_clock_frequency, duty_cycle = 0.5)
         # Create buffer for generating signal
         self._nicard.samp_timing_type(self._scanner_clock_task, type = 'implicit')
         self._nicard.cfg_implicit_timing(self._scanner_clock_task, sample_mode='continuous', samps_per_chan=10000)
@@ -184,33 +198,33 @@ class NITTConfocalScanner(Base):
         @return int: error code (0:OK, -1:error)
         """
         if self._scanner_task is None:
-            self._scanner_task = self._nicard.create_ao_task(taskname = 'sps_setup_ao', channels = self._scanner_ao_channels, voltage_ranges = self._scanner_voltage_ranges)
+            self._scanner_task = self._nicard.create_ao_task(taskname = 'laserscannernitt_ao', channels = self._scanner_ao_channels, voltage_ranges = self._scanner_voltage_ranges)
         else:
             for i, task in enumerate(self._nicard._ao_task_handles):
-                if task.name == 'sps_setup_ao':
+                if task.name == 'laserscannernitt_ao':
                     break
                 elif i == len(self._nicard._ao_task_handles)-1:
-                    self._scanner_task = self._nicard.create_ao_task(taskname = 'sps_setup_ao', channels = self._scanner_ao_channels, voltage_ranges = self._scanner_voltage_ranges)
+                    self._scanner_task = self._nicard.create_ao_task(taskname = 'laserscannernitt_ao', channels = self._scanner_ao_channels, voltage_ranges = self._scanner_voltage_ranges)
 
         if self._scanner_clock_task is None:
             self.log.error('No clock running, call set_up_scanner_clock before starting the counter.')
             return -1
         else:
             for i, task in enumerate(self._nicard._co_task_handles):
-                if task.name == 'sps_setup_scanner_clock':
+                if task.name == 'laserscannernitt_scanner_clock':
                     break
                 elif i == len(self._nicard._co_task_handles)-1:
-                    self.log.error('task sps_setup_scanner_clock is closed by other program')
+                    self.log.error('task laserscannernitt_scanner_clock is closed by other program')
                     return -1
         if self._scanner_ai_channels:
             if self._scanner_ai_task is None:
-                self._scanner_ai_task = self._nicard.create_ai_task(taskname = 'sps_setup_ai', channels = self._scanner_ai_channels, voltage_ranges = self._ai_voltage_ranges)
+                self._scanner_ai_task = self._nicard.create_ai_task(taskname = 'laserscannernitt_ai', channels = self._scanner_ai_channels, voltage_ranges = self._ai_voltage_ranges)
             else:
                 for i, task in enumerate(self._nicard._ai_task_handles):
-                    if task.name == 'sps_setup_ai':
+                    if task.name == 'laserscannernitt_ai':
                         break
                     elif i == len(self._nicard._ai_task_handles)-1:
-                        self._scanner_ai_task = self._nicard.create_ai_task(taskname = 'sps_setup_ai', channels = self._scanner_ai_channels, voltage_ranges = self._ai_voltage_ranges)
+                        self._scanner_ai_task = self._nicard.create_ai_task(taskname = 'laserscannernitt_ai', channels = self._scanner_ai_channels, voltage_ranges = self._ai_voltage_ranges)
 
         return 0
 
@@ -465,7 +479,7 @@ class NITTConfocalScanner(Base):
         """
         
         self._scanner_clock_task = None
-        return self._nicard.close_co_task(taskname = 'sps_setup_scanner_clock')
+        return self._nicard.close_co_task(taskname = 'laserscannernitt_scanner_clock')
 
 
 

@@ -187,7 +187,7 @@ class LaserScannerLogic(LogicBase):
     """
 
     # declare connectors
-    laserscannerscanner1 = Connector(interface='NITTConfocalScanner')
+    laserscannerscanner1 = Connector(interface='LaserscannerNITT')
     customscanlogic1 = Connector(interface='SPSCustonScanLogic')
     savelogic = Connector(interface='SaveLogic')
 
