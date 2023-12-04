@@ -744,18 +744,14 @@ class ConfocalGui(GuiBase):
 
         # Otherwise, calculate cb range from percentiles.
         else:
-            try:
-                # Exclude any zeros (which are typically due to unfinished scan)
-                xy_image_nonzero = self.xy_image.image[np.nonzero(self.xy_image.image)]     
-                # Read centile range
-                low_centile = self._mw.xy_cb_low_percentile_DoubleSpinBox.value()
-                high_centile = self._mw.xy_cb_high_percentile_DoubleSpinBox.value()
+            # Exclude any zeros (which are typically due to unfinished scan)
+            xy_image_nonzero = self.xy_image.image[np.nonzero(self.xy_image.image)]     
+            # Read centile range
+            low_centile = self._mw.xy_cb_low_percentile_DoubleSpinBox.value()
+            high_centile = self._mw.xy_cb_high_percentile_DoubleSpinBox.value()
 
-                cb_min = np.percentile(xy_image_nonzero, low_centile)
-                cb_max = np.percentile(xy_image_nonzero, high_centile)
-            except:
-                cb_min = 0
-                cb_max = 1
+            cb_min = np.percentile(xy_image_nonzero, low_centile)
+            cb_max = np.percentile(xy_image_nonzero, high_centile)
 
         cb_range = [cb_min, cb_max]
 

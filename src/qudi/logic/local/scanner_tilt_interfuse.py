@@ -184,6 +184,8 @@ class ScannerTiltInterfuse(ConfocalScannerInterface):
                     'The z positions during the xy scan will be out of scanner '
                     'range ! Tilt correction not working, please reduce scan range.')
                 return -1
+        else:
+            return self._scanning_device.scan_line(line_path, pixel_clock)
 
     def close_scanner(self):
         """ Closes the scanner and cleans up afterwards.
