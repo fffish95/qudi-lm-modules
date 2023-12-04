@@ -26,7 +26,7 @@ class ScannerTiltInterfuse(ConfocalScannerInterface):
     """ This interfuse produces a Z correction corresponding to a tilted surface.
     """
 
-    confocalscanner1 = Connector(interface='NITTConfocalScanner')
+    confocalscanner1 = Connector(interface='ConfocalNITT')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -175,7 +175,15 @@ class ScannerTiltInterfuse(ConfocalScannerInterface):
         """
         if self.tiltcorrection:
             line_path[:][2] += self._calc_dz(line_path[:][0], line_path[:][1])
-        return self._scanning_device.scan_line(line_path, pixel_clock)
+            z_min = self.get_position_range()[2][0]
+            z_max = self.get_position_range()[2][1]
+            if (z_min <= min(line_path[:][2])) and (max(line_path[:][2]) <= z_max):
+                return self._scanning_device.scan_line(line_path, pixel_clock)
+            else:
+                self.log.warning(
+                    'The z positions during the xy scan will be out of scanner '
+                    'range ! Tilt correction not working, please reduce scan range.')
+                return -1
 
     def close_scanner(self):
         """ Closes the scanner and cleans up afterwards.
