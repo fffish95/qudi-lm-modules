@@ -919,7 +919,6 @@ class ConfocalLogic(LogicBase):
             # stop scanning when last line scan was performed and makes scan not continuable
             if self._scan_counter >= np.size(self._image_vert_axis):
                 if not self.permanent_scan:
-                    self._scan_counter -= 1
                     self.stop_scanning()
                     if self._zscan:
                         self._zscan_continuable = False
