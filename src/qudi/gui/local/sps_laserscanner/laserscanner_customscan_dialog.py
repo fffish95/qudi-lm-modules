@@ -333,10 +333,10 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         self._params[modenum]['motor_channel'] = int(self.ss_motor_channel_lineedit.text())
 
     def ss_start_deg_changed(self, modenum):
-        self._params[modenum]['start_deg'] = int(self.ss_start_deg_lineedit.text())
+        self._params[modenum]['start_deg'] = float(self.ss_start_deg_lineedit.text())
 
     def ss_step_deg_changed(self, modenum):
-        self._params[modenum]['step_deg'] = int(self.ss_step_deg_lineedit.text())
+        self._params[modenum]['step_deg'] = float(self.ss_step_deg_lineedit.text())
 
 
     def pr_measurements_per_action_changed(self, modenum):
