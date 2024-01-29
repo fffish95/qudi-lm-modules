@@ -187,7 +187,7 @@ class LaserScannerLogic(LogicBase):
     """
 
     # declare connectors
-    laserscannerscanner1 = Connector(interface='LaserscannerNITT')
+    laserscanner1 = Connector(interface='ConfocalScannerInterface')
     customscanlogic1 = Connector(interface='SPSCustonScanLogic')
     savelogic = Connector(interface='SaveLogic')
 
@@ -231,7 +231,7 @@ class LaserScannerLogic(LogicBase):
     def on_activate(self):
         """ Initialisation performed during activation of the module.
         """
-        self._scanning_device = self.laserscannerscanner1()
+        self._scanning_device = self.laserscanner1()
         self._save_logic = self.savelogic()
         self._custom_scan_logic = self.customscanlogic1()
 
