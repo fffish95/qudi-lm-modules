@@ -53,7 +53,7 @@ class ConfocalMainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         # Get the path to the *.ui file
         this_dir = os.path.dirname(__file__)
-        ui_file = os.path.join(this_dir, 'ui_confocalgui.ui')
+        ui_file = os.path.join(this_dir, 'ui_confocalgui_sm.ui')
         self._doubleclicked = False
 
         # Load it

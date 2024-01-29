@@ -116,7 +116,7 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         ss_measurements_per_action_layout.addWidget(label)
         self.ss_measurements_per_action_lineedit = QtWidgets.QLineEdit()
         self.ss_measurements_per_action_lineedit.setText('{0}'.format(self._params[modenum]['measurements_per_action']))
-        self.ss_measurements_per_action_lineedit.editingFinished.connect(lambda: self.ss_measurements_per_action_changed(modenum))
+        self.ss_measurements_per_action_lineedit.editingFinished.connect(lambda: self.ss_measurements_per_action_changed(modenum)) # Use lambda if you have some arguements for the function
         ss_measurements_per_action_layout.addWidget(self.ss_measurements_per_action_lineedit)
 
         # delete button
@@ -190,6 +190,17 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         self.pr_averages_lineedit.editingFinished.connect(lambda: self.pr_averages_changed(modenum))
         pr_averages_layout.addWidget(self.pr_averages_lineedit)
 
+        # detection_to_power_ratio_layout
+        pr_detection_to_power_ratio_layout = QtWidgets.QHBoxLayout()
+        HSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        pr_detection_to_power_ratio_layout.addItem(HSpacer)
+        label = QtWidgets.QLabel('Detection to power ratio')
+        pr_detection_to_power_ratio_layout.addWidget(label)
+        self.pr_detection_to_power_ratio_lineedit = QtWidgets.QLineEdit()
+        self.pr_detection_to_power_ratio_lineedit.setText('{0}'.format(self._params[modenum]['measurements_per_action']))
+        self.pr_detection_to_power_ratio_lineedit.editingFinished.connect(lambda: self.pr_detection_to_power_ratio_changed(modenum))
+        pr_detection_to_power_ratio_layout.addWidget(self.pr_detection_to_power_ratio_lineedit)
+
         # delete button
         pr_delete_button_layout = QtWidgets.QHBoxLayout()
         delete_button = QtWidgets.QPushButton('Delete')
@@ -200,6 +211,13 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
         # motor_layout
         pr_motor_layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QLabel('motor_on')
+        pr_motor_layout.addWidget(label)
+        self.pr_motor_on_checkbox = QtWidgets.QCheckBox()
+        self.pr_motor_on_checkbox.setChecked(self._params[modenum]['motor_on'])
+        self.pr_motor_on_checkbox.stateChanged.connect(lambda: self.pr_motor_on_changed(modenum))
+        pr_motor_layout.addWidget(self.pr_motor_on_checkbox)
+
         label = QtWidgets.QLabel('motor_channel')
         pr_motor_layout.addWidget(label)
         self.pr_motor_channel_lineedit = QtWidgets.QLineEdit()
@@ -223,9 +241,10 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
         pr_layout = QtWidgets.QGridLayout()
         pr_layout.addLayout(pr_measurements_per_action_layout, 0, 0, 1, 2)
-        pr_layout.addLayout(pr_averages_layout, 0, 2, 1, 2)
-        pr_layout.addLayout(pr_delete_button_layout, 0, 4, 1, 2)
-        pr_layout.addLayout(pr_motor_layout, 1, 0, 1, 6)
+        pr_layout.addLayout(pr_detection_to_power_ratio_layout, 0, 2, 1, 2)
+        pr_layout.addLayout(pr_averages_layout, 0, 4, 1, 2)
+        pr_layout.addLayout(pr_delete_button_layout, 0, 6, 1, 2)
+        pr_layout.addLayout(pr_motor_layout, 1, 0, 1, 8)
 
         value = self._customscan_mode[modenum]
         pr_groupbox = QtWidgets.QGroupBox(value)
@@ -342,17 +361,23 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
     def pr_measurements_per_action_changed(self, modenum):
         self._params[modenum]['measurements_per_action'] = int(self.pr_measurements_per_action_lineedit.text())
 
+    def pr_detection_to_power_ratio_changed(self, modenum):
+        self._params[modenum]['detection_to_power_ratio'] = float(self.pr_detection_to_power_ratio_lineedit.text())
+
     def pr_averages_changed(self, modenum):
         self._params[modenum]['averages'] = int(self.pr_averages_lineedit.text())
+
+    def pr_motor_on_changed(self, modenum):
+        self._params[modenum]['motor_on'] = self.pr_motor_on_checkbox.isChecked()
 
     def pr_motor_channel_changed(self, modenum):
         self._params[modenum]['motor_channel'] = int(self.pr_motor_channel_lineedit.text())
 
     def pr_idle_deg_changed(self, modenum):
-        self._params[modenum]['idle_deg'] = int(self.pr_idle_deg_lineedit.text())
+        self._params[modenum]['idle_deg'] = float(self.pr_idle_deg_lineedit.text())
 
     def pr_running_deg_changed(self, modenum):
-        self._params[modenum]['running_deg'] = int(self.pr_running_deg_lineedit.text())
+        self._params[modenum]['running_deg'] = float(self.pr_running_deg_lineedit.text())
         
 
     def eit_measurements_per_action_changed(self, modenum):

@@ -53,11 +53,13 @@ class SPSCustonScanLogic(LogicBase):
         'start_deg': 0,
         'step_deg': 2,
         'measurements_per_action': 1
-    },{ 'motor_channel': 0,
+    },{ 'motor_on': False,
+        'motor_channel': 0,
         'idle_deg': 0,
         'running_deg': 90,
         'averages': 1,
         'measurements_per_action': 1,
+        'detection_to_power_ratio': 1,
         'lines_power': []
     },{ 'Background_subtract': False,
         'wavelength_ramp': False,
@@ -121,7 +123,6 @@ class SPSCustonScanLogic(LogicBase):
     def power_record_start_scanner(self):
         self.Params[self._pr_modenum]['lines_power'] = []      
     
-
     def EIT_start_scanner(self):
         if self.Params[self._eit_modenum]['wavelength_ramp']:
             self.Params[self._eit_modenum]['lines_frequency'] = []
@@ -190,12 +191,13 @@ class SPSCustonScanLogic(LogicBase):
             tlPM.getRsrcName(c_int(0), resourceName)
             tlPM.open(resourceName, c_bool(True), c_bool(False))
 
-            # move the motor to the measurement point 
-            self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['running_deg'])
-            # wait until done, the longest wait time = 90*(60/4)*3 = 4050 ms
-            
-            t_delay = int(abs(self.Params[self._pr_modenum]['running_deg'] - self.Params[self._pr_modenum]['idle_deg'])*(60/4)*3)
-            tools.delay(t_delay)
+            if self.Params[self._pr_modenum]['motor_on']:
+                # move the motor to the measurement point 
+                self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['running_deg'])
+                # wait until done, the longest wait time = 90*(60/4)*3 = 4050 ms
+                
+                t_delay = int(abs(self.Params[self._pr_modenum]['running_deg'] - self.Params[self._pr_modenum]['idle_deg'])*(60/4)*3)
+                tools.delay(t_delay)
 
             # measurement
             power_measurements = []
@@ -207,11 +209,12 @@ class SPSCustonScanLogic(LogicBase):
                 count+=1
                 tools.delay(1000)
             tlPM.close()
-            # move the motor to the idle point 
-            self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
-            tools.delay(t_delay)
+            if self.Params[self._pr_modenum]['motor_on']:
+                # move the motor to the idle point 
+                self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
+                tools.delay(t_delay)
             power_measurements = np.array(power_measurements)
-            value = np.mean(power_measurements)            
+            value = np.mean(power_measurements) * self.Params[self._pr_modenum]['detection_to_power_ratio']
             self.Params[self._pr_modenum]['lines_power'].append(value)
 
     
