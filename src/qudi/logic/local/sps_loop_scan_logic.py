@@ -24,10 +24,6 @@ from qudi.core.connector import Connector
 from qudi.core.statusvariable import StatusVar
 from qudi.util import tools
 from qudi.core.module import LogicBase
-from PySide2 import QtCore
-import copy
-from ctypes import cdll,c_long, c_ulong, c_uint32,byref,create_string_buffer,c_bool,c_char_p,c_int,c_int16,c_double, sizeof, c_voidp
-from qudi.hardware.local.ThorlabsPM.TLPM import TLPM
 
 
 

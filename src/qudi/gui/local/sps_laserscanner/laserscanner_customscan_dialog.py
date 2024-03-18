@@ -190,16 +190,16 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         self.pr_averages_lineedit.editingFinished.connect(lambda: self.pr_averages_changed(modenum))
         pr_averages_layout.addWidget(self.pr_averages_lineedit)
 
-        # detection_to_power_ratio_layout
-        pr_detection_to_power_ratio_layout = QtWidgets.QHBoxLayout()
+        # realpower_to_readout_ratio_layout
+        pr_realpower_to_readout_ratio_layout = QtWidgets.QHBoxLayout()
         HSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        pr_detection_to_power_ratio_layout.addItem(HSpacer)
-        label = QtWidgets.QLabel('Detection to power ratio')
-        pr_detection_to_power_ratio_layout.addWidget(label)
-        self.pr_detection_to_power_ratio_lineedit = QtWidgets.QLineEdit()
-        self.pr_detection_to_power_ratio_lineedit.setText('{0}'.format(self._params[modenum]['measurements_per_action']))
-        self.pr_detection_to_power_ratio_lineedit.editingFinished.connect(lambda: self.pr_detection_to_power_ratio_changed(modenum))
-        pr_detection_to_power_ratio_layout.addWidget(self.pr_detection_to_power_ratio_lineedit)
+        pr_realpower_to_readout_ratio_layout.addItem(HSpacer)
+        label = QtWidgets.QLabel('realpower_to_readout_ratio')
+        pr_realpower_to_readout_ratio_layout.addWidget(label)
+        self.pr_realpower_to_readout_ratio_lineedit = QtWidgets.QLineEdit()
+        self.pr_realpower_to_readout_ratio_lineedit.setText('{0}'.format(self._params[modenum]['measurements_per_action']))
+        self.pr_realpower_to_readout_ratio_lineedit.editingFinished.connect(lambda: self.pr_realpower_to_readout_ratio_changed(modenum))
+        pr_realpower_to_readout_ratio_layout.addWidget(self.pr_realpower_to_readout_ratio_lineedit)
 
         # delete button
         pr_delete_button_layout = QtWidgets.QHBoxLayout()
@@ -241,7 +241,7 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
         pr_layout = QtWidgets.QGridLayout()
         pr_layout.addLayout(pr_measurements_per_action_layout, 0, 0, 1, 2)
-        pr_layout.addLayout(pr_detection_to_power_ratio_layout, 0, 2, 1, 2)
+        pr_layout.addLayout(pr_realpower_to_readout_ratio_layout, 0, 2, 1, 2)
         pr_layout.addLayout(pr_averages_layout, 0, 4, 1, 2)
         pr_layout.addLayout(pr_delete_button_layout, 0, 6, 1, 2)
         pr_layout.addLayout(pr_motor_layout, 1, 0, 1, 8)
@@ -361,8 +361,8 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
     def pr_measurements_per_action_changed(self, modenum):
         self._params[modenum]['measurements_per_action'] = int(self.pr_measurements_per_action_lineedit.text())
 
-    def pr_detection_to_power_ratio_changed(self, modenum):
-        self._params[modenum]['detection_to_power_ratio'] = float(self.pr_detection_to_power_ratio_lineedit.text())
+    def pr_realpower_to_readout_ratio_changed(self, modenum):
+        self._params[modenum]['realpower_to_readout_ratio'] = float(self.pr_realpower_to_readout_ratio_lineedit.text())
 
     def pr_averages_changed(self, modenum):
         self._params[modenum]['averages'] = int(self.pr_averages_lineedit.text())
