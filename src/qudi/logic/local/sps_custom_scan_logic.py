@@ -24,10 +24,7 @@ from qudi.core.connector import Connector
 from qudi.core.statusvariable import StatusVar
 from qudi.util import tools
 from qudi.core.module import LogicBase
-from PySide2 import QtCore
-import copy
-from ctypes import cdll,c_long, c_ulong, c_uint32,byref,create_string_buffer,c_bool,c_char_p,c_int,c_int16,c_double, sizeof, c_voidp
-from qudi.hardware.local.ThorlabsPM.TLPM import TLPM
+
 
 
 
@@ -59,7 +56,7 @@ class SPSCustonScanLogic(LogicBase):
         'running_deg': 90,
         'averages': 1,
         'measurements_per_action': 1,
-        'detection_to_power_ratio': 1,
+        'realpower_to_readout_ratio': 1,
         'lines_power': []
     },{ 'Background_subtract': False,
         'wavelength_ramp': False,
@@ -214,7 +211,7 @@ class SPSCustonScanLogic(LogicBase):
                 self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
                 tools.delay(t_delay)
             power_measurements = np.array(power_measurements)
-            value = np.mean(power_measurements) * self.Params[self._pr_modenum]['detection_to_power_ratio']
+            value = np.mean(power_measurements) * self.Params[self._pr_modenum]['realpower_to_readout_ratio']
             self.Params[self._pr_modenum]['lines_power'].append(value)
 
     
