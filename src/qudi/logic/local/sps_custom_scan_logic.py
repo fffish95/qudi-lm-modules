@@ -39,6 +39,7 @@ class SPSCustonScanLogic(LogicBase):
     """
     # connector
     stepmotor1 = Connector(interface='MotorInterface')
+    thorlabspm1 = Connector(interface = "ThorlabsPM")
     nicard = Connector(interface = "NICard")
     wavemeter = Connector(interface= "HighFinesseWavemeter")
 
@@ -79,6 +80,7 @@ class SPSCustonScanLogic(LogicBase):
         """ Initialisation performed during activation of the module.
         """
         self._motor = self.stepmotor1()
+        self._tlpm = self.thorlabspm1()
         self._nicard = self.nicard()
         self._wavemeter = self.wavemeter()
         self._ss_modenum = 0
@@ -179,14 +181,8 @@ class SPSCustonScanLogic(LogicBase):
             tools.delay(t_delay)
 
     def power_record_process_scanner(self, scan_counter):
-        if scan_counter % self.Params[self._pr_modenum]['measurements_per_action'] == 0:
-            tlPM = TLPM()        
+        if scan_counter % self.Params[self._pr_modenum]['measurements_per_action'] == 0:      
             # connect power meter
-            deviceCount = c_uint32()
-            tlPM.findRsrc(byref(deviceCount))
-            resourceName = create_string_buffer(1024)
-            tlPM.getRsrcName(c_int(0), resourceName)
-            tlPM.open(resourceName, c_bool(True), c_bool(False))
 
             if self.Params[self._pr_modenum]['motor_on']:
                 # move the motor to the measurement point 
@@ -200,12 +196,9 @@ class SPSCustonScanLogic(LogicBase):
             power_measurements = []
             count = 0 
             while count < self.Params[self._pr_modenum]['averages']:
-                power =  c_double()
-                tlPM.measPower(byref(power))
-                power_measurements.append(power.value)
+                power_measurements.append(self._tlpm.get_power())
                 count+=1
                 tools.delay(1000)
-            tlPM.close()
             if self.Params[self._pr_modenum]['motor_on']:
                 # move the motor to the idle point 
                 self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
