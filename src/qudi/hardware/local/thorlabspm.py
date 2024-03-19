@@ -37,14 +37,21 @@ class ThorlabsPM(Base):
 
     def on_activate(self):
         self._tlPM = TLPM()        
-        # connect power meter
+       
+
+
+    def on_deactivate(self):
+        self.disconnect()
+        self._tlPM = None
+
+    def connect(self):       
         deviceCount = c_uint32()
         self._tlPM.findRsrc(byref(deviceCount))
         resourceName = create_string_buffer(1024)
         self._tlPM.getRsrcName(c_int(0), resourceName)
         self._tlPM.open(resourceName, c_bool(True), c_bool(False))
 
-    def on_deactivate(self):
+    def disconnect(self):
         self._tlPM.close()
 
     
