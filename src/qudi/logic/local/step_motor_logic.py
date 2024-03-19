@@ -29,9 +29,6 @@ from qudi.util.mutex import Mutex
 
 class StepMotorLogic(LogicBase):
     stepmotor1 = Connector(interface='MotorInterface')
-    def __init__(self, config, **kwargs):
-        super().__init__(config= config, **kwargs)
-        self.threadlock = Mutex()
 
     def on_activate(self):
         self._motor = self.stepmotor1()
@@ -42,9 +39,11 @@ class StepMotorLogic(LogicBase):
 
 
     def move_rel(self, motor_channel=None, degree=None):
-        return self._motor.move_rel(motor_channel, degree)
+        with self.threadlock:
+            self._motor.move_rel(motor_channel, degree)
 
     
     def move_abs(self, motor_channel=None, degree=None):
-        return self._motor.move_abs(motor_channel, degree)
+        with self.threadlock:
+            self._motor.move_abs(motor_channel, degree)
 
