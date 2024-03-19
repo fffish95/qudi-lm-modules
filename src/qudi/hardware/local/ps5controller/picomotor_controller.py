@@ -2,6 +2,7 @@ import time
 from evdev import InputDevice, categorize, ecodes
 from telnetlib import Telnet
 import select
+import numpy as np
 
 
 picomotor_ip = '10.140.1.153'
@@ -59,6 +60,8 @@ MAX_EMERGENCY_DELAY = 1000                  # max number of milliseconds between
 emergency_tap_time = 0                      # track when the last time the emergency button (playstation) was pressed
 left_joystick, right_joystick = [CENTER, CENTER], [CENTER, CENTER]
 READ_INT = 0.01                              # read interval - 0.3s
+steps_array = [1,10,40,200]
+steps = steps_array[0]
 
 def is_emergency(event):
     global emergency_tap_time
@@ -94,119 +97,64 @@ def decode_leftpad(event):
     return f'leftpad: {action}'
 
 def run_event(event):
+    global steps_array
+    global steps
     if event.type == ecodes.EV_KEY and event.code in button_presses:       # any button press other than leftpad
         if event.code == 308 and event.value == 1:
             with Telnet(picomotor_ip, 23) as pico:
                 _pico= pico_controller(pico)
-                _pico.mov_1x2_up()
-            print('1x2up')
+                _pico.mov_nx2_up(steps)
+            print(f'mov_nx2_up({steps})')
 
         if event.code == 305 and event.value == 1:
             with Telnet(picomotor_ip, 23) as pico:
                 _pico= pico_controller(pico)
-                _pico.mov_1x2_down()
-            print('1x2down')
+                _pico.mov_nx2_down(steps)
+            print(f'mov_nx2_down({steps})')
 
         if event.code == 307 and event.value == 1:
             with Telnet(picomotor_ip, 23) as pico:
                 _pico= pico_controller(pico)
-                _pico.mov_1y2_up()
-            print('1y2up')
+                _pico.mov_ny2_up(steps)
+            print(f'mov_ny2_up({steps})')
 
         if event.code == 304 and event.value == 1:
             with Telnet(picomotor_ip, 23) as pico:
                 _pico= pico_controller(pico)
-                _pico.mov_1y2_down()
-            print('1y2down')
+                _pico.mov_ny2_down(steps)
+            print(f'mov_ny2_down({steps})')
+
+        if event.code == 314 and event.value == 1:
+            np.roll(steps_array,-1)
+            steps = steps_array[0]
+            print(f'picosteps={steps}')
 
     if event.type == ecodes.EV_ABS and event.code in absolutes:                     # leftpad, joystick motion, or L2/R2 triggers
         if event.code == 16:
            if event.value == -1:
-               with Telnet(picomotor_ip, 23) as pico:
+                with Telnet(picomotor_ip, 23) as pico:
                    _pico= pico_controller(pico)
-                   _pico.mov_1x1_up()
-               print('1x1up')
+                   _pico.mov_nx1_up(steps)
+                print(f'mov_nx1_up({steps})')
+
            elif event.value == 1:
-               with Telnet(picomotor_ip, 23) as pico:
+                with Telnet(picomotor_ip, 23) as pico:
                    _pico= pico_controller(pico)
-                   _pico.mov_1x1_down()
-               print('1x1down')
+                   _pico.mov_nx1_down(steps)
+                print(f'mov_nx1_down({steps})')
 
         if event.code == 17:
             if event.value == 1:
                 with Telnet(picomotor_ip, 23) as pico:
                     _pico= pico_controller(pico)
-                    _pico.mov_1y1_down()
-                print('1y1down')
+                    _pico.mov_ny1_down(steps)
+                print(f'mov_ny1_down({steps})')
+
             elif event.value == -1:
                 with Telnet(picomotor_ip, 23) as pico:
                     _pico= pico_controller(pico)
-                    _pico.mov_1y1_up()
-                print('1y1up')
-
-        if event.code == 0:                                              # left joystick moving
-            if event.value > (CENTER - BLIND) and event.value < (CENTER + BLIND):   # skip printing the jittery center for the joysticks
-                return
-            elif event.value > CENTER:
-                steps = event.value - CENTER
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
-                    _pico.mov_nx1_down(steps)
-                print(f'_pos.mov_nx1_down({steps})')
-            else:
-                steps = CENTER - event.value
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
-                    _pico.mov_nx1_up(steps)
-                print(f'_pos.mov_nx1_up({steps})')
-
-        if event.code == 1:                                              # left joystick moving
-            if event.value > (CENTER - BLIND) and event.value < (CENTER + BLIND):   # skip printing the jittery center for the joysticks
-                return
-            elif event.value > CENTER:
-                steps = event.value - CENTER
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
-                    _pico.mov_ny1_down(steps)
-                print(f'_pos.mov_ny1_down({steps})')
-            else:
-                steps = CENTER - event.value
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
                     _pico.mov_ny1_up(steps)
-                print(f'_pos.mov_ny1_up({steps})')
-
-        if event.code == 3:                                              # right joystick moving
-            if event.value > (CENTER - BLIND) and event.value < (CENTER + BLIND):   # skip printing the jittery center for the joysticks
-                return
-            elif event.value > CENTER:
-                steps = event.value - CENTER
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
-                    _pico.mov_nx2_down(steps)
-                print(f'_pos.mov_nx2_down({steps})')
-            else:
-                steps = CENTER - event.value
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
-                    _pico.mov_nx2_up(steps)
-                print(f'_pos.mov_nx2_up({steps})')
-
-        if event.code == 4:                                              # right joystick moving
-            if event.value > (CENTER - BLIND) and event.value < (CENTER + BLIND):   # skip printing the jittery center for the joysticks
-                return
-            elif event.value > CENTER:
-                steps = event.value - CENTER
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
-                    _pico.mov_ny2_down(steps)
-                print(f'_pos.mov_ny2_down({steps})')
-            else:
-                steps = CENTER - event.value
-                with Telnet(picomotor_ip, 23) as pico:
-                    _pico= pico_controller(pico)
-                    _pico.mov_ny2_up(steps)
-                print(f'_pos.mov_ny2_up({steps})')
+                print(f'mov_ny1_up({steps})')
 
 class pico_controller:
     def __init__(self, pico):
@@ -291,9 +239,7 @@ if __name__ == '__main__':
                 time.sleep(READ_INT)
                 events = []
                 for ev in gamepad.read():
-                    if ev.type != 0 and ev.code in [304,305,307,308,316,16,17]:
-                        events.append(ev)
-                    elif ev.type != 0 and ev.code in [0,1,3,4] and (ev.value < (CENTER - BLIND) or ev.value > (CENTER + BLIND)):
+                    if ev.type != 0 and ev.code in [304,305,307,308, 314,316,16,17]:
                         events.append(ev)
                     else:
                         continue
