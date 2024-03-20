@@ -7,8 +7,8 @@ conda config --add channels conda-forge
 
 ## install qudi
 conda update --all
-conda install python=3.9
-conda create --name qudi-env python=3.9
+conda install python=3.10
+conda create --name qudi-env python=3.10
 conda activate qudi-env
 python -m pip install qudi-core
 python -m pip install git+https://github.com/fffish95/qudi-core.git@main  
