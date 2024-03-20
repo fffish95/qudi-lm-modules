@@ -39,7 +39,6 @@ class PIDControllerInterface(Base):
     """
 
     @abstractmethod
-    @abstractmethod
     def get_kp(self):
         """ Get the coefficient associated with the proportional term
 
@@ -47,7 +46,6 @@ class PIDControllerInterface(Base):
          """
         pass
 
-    @abstractmethod
     @abstractmethod
     def set_kp(self, kp):
         """ Set the coefficient associated with the proportional term
@@ -57,7 +55,6 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    @abstractmethod
     def get_ki(self):
         """ Get the coefficient associated with the integral term
 
@@ -65,7 +62,6 @@ class PIDControllerInterface(Base):
          """
         pass
 
-    @abstractmethod
     @abstractmethod
     def set_ki(self, ki):
         """ Set the coefficient associated with the integral term
@@ -75,7 +71,6 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    @abstractmethod
     def get_kd(self):
         """ Get the coefficient associated with the derivative term
 
@@ -83,7 +78,6 @@ class PIDControllerInterface(Base):
          """
         pass
 
-    @abstractmethod
     @abstractmethod
     def set_kd(self, kd):
         """ Set the coefficient associated with the derivative term
@@ -93,7 +87,6 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    @abstractmethod
     def get_setpoint(self):
         """ Get the setpoint value of the hardware device
 
@@ -101,7 +94,6 @@ class PIDControllerInterface(Base):
          """
         pass
 
-    @abstractmethod
     @abstractmethod
     def set_setpoint(self, setpoint):
         """ Set the setpoint value of the hardware device
@@ -111,7 +103,6 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    @abstractmethod
     def get_manual_value(self):
         """ Get the manual value, used if the device is disabled
 
@@ -120,14 +111,13 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    def set_manual_value(self, manualvalue):
+    def set_manual_value(self, manual_value):
         """ Set the manual value, used if the device is disabled
 
         @param (float) manual_value: The new manual value
         """
         pass
 
-    @abstractmethod
     @abstractmethod
     def get_enabled(self):
         """ Get if the PID is enabled (True) or if it is disabled (False) and the manual value is used
@@ -137,7 +127,6 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    @abstractmethod
     def set_enabled(self, enabled):
         """ Set if the PID is enabled (True) or if it is disabled (False) and the manual value is used
 
@@ -146,7 +135,6 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    @abstractmethod
     def get_control_limits(self):
         """ Get the current limits of the control value as a tuple
 
@@ -154,7 +142,6 @@ class PIDControllerInterface(Base):
         """
         pass
 
-    @abstractmethod
     @abstractmethod
     def set_control_limits(self, limits):
         """ Set the current limits of the control value as a tuple
@@ -166,11 +153,17 @@ class PIDControllerInterface(Base):
         pass
 
     @abstractmethod
-    @abstractmethod
     def get_process_value(self):
         """ Get the current process value read
 
         @return (float): The current process value
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def process_value_unit(self) -> str:
+        """ read-only property for the unit of the process value
         """
         pass
 
@@ -179,6 +172,13 @@ class PIDControllerInterface(Base):
         """ Get the current control value read
 
         @return (float): The current control value
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def control_value_unit(self) -> str:
+        """ read-only property for the unit of the control value
         """
         pass
 
