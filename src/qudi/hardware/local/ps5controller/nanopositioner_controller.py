@@ -60,6 +60,8 @@ MAX_EMERGENCY_DELAY = 1000                  # max number of milliseconds between
 emergency_tap_time = 0                      # track when the last time the emergency button (playstation) was pressed
 left_joystick, right_joystick = [CENTER, CENTER], [CENTER, CENTER]
 READ_INT = 0.15                              # read interval - 0.3s
+steps_array = [1,10,40,200]
+steps = steps_array[0]
 
 def is_emergency(event):
     global emergency_tap_time
@@ -95,6 +97,8 @@ def decode_leftpad(event):
     return f'leftpad: {action}'
 
 def run_event(event):
+    global steps_array
+    global steps
     if event.type == ecodes.EV_KEY and event.code in button_presses:       # any button press other than leftpad
         if event.code == 310 and event.value == 1:
             with Telnet(attocube_ip, 7231) as pos:
@@ -102,7 +106,7 @@ def run_event(event):
                 pos.read_until(b"Authorization code:")
                 pos.write(password)
                 _pos.mov_1z_up()
-            #print('1zup')
+            print('1zup')
 
         if event.code == 311 and event.value == 1:
             with Telnet(attocube_ip, 7231) as pos:
@@ -110,7 +114,12 @@ def run_event(event):
                 pos.read_until(b"Authorization code:")
                 pos.write(password)
                 _pos.mov_1z_down()
-            #print('1zdown')
+            print('1zdown')
+
+        if event.code == 314 and event.value == 1:
+            np.roll(steps_array,-1)
+            steps = steps_array[0]
+            print(f'nanosteps={steps}')
 
     if event.type == ecodes.EV_ABS and event.code in absolutes:                     # leftpad, joystick motion, or L2/R2 triggers
         if event.code == 16:
@@ -119,15 +128,16 @@ def run_event(event):
                     _pos= pos_controller(pos)
                     pos.read_until(b"Authorization code:")
                     pos.write(password)
-                    _pos.mov_1x_up()
-                #print('1xdown')
+                    _pos.mov_nx_up(steps)
+                print(f'mov_nx_up({steps})')
+                
            elif event.value == 1:
                 with Telnet(attocube_ip, 7231) as pos:
                     _pos= pos_controller(pos)
                     pos.read_until(b"Authorization code:")
                     pos.write(password)
-                    _pos.mov_1x_down()
-                #print('1xup')
+                    _pos.mov_nx_down(steps)
+                print(f'mov_nx_down({steps})')
 
 
         if event.code == 17:
@@ -136,15 +146,16 @@ def run_event(event):
                     _pos= pos_controller(pos)
                     pos.read_until(b"Authorization code:")
                     pos.write(password)
-                    _pos.mov_1y_up()
-                #print('1ydown')
+                    _pos.mov_ny_up(steps)
+                print(f'mov_ny_up({steps})')
+                
             elif event.value == -1:
                 with Telnet(attocube_ip, 7231) as pos:
                     _pos= pos_controller(pos)
                     pos.read_until(b"Authorization code:")
                     pos.write(password)
-                    _pos.mov_1y_down()
-                #print('1yup')
+                    _pos.mov_ny_down(steps)
+                print(f'mov_ny_down({steps})')
 
         if event.code == 2 and event.value > L2R2_BLIND:
             with Telnet(attocube_ip, 7231) as pos:
@@ -152,7 +163,7 @@ def run_event(event):
                 pos.read_until(b"Authorization code:")
                 pos.write(password)
                 _pos.mov_nz_up(event.value)
-            #print(f'_pos.mov_nz_up({event.value})')
+            print(f'mov_nz_up({event.value})')
 
         if event.code == 5 and event.value > L2R2_BLIND:
             with Telnet(attocube_ip, 7231) as pos:
@@ -160,47 +171,7 @@ def run_event(event):
                 pos.read_until(b"Authorization code:")
                 pos.write(password)
                 _pos.mov_nz_down(event.value)
-            #print(f'_pos.mov_nz_down({event.value})')
-
-        if event.code == 0:                                              # left joystick moving
-            if event.value > (CENTER - BLIND) and event.value < (CENTER + BLIND):   # skip printing the jittery center for the joysticks
-                return
-            elif event.value > CENTER:
-                steps = event.value - CENTER
-                with Telnet(attocube_ip, 7231) as pos:
-                    _pos= pos_controller(pos)
-                    pos.read_until(b"Authorization code:")
-                    pos.write(password)
-                    _pos.mov_nx_down(steps)
-                #print(f'_pos.mov_nx_up({steps})')
-            else:
-                steps = CENTER - event.value
-                with Telnet(attocube_ip, 7231) as pos:
-                    _pos= pos_controller(pos)
-                    pos.read_until(b"Authorization code:")
-                    pos.write(password)
-                    _pos.mov_nx_up(steps)
-                #print(f'_pos.mov_nx_down({steps})')
-
-        if event.code == 1:                                              # left joystick moving
-            if event.value > (CENTER - BLIND) and event.value < (CENTER + BLIND):   # skip printing the jittery center for the joysticks
-                return
-            elif event.value > CENTER:
-                steps = event.value - CENTER
-                with Telnet(attocube_ip, 7231) as pos:
-                    _pos= pos_controller(pos)
-                    pos.read_until(b"Authorization code:")
-                    pos.write(password)
-                    _pos.mov_ny_up(steps)
-                #print(f'_pos.mov_ny_down({steps})')
-            else:
-                steps = CENTER - event.value
-                with Telnet(attocube_ip, 7231) as pos:
-                    _pos= pos_controller(pos)
-                    pos.read_until(b"Authorization code:")
-                    pos.write(password)
-                    _pos.mov_ny_down(steps)
-                #print(f'_pos.mov_ny_up({steps})')
+            print(f'mov_nz_down({event.value})')
 
 
 class pos_controller:
@@ -276,11 +247,9 @@ if __name__ == '__main__':
                 time.sleep(READ_INT)
                 events = []
                 for ev in gamepad.read():
-                    if ev.type != 0 and ev.code in [310,311,316,16,17]:
+                    if ev.type != 0 and ev.code in [310,311,314,316,16,17]:
                         events.append(ev)
                     elif ev.type != 0 and ev.code in [2,5] and ev.value > L2R2_BLIND:
-                        events.append(ev)
-                    elif ev.type != 0 and ev.code in [0,1] and (ev.value < (CENTER - BLIND) or ev.value > (CENTER + BLIND)):
                         events.append(ev)
                     else:
                         continue

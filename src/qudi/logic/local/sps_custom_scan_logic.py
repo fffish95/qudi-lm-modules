@@ -24,10 +24,7 @@ from qudi.core.connector import Connector
 from qudi.core.statusvariable import StatusVar
 from qudi.util import tools
 from qudi.core.module import LogicBase
-from PySide2 import QtCore
-import copy
-from ctypes import cdll,c_long, c_ulong, c_uint32,byref,create_string_buffer,c_bool,c_char_p,c_int,c_int16,c_double, sizeof, c_voidp
-from qudi.hardware.local.ThorlabsPM.TLPM import TLPM
+
 
 
 
@@ -42,22 +39,26 @@ class SPSCustonScanLogic(LogicBase):
     """
     # connector
     stepmotor1 = Connector(interface='MotorInterface')
+    thorlabspm1 = Connector(interface = "ThorlabsPM")
     nicard = Connector(interface = "NICard")
     wavemeter = Connector(interface= "HighFinesseWavemeter")
+    fugsourcelogic = Connector(interface = "FugSourceLogic")
 
     # status vars
 
-    CustomScanMode = StatusVar(default = ['saturation scan', 'power record', 'EIT', 'stark shift scan'])
+    CustomScanMode = StatusVar(default = ['step motor', 'power record', 'EIT', 'stark shift scan'])
     Params =  StatusVar(default=[{
         'motor_channel': 0,
         'start_deg': 0,
         'step_deg': 2,
         'measurements_per_action': 1
-    },{ 'motor_channel': 0,
+    },{ 'motor_on': False,
+        'motor_channel': 0,
         'idle_deg': 0,
         'running_deg': 90,
         'averages': 1,
         'measurements_per_action': 1,
+        'realpower_to_readout_ratio': 1,
         'lines_power': []
     },{ 'Background_subtract': False,
         'wavelength_ramp': False,
@@ -67,6 +68,8 @@ class SPSCustonScanLogic(LogicBase):
         'lines_frequency': [],
         'measurements_per_action': 1
         },{
+        'start_V': 250,
+        'step_V': -2,
         'measurements_per_action': 1 
     }])
 
@@ -80,8 +83,10 @@ class SPSCustonScanLogic(LogicBase):
         """ Initialisation performed during activation of the module.
         """
         self._motor = self.stepmotor1()
+        self._tlpm = self.thorlabspm1()
         self._nicard = self.nicard()
         self._wavemeter = self.wavemeter()
+        self._fugsourcelogic = self.fugsourcelogic()
         self._ss_modenum = 0
         self._pr_modenum = 1
         self._eit_modenum = 2
@@ -103,7 +108,7 @@ class SPSCustonScanLogic(LogicBase):
 
         value = self.CustomScanMode[current]
         func_map = {
-            self.CustomScanMode[0]: self.saturation_scan_start_scanner,
+            self.CustomScanMode[0]: self.step_motor_start_scanner,
             self.CustomScanMode[1]: self.power_record_start_scanner,
             self.CustomScanMode[2]: self.EIT_start_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_start_scanner,
@@ -111,7 +116,7 @@ class SPSCustonScanLogic(LogicBase):
         func = func_map.get(value)
         func()
 
-    def saturation_scan_start_scanner(self):
+    def step_motor_start_scanner(self):
         # move the motor to the start point 
         self._motor.move_abs(self.Params[self._ss_modenum]['motor_channel'], self.Params[self._ss_modenum]['start_deg'])
         # wait until done, the longest wait time = 180*(60/4)*3 = 8100 ms
@@ -119,9 +124,9 @@ class SPSCustonScanLogic(LogicBase):
         tools.delay(t_delay)
 
     def power_record_start_scanner(self):
-        self.Params[self._pr_modenum]['lines_power'] = []      
+        self.Params[self._pr_modenum]['lines_power'] = []
+        self._tlpm.connect()     
     
-
     def EIT_start_scanner(self):
         if self.Params[self._eit_modenum]['wavelength_ramp']:
             self.Params[self._eit_modenum]['lines_frequency'] = []
@@ -156,7 +161,10 @@ class SPSCustonScanLogic(LogicBase):
 
 
     def stark_shift_scan_start_scanner(self):
-        pass
+        # enable voltage source
+        self._fugsourcelogic.enable()
+        # set to initial voltage
+        self._fugsourcelogic.set_V(self.Params[self._starkshift_modenum]['start_V'])
 
 
     
@@ -164,7 +172,7 @@ class SPSCustonScanLogic(LogicBase):
 
         value = self.CustomScanMode[current]
         func_map = {
-            self.CustomScanMode[0]: self.saturation_scan_process_scanner,
+            self.CustomScanMode[0]: self.step_motor_process_scanner,
             self.CustomScanMode[1]: self.power_record_process_scanner,
             self.CustomScanMode[2]: self.EIT_process_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_process_scanner,
@@ -172,7 +180,7 @@ class SPSCustonScanLogic(LogicBase):
         func = func_map.get(value)
         func(scan_counter)
 
-    def saturation_scan_process_scanner(self, scan_counter):
+    def step_motor_process_scanner(self, scan_counter):
         if scan_counter % self.Params[self._ss_modenum]['measurements_per_action'] == 0:
             # move the motor 
             self._motor.move_rel(self.Params[self._ss_modenum]['motor_channel'], self.Params[self._ss_modenum]['step_deg'])
@@ -181,37 +189,30 @@ class SPSCustonScanLogic(LogicBase):
             tools.delay(t_delay)
 
     def power_record_process_scanner(self, scan_counter):
-        if scan_counter % self.Params[self._pr_modenum]['measurements_per_action'] == 0:
-            tlPM = TLPM()        
+        if scan_counter % self.Params[self._pr_modenum]['measurements_per_action'] == 0:      
             # connect power meter
-            deviceCount = c_uint32()
-            tlPM.findRsrc(byref(deviceCount))
-            resourceName = create_string_buffer(1024)
-            tlPM.getRsrcName(c_int(0), resourceName)
-            tlPM.open(resourceName, c_bool(True), c_bool(False))
 
-            # move the motor to the measurement point 
-            self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['running_deg'])
-            # wait until done, the longest wait time = 90*(60/4)*3 = 4050 ms
-            
-            t_delay = int(abs(self.Params[self._pr_modenum]['running_deg'] - self.Params[self._pr_modenum]['idle_deg'])*(60/4)*3)
-            tools.delay(t_delay)
+            if self.Params[self._pr_modenum]['motor_on']:
+                # move the motor to the measurement point 
+                self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['running_deg'])
+                # wait until done, the longest wait time = 90*(60/4)*3 = 4050 ms
+                
+                t_delay = int(abs(self.Params[self._pr_modenum]['running_deg'] - self.Params[self._pr_modenum]['idle_deg'])*(60/4)*3)
+                tools.delay(t_delay)
 
             # measurement
             power_measurements = []
             count = 0 
             while count < self.Params[self._pr_modenum]['averages']:
-                power =  c_double()
-                tlPM.measPower(byref(power))
-                power_measurements.append(power.value)
+                power_measurements.append(self._tlpm.get_power())
                 count+=1
                 tools.delay(1000)
-            tlPM.close()
-            # move the motor to the idle point 
-            self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
-            tools.delay(t_delay)
+            if self.Params[self._pr_modenum]['motor_on']:
+                # move the motor to the idle point 
+                self._motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
+                tools.delay(t_delay)
             power_measurements = np.array(power_measurements)
-            value = np.mean(power_measurements)            
+            value = np.mean(power_measurements) * self.Params[self._pr_modenum]['realpower_to_readout_ratio']
             self.Params[self._pr_modenum]['lines_power'].append(value)
 
     
@@ -260,7 +261,10 @@ class SPSCustonScanLogic(LogicBase):
         
 
     def stark_shift_scan_process_scanner(self,scan_counter):
-        pass
+        if scan_counter % self.Params[self._ss_modenum]['measurements_per_action'] == 0:
+            current_V = self._fugsourcelogic.get_V()
+            set_V = current_V + self.Params[self._starkshift_modenum]['step_V']
+            self._fugsourcelogic.set_V(set_V)
 
 
 
@@ -268,7 +272,7 @@ class SPSCustonScanLogic(LogicBase):
 
         value = self.CustomScanMode[current]
         func_map = {
-            self.CustomScanMode[0]: self.saturation_scan_stop_scanner,
+            self.CustomScanMode[0]: self.step_motor_stop_scanner,
             self.CustomScanMode[1]: self.power_record_stop_scanner,
             self.CustomScanMode[2]: self.EIT_stop_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_stop_scanner,
@@ -276,11 +280,15 @@ class SPSCustonScanLogic(LogicBase):
         func = func_map.get(value)
         func()
 
-    def saturation_scan_stop_scanner(self):
-        pass
+    def step_motor_stop_scanner(self):
+        # move the motor to the start point 
+        self._motor.move_abs(self.Params[self._ss_modenum]['motor_channel'], self.Params[self._ss_modenum]['start_deg'])
+        # wait until done, the longest wait time = 180*(60/4)*3 = 8100 ms
+        t_delay = int(8100)
+        tools.delay(t_delay)    
 
     def power_record_stop_scanner(self):
-        pass
+        self._tlpm.disconnect()     
     
     def EIT_stop_scanner(self):
         if self.Params[self._eit_modenum]['Background_subtract']:
@@ -295,14 +303,14 @@ class SPSCustonScanLogic(LogicBase):
 
 
     def stark_shift_scan_stop_scanner(self):
-        pass
+        self._fugsourcelogic.disable()
 
 
     def function_0_handler(self, current): 
 
         value = self.CustomScanMode[current]
         func_map = {
-            self.CustomScanMode[0]: self.saturation_scan_function_0,
+            self.CustomScanMode[0]: self.step_motor_function_0,
             self.CustomScanMode[0]: self.power_record_function_0,
             self.CustomScanMode[1]: self.EIT_function_0,
             self.CustomScanMode[2]: self.stark_shift_scan_function_0,
@@ -310,7 +318,7 @@ class SPSCustonScanLogic(LogicBase):
         func = func_map.get(value)
         func()
 
-    def saturation_scan_function_0(self):
+    def step_motor_function_0(self):
         pass
 
     def power_record_function_0(self):
