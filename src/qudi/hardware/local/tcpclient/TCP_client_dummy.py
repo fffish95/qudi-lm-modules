@@ -4,7 +4,7 @@ import socket
 from qudi.core.configoption import ConfigOption
 from qudi.core.module import Base
 
-class TCPClient_dummy(Base):
+class TCPClient(Base):
     """
         fugsource_tcp_client:
         module.Class: 'local.tcpclient.TCP_client.TCPClient'
