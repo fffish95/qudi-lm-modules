@@ -125,7 +125,7 @@ def run_event(event):
             print(f'mov_ny2_down({steps})')
 
         if event.code == 314 and event.value == 1:
-            np.roll(steps_array,-1)
+            steps_array = np.roll(steps_array,-1)
             steps = steps_array[0]
             print(f'picosteps={steps}')
 

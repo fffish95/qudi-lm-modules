@@ -2,6 +2,7 @@ import time
 from evdev import InputDevice, categorize, ecodes
 from telnetlib import Telnet
 import select
+import numpy as np
 
 
 attocube_ip = '10.140.1.111'
@@ -117,7 +118,7 @@ def run_event(event):
             print('1zdown')
 
         if event.code == 314 and event.value == 1:
-            np.roll(steps_array,-1)
+            steps_array = np.roll(steps_array,-1)
             steps = steps_array[0]
             print(f'nanosteps={steps}')
 
@@ -141,7 +142,7 @@ def run_event(event):
 
 
         if event.code == 17:
-            if event.value == 1:
+            if event.value == -1:
                 with Telnet(attocube_ip, 7231) as pos:
                     _pos= pos_controller(pos)
                     pos.read_until(b"Authorization code:")
@@ -149,7 +150,7 @@ def run_event(event):
                     _pos.mov_ny_up(steps)
                 print(f'mov_ny_up({steps})')
                 
-            elif event.value == -1:
+            elif event.value == 1:
                 with Telnet(attocube_ip, 7231) as pos:
                     _pos= pos_controller(pos)
                     pos.read_until(b"Authorization code:")

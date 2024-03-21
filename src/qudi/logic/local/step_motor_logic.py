@@ -32,7 +32,7 @@ class StepMotorLogic(LogicBase):
 
     def on_activate(self):
         self._motor = self.stepmotor1()
-
+        self.threadlock = Mutex()
 
     def on_deactivate(self):
         return 0
