@@ -87,10 +87,10 @@ class SPSCustonScanLogic(LogicBase):
         self._nicard = self.nicard()
         self._wavemeter = self.wavemeter()
         self._fugsourcelogic = self.fugsourcelogic()
-        self._ss_modenum = 0
+        self._sm_modenum = 0
         self._pr_modenum = 1
         self._eit_modenum = 2
-        self._starkshift_modenum = 3
+        self._ss_modenum = 3
 
 
         self._shutter_task = None
@@ -118,7 +118,7 @@ class SPSCustonScanLogic(LogicBase):
 
     def step_motor_start_scanner(self):
         # move the motor to the start point 
-        self._motor.move_abs(self.Params[self._ss_modenum]['motor_channel'], self.Params[self._ss_modenum]['start_deg'])
+        self._motor.move_abs(self.Params[self._sm_modenum]['motor_channel'], self.Params[self._sm_modenum]['start_deg'])
         # wait until done, the longest wait time = 180*(60/4)*3 = 8100 ms
         t_delay = int(8100)
         tools.delay(t_delay)
@@ -164,7 +164,7 @@ class SPSCustonScanLogic(LogicBase):
         # enable voltage source
         self._fugsourcelogic.enable()
         # set to initial voltage
-        self._fugsourcelogic.set_V(self.Params[self._starkshift_modenum]['start_V'])
+        self._fugsourcelogic.set_V(self.Params[self._ss_modenum]['start_V'])
 
 
     
@@ -181,11 +181,11 @@ class SPSCustonScanLogic(LogicBase):
         func(scan_counter)
 
     def step_motor_process_scanner(self, scan_counter):
-        if scan_counter % self.Params[self._ss_modenum]['measurements_per_action'] == 0:
+        if scan_counter % self.Params[self._sm_modenum]['measurements_per_action'] == 0:
             # move the motor 
-            self._motor.move_rel(self.Params[self._ss_modenum]['motor_channel'], self.Params[self._ss_modenum]['step_deg'])
+            self._motor.move_rel(self.Params[self._sm_modenum]['motor_channel'], self.Params[self._sm_modenum]['step_deg'])
             # wait until done
-            t_delay = int(self.Params[self._ss_modenum]['step_deg']*(60/4)*3) 
+            t_delay = int(self.Params[self._sm_modenum]['step_deg']*(60/4)*3) 
             tools.delay(t_delay)
 
     def power_record_process_scanner(self, scan_counter):
@@ -263,7 +263,7 @@ class SPSCustonScanLogic(LogicBase):
     def stark_shift_scan_process_scanner(self,scan_counter):
         if scan_counter % self.Params[self._ss_modenum]['measurements_per_action'] == 0:
             current_V = self._fugsourcelogic.get_V()
-            set_V = current_V + self.Params[self._starkshift_modenum]['step_V']
+            set_V = current_V + self.Params[self._ss_modenum]['step_V']
             self._fugsourcelogic.set_V(set_V)
 
 
@@ -282,7 +282,7 @@ class SPSCustonScanLogic(LogicBase):
 
     def step_motor_stop_scanner(self):
         # move the motor to the start point 
-        self._motor.move_abs(self.Params[self._ss_modenum]['motor_channel'], self.Params[self._ss_modenum]['start_deg'])
+        self._motor.move_abs(self.Params[self._sm_modenum]['motor_channel'], self.Params[self._sm_modenum]['start_deg'])
         # wait until done, the longest wait time = 180*(60/4)*3 = 8100 ms
         t_delay = int(8100)
         tools.delay(t_delay)    
