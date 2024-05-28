@@ -46,7 +46,7 @@ class SPSCustonScanLogic(LogicBase):
 
     # status vars
 
-    CustomScanMode = StatusVar(default = ['step motor', 'power record', 'EIT', 'stark shift scan'])
+    CustomScanMode = StatusVar(default = ['step motor', 'power record', 'EIT', 'stark shift scan', 'scan trigger'])
     Params =  StatusVar(default=[{
         'motor_channel': 0,
         'start_deg': 0,
@@ -71,6 +71,9 @@ class SPSCustonScanLogic(LogicBase):
         'start_V': 250,
         'step_V': -2,
         'measurements_per_action': 1 
+    },{
+        'trigger_channel':['pfi1'],
+        'trigger_length': 50,
     }])
 
 
@@ -91,6 +94,7 @@ class SPSCustonScanLogic(LogicBase):
         self._pr_modenum = 1
         self._eit_modenum = 2
         self._ss_modenum = 3
+        self._st_modenum = 4
 
 
         self._shutter_task = None
@@ -112,6 +116,7 @@ class SPSCustonScanLogic(LogicBase):
             self.CustomScanMode[1]: self.power_record_start_scanner,
             self.CustomScanMode[2]: self.EIT_start_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_start_scanner,
+            self.CustomScanMode[4]: self.scan_trigger_start_scanner,
         }
         func = func_map.get(value)
         func()
@@ -166,8 +171,16 @@ class SPSCustonScanLogic(LogicBase):
         # set to initial voltage
         self._fugsourcelogic.set_V(self.Params[self._ss_modenum]['start_V'])
 
-
+    def scan_trigger_start_scanner(self):
+        # output a trigger before each loop
+        self._trigger_task = self._nicard.create_do_task(taskname = 'trigger1', channels = self.Params[self._st_modenum]['trigger_channel'])
+        self._nicard.write_task(task= self._trigger_task, data = True)
+        # keep the do on for trigger length time
+        t_delay = int(self.Params[self._st_modenum]['trigger_length'])
+        tools.delay(t_delay)
+        self._nicard.write_task(task= self._trigger_task, data = False)
     
+
     def process_scanner_handler(self, current, scan_counter): 
 
         value = self.CustomScanMode[current]
@@ -176,6 +189,7 @@ class SPSCustonScanLogic(LogicBase):
             self.CustomScanMode[1]: self.power_record_process_scanner,
             self.CustomScanMode[2]: self.EIT_process_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_process_scanner,
+            self.CustomScanMode[4]: self.scan_trigger_process_scanner,
         }
         func = func_map.get(value)
         func(scan_counter)
@@ -266,6 +280,13 @@ class SPSCustonScanLogic(LogicBase):
             set_V = current_V + self.Params[self._ss_modenum]['step_V']
             self._fugsourcelogic.set_V(set_V)
 
+    def scan_trigger_process_scanner(self,scan_counter):
+
+        self._nicard.write_task(task= self._trigger_task, data = True)
+        # keep the do on for trigger length time
+        t_delay = int(self.Params[self._st_modenum]['trigger_length'])
+        tools.delay(t_delay)
+        self._nicard.write_task(task= self._trigger_task, data = False)
 
 
     def stop_scanner_handler(self, current): 
@@ -276,6 +297,7 @@ class SPSCustonScanLogic(LogicBase):
             self.CustomScanMode[1]: self.power_record_stop_scanner,
             self.CustomScanMode[2]: self.EIT_stop_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_stop_scanner,
+            self.CustomScanMode[4]: self.scan_trigger_stop_scanner,
         }
         func = func_map.get(value)
         func()
@@ -305,15 +327,20 @@ class SPSCustonScanLogic(LogicBase):
     def stark_shift_scan_stop_scanner(self):
         self._fugsourcelogic.disable()
 
+    def scan_trigger_stop_scanner(self):
+
+        self._nicard.close_do_task(taskname = 'trigger1')
+        self._trigger_task = None
 
     def function_0_handler(self, current): 
 
         value = self.CustomScanMode[current]
         func_map = {
             self.CustomScanMode[0]: self.step_motor_function_0,
-            self.CustomScanMode[0]: self.power_record_function_0,
-            self.CustomScanMode[1]: self.EIT_function_0,
-            self.CustomScanMode[2]: self.stark_shift_scan_function_0,
+            self.CustomScanMode[1]: self.power_record_function_0,
+            self.CustomScanMode[2]: self.EIT_function_0,
+            self.CustomScanMode[3]: self.stark_shift_scan_function_0,
+            self.CustomScanMode[4]: self.scan_trigger_stop_scanner_0,
         }
         func = func_map.get(value)
         func()
@@ -328,4 +355,7 @@ class SPSCustonScanLogic(LogicBase):
         pass
 
     def stark_shift_scan_function_0(self):
+        pass
+
+    def scan_trigger_stop_scanner_0(self):
         pass

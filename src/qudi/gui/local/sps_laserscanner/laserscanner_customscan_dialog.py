@@ -90,7 +90,8 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
             self._customscan_mode[0]: self.step_motor_layout,
             self._customscan_mode[1]: self.power_record_layout,
             self._customscan_mode[2]: self.EIT_layout,
-            self._customscan_mode[3]: self.stark_shift_scan_layout
+            self._customscan_mode[3]: self.stark_shift_scan_layout,
+            self._customscan_mode[4]: self.scan_trigger_layout,
         }
         for n, mode in enumerate(self._current_modes):
             value = self._customscan_mode[mode]
@@ -384,6 +385,51 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
         return ss_groupbox        
 
+    def scan_trigger_layout(self):
+
+        # mode num
+        modenum = 4
+
+        font = QtGui.QFont()
+        font.setBold(True)
+
+        # st_setting_layout
+        st_setting_layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QLabel('trigger_channel')
+        st_setting_layout.addWidget(label)
+        self.st_trigger_channel_lineedit = QtWidgets.QLineEdit()
+        self.st_trigger_channel_lineedit.setText('{0}'.format(self._params[modenum]['trigger_channel'][0]))
+        self.st_trigger_channel_lineedit.editingFinished.connect(lambda: self.st_trigger_channel_changed(modenum))
+        st_setting_layout.addWidget(self.st_trigger_channel_lineedit)
+
+
+        label = QtWidgets.QLabel('trigger_length')
+        st_setting_layout.addWidget(label)
+        self.st_trigger_length_lineedit = QtWidgets.QLineEdit()
+        self.st_trigger_length_lineedit.setText('{0}'.format(self._params[modenum]['trigger_length']))
+        self.st_trigger_length_lineedit.editingFinished.connect(lambda: self.st_trigger_length_changed(modenum))
+        st_setting_layout.addWidget(self.st_trigger_length_lineedit)
+
+        # delete button
+        st_delete_button_layout = QtWidgets.QHBoxLayout()
+        delete_button = QtWidgets.QPushButton('Delete')
+        delete_button.setCheckable(True)
+        delete_button.clicked.connect(self.customscan_delete)
+        st_delete_button_layout.addWidget(delete_button)
+
+ 
+
+        st_layout = QtWidgets.QGridLayout()
+        st_layout.addLayout(st_setting_layout, 0, 0, 1, 4)
+        st_layout.addLayout(st_delete_button_layout, 0, 5, 1, 1)
+
+        value = self._customscan_mode[modenum]
+        st_groupbox = QtWidgets.QGroupBox(value)
+        st_groupbox.setLayout(st_layout)
+        self._customscan_del_button_hashmap[delete_button] = {'mode':modenum, 'groupbox': st_groupbox}
+
+        return st_groupbox
+
 
     def customscan_delete(self):
         mode = self._customscan_del_button_hashmap[self.sender()]['mode']
@@ -458,6 +504,12 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
     def ss_step_V_changed(self, modenum):
         self._params[modenum]['step_V'] = float(self.ss_step_V_lineedit.text())
+
+    def st_trigger_channel_changed(self, modenum):
+        self._params[modenum]['trigger_channel'][0] = str(self.st_trigger_channel_lineedit.text())
+
+    def st_trigger_length_changed(self, modenum):
+        self._params[modenum]['trigger_length'] = str(self.st_trigger_length_lineedit.text())        
 
     def deleteItemsOfLayout(self, layout):
         """
