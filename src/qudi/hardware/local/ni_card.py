@@ -90,7 +90,7 @@ class NICardConstraints:
             self.ao_rate = ao_rate
         
         if ai_rate is None:
-            self.ao_rate=[]
+            self.ai_rate=[]
         else:
             self.ai_rate = ai_rate
         
