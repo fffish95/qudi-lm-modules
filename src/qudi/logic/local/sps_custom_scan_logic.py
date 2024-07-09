@@ -43,10 +43,11 @@ class SPSCustonScanLogic(LogicBase):
     nicard = Connector(interface = "NICard")
     wavemeter = Connector(interface= "HighFinesseWavemeter")
     fugsourcelogic = Connector(interface = "FugSourceLogic")
+    timetaggerlogic = Connector(interface = "TimeTaggerLogic")
 
     # status vars
 
-    CustomScanMode = StatusVar(default = ['step motor', 'power record', 'EIT', 'stark shift scan', 'scan trigger'])
+    CustomScanMode = StatusVar(default = ['step motor', 'power record', 'EIT', 'stark shift scan', 'scan trigger', 'timetagger writeintofile'])
     Params =  StatusVar(default=[{
         'motor_channel': 0,
         'start_deg': 0,
@@ -74,6 +75,9 @@ class SPSCustonScanLogic(LogicBase):
     },{
         'trigger_channel':['pfi1'],
         'trigger_length': 50,
+    },{
+        'sample_name':'sample1',
+        'measurements_per_action':1,
     }])
 
 
@@ -90,11 +94,13 @@ class SPSCustonScanLogic(LogicBase):
         self._nicard = self.nicard()
         self._wavemeter = self.wavemeter()
         self._fugsourcelogic = self.fugsourcelogic()
+        self._timetaggerlogic = self.timetaggerlogic()
         self._sm_modenum = 0
         self._pr_modenum = 1
         self._eit_modenum = 2
         self._ss_modenum = 3
         self._st_modenum = 4
+        self._tw_modenum = 5
 
 
         self._shutter_task = None
@@ -117,6 +123,7 @@ class SPSCustonScanLogic(LogicBase):
             self.CustomScanMode[2]: self.EIT_start_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_start_scanner,
             self.CustomScanMode[4]: self.scan_trigger_start_scanner,
+            self.CustomScanMode[5]: self.timetagger_writeintofile_start_scanner,
         }
         func = func_map.get(value)
         func()
@@ -180,6 +187,9 @@ class SPSCustonScanLogic(LogicBase):
         tools.delay(t_delay)
         self._nicard.write_task(task= self._trigger_task, data = False)
     
+    def timetagger_writeintofile_start_scanner(self):
+        self._timetaggerlogic._writeintofile_params['sample_name'] = f'{self.Params[self._tw_modenum]["sample_name"]}_0'
+        self._timetaggerlogic.start_recording()
 
     def process_scanner_handler(self, current, scan_counter): 
 
@@ -190,6 +200,7 @@ class SPSCustonScanLogic(LogicBase):
             self.CustomScanMode[2]: self.EIT_process_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_process_scanner,
             self.CustomScanMode[4]: self.scan_trigger_process_scanner,
+            self.CustomScanMode[5]: self.timetagger_writeintofile_process_scanner,
         }
         func = func_map.get(value)
         func(scan_counter)
@@ -288,6 +299,13 @@ class SPSCustonScanLogic(LogicBase):
         tools.delay(t_delay)
         self._nicard.write_task(task= self._trigger_task, data = False)
 
+    def timetagger_writeintofile_process_scanner(self,scan_counter):
+        if scan_counter % self.Params[self._tw_modenum]['measurements_per_action'] == 0:
+            self._timetaggerlogic.stop_recording()
+            # wait until done 3000ms
+            tools.delay(3000)
+        self._timetaggerlogic._writeintofile_params['sample_name'] = f'{self.Params[self._tw_modenum]["sample_name"]}_{scan_counter}'
+        self._timetaggerlogic.start_recording()            
 
     def stop_scanner_handler(self, current): 
 
@@ -298,6 +316,7 @@ class SPSCustonScanLogic(LogicBase):
             self.CustomScanMode[2]: self.EIT_stop_scanner,
             self.CustomScanMode[3]: self.stark_shift_scan_stop_scanner,
             self.CustomScanMode[4]: self.scan_trigger_stop_scanner,
+            self.CustomScanMode[5]: self.timetagger_writeintofile_stop_scanner,
         }
         func = func_map.get(value)
         func()
@@ -332,6 +351,9 @@ class SPSCustonScanLogic(LogicBase):
         self._nicard.close_do_task(taskname = 'trigger1')
         self._trigger_task = None
 
+    def timetagger_writeintofile_stop_scanner(self):
+        self._timetaggerlogic.stop_recording()
+
     def function_0_handler(self, current): 
 
         value = self.CustomScanMode[current]
@@ -341,6 +363,7 @@ class SPSCustonScanLogic(LogicBase):
             self.CustomScanMode[2]: self.EIT_function_0,
             self.CustomScanMode[3]: self.stark_shift_scan_function_0,
             self.CustomScanMode[4]: self.scan_trigger_stop_scanner_0,
+            self.CustomScanMode[5]: self.timetagger_writeintofile_stop_scanner_0,
         }
         func = func_map.get(value)
         func()
@@ -358,4 +381,7 @@ class SPSCustonScanLogic(LogicBase):
         pass
 
     def scan_trigger_stop_scanner_0(self):
+        pass
+
+    def timetagger_writeintofile_stop_scanner_0(self):
         pass

@@ -284,7 +284,7 @@ class TimeTaggerLogic(LogicBase):
         self.signal_timetagger_pull_handle_timer.connect(self._timetagger_pull.handle_timer)
         self._timetagger_pull.sig_TimetaggerPull.connect(self.handle_timetaggerpull, QtCore.Qt.DirectConnection)
         self.signal_timetagger_write_handle_timer.connect(self._timetagger_write.handle_timer)
-        self._timetagger_write.sig_TimetaggerWrite.connect(self.handle_timetaggerwrtie, QtCore.Qt.DirectConnection)
+        self._timetagger_write.sig_TimetaggerWrite.connect(self.handle_timetaggerwrite, QtCore.Qt.DirectConnection)
 
         # start the event loop for the hardware
         self.timetaggerpull_thread.start()
@@ -374,7 +374,7 @@ class TimeTaggerLogic(LogicBase):
         self.histogram_y = histogram_all_data
         self.signal_plots_updated.emit()
 
-    def handle_timetaggerwrtie(self, measure_time, total_size):
+    def handle_timetaggerwrite(self, measure_time, total_size):
         self.mearsure_time = measure_time
         self.total_size = total_size
         self.signal_writeintofile_updated.emit()
