@@ -85,10 +85,13 @@ class NITT(Base):
     _scanner_ao_channels = ConfigOption('scanner_ao_channels', missing='error')
     _scanner_voltage_ranges = ConfigOption('scanner_voltage_ranges', missing='error')
     _scanner_position_ranges = ConfigOption('scanner_position_ranges', missing='error')
-    _scanner_clock_channel = ConfigOption('scanner_clock_channel', missing='error') 
+    _scanner_clock_channel = ConfigOption('scanner_clock_channel', missing='error')
+    _trigger_clock_channel = ConfigOption('trigger_clock_channel', missing='nothing') 
     _pixel_clock_channel = ConfigOption('pixel_clock_channel', None, missing='nothing')
+    _trigger_pixel_clock_channel = ConfigOption('trigger_pixel_clock_channel', None, missing='nothing')
     _timetagger_channels = ConfigOption('timetagger_channels', list(), missing='info')
     _timetagger_cbm_begin_channel = ConfigOption('timetagger_cbm_begin_channel', missing='info')
+    _timetagger_cbm_trigger_begin_channel = ConfigOption('timetagger_cbm_trigger_begin_channel', missing='info')
     _scanner_ai_channels = ConfigOption('scanner_ai_channels', list(), missing='nothing')
     _ai_voltage_ranges = ConfigOption('ai_voltage_ranges', None, missing='nothing')
     _channel_labelsandunits = ConfigOption('channel_labelsandunits', missing='error')
@@ -102,10 +105,13 @@ class NITT(Base):
         self.threadlock = Mutex()
         self._scanner_task = None
         self._scanner_clock_task = None
+        self._trigger_clock_task = None
         self._timetagger_cbm_tasks = list()
+        self._timetagger_trigger_tasks = list()
         if self._scanner_ai_channels:
             self._scanner_ai_task = None
         self._line_length = None
+        self._trigger_length = None
         self._current_position = np.zeros(len(self._scanner_ao_channels))
         
         if len(self._scanner_ao_channels) != len(self._scanner_voltage_ranges):
@@ -123,13 +129,11 @@ class NITT(Base):
     def on_deactivate(self):
         """ Deactivate the module and clean up.
         """
-        self._nicard.close_ao_task(taskname = 'nitt_ao')
+        self._nicard.terminate_all_tasks()
         self._scanner_task = None
-        self._nicard.close_co_task(taskname = 'nitt_scanner_clock')
         self._scanner_clock_task = None
-        if self._scanner_ai_channels and self._scanner_ai_task is not None:
-            self._nicard.close_ai_task(taskname = 'nitt_ai')
-            self._scanner_ai_task = None
+        self._trigger_clock_task = None
+        self._scanner_ai_task = None
 
     def reset_hardware(self):
         """ Resets the NI hardware, so the connection is lost and other
@@ -156,6 +160,8 @@ class NITT(Base):
         ch = self._timetagger_channels.copy()
         ch.extend(self._scanner_ai_channels)
         return ch
+    
+
 
     def get_position_range(self):
         """ Returns the physical range of the scanner.
@@ -188,7 +194,29 @@ class NITT(Base):
         self._scanner_clock_task = self._nicard.create_co_task(taskname = 'nitt_scanner_clock', channels = self._scanner_clock_channel, freq = self._scanner_clock_frequency, duty_cycle = 0.5)
         # Create buffer for generating signal
         self._nicard.samp_timing_type(self._scanner_clock_task, type = 'implicit')
-        self._nicard.cfg_implicit_timing(self._scanner_clock_task, sample_mode='continuous', samps_per_chan=10000)
+        return 0
+    
+    def set_up_trigger_clock(self, clock_frequency=None, clock_channel=None):
+        """ Configures the hardware clock of the NiDAQ card to give the timing.
+
+        @param float clock_frequency: if defined, this sets the frequency of
+                                      the clock
+        @param string clock_channel: if defined, this is the physical channel
+                                     of the clock
+
+        @return int: error code (0:OK, -1:error)
+        """
+        if clock_frequency is None:
+            self.log.error('No clock_frequency in set_up_scanner_clock.')
+            return -1
+        else:
+            self._trigger_clock_frequency = float(clock_frequency)
+        if clock_channel is not None:   
+            self._trigger_clock_channel = clock_channel
+
+        self._trigger_clock_task = self._nicard.create_co_task(taskname = 'nitt_trigger_clock', channels = self._trigger_clock_channel, freq = self._trigger_clock_frequency, duty_cycle = 0.5)
+        # Create buffer for generating signal
+        self._nicard.samp_timing_type(self._trigger_clock_task, type = 'implicit')
         return 0
 
 
@@ -366,6 +394,47 @@ class NITT(Base):
             self.log.exception('Error while setting up scanner to scan a line.')
             return -1
         return 0
+    
+    def _set_up_trigger_line(self, length = 100):
+        """the configuration needed to do before every scan line, assign buffer according to length to tasks
+
+        start cbm task in TimeTagger
+
+        Set up the configuration of ao task for scanning with certain length
+
+        Connect the timing of the ao task with the timing of the
+        co task.
+
+        @param int length: length of the line in pixel
+
+        @return int: error code (0:OK, -1:error)
+        """
+        self._trigger_line_length = length
+
+        try:
+            # Start instance of TimeTagger.CountBetweenMarkers with the correct channels. Does this every time a line is scanned
+            self._timetagger_trigger_tasks = list()
+            for i,ch in enumerate(self._timetagger_channels):
+                self._timetagger_trigger_tasks.append(self._tt.count_between_markers(click_channel = self._tt.channel_codes[ch], begin_channel = self._tt.channel_codes[self._timetagger_cbm_trigger_begin_channel[0]], n_values=self._trigger_line_length))
+
+            if self._scanner_ai_channels:
+                if self._scanner_ai_task is None:
+                    self._scanner_ai_task = self._nicard.create_ai_task(taskname = 'nitt_ai', channels = self._scanner_ai_channels, voltage_ranges = self._ai_voltage_ranges)
+                else:
+                    for i, task in enumerate(self._nicard._ai_task_handles):
+                        if task.name == 'nitt_ai':
+                            break
+                        elif i == len(self._nicard._ai_task_handles)-1:
+                            self._scanner_ai_task = self._nicard.create_ai_task(taskname = 'nitt_ai', channels = self._scanner_ai_channels, voltage_ranges = self._ai_voltage_ranges)
+                self._nicard.cfg_samp_clk_timing(self._scanner_ai_task, rate = self._trigger_clock_frequency, source= self._trigger_clock_channel[0], samps_per_chan = self._trigger_line_length+1)
+            # Configure Implicit Timing for the clock.
+            # Set timing for scanner clock task to the number of pixel.
+            self._nicard.cfg_implicit_timing(self._trigger_clock_task, sample_mode='finite', samps_per_chan = self._trigger_line_length+1)
+        except:
+            self.log.exception('Error while setting up scanner to scan a line.')
+            return -1
+        return 0
+    
 
     def scan_line(self, line_path=None, pixel_clock=False):
         """ Scans a line and return the counts on that line.
@@ -447,7 +516,33 @@ class NITT(Base):
                 return np.array([[-1.]])
             # return values is a rate of counts/s
             return all_data.transpose()
-
+        
+    def scan_trigger_line(self):
+        try:
+            self._trigger_clock_task.stop()
+            self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+            self._trigger_clock_task.start()
+            self._trigger_clock_task.wait_until_done(timeout = 10 * 2 * self._trigger_line_length)
+            if self._scanner_ai_channels:
+                self._analog_data = self._scanner_ai_task.read(self._trigger_line_length + 1)
+                self._scanner_ai_task.stop()
+            self._trigger_clock_task.stop()
+            self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+            all_data = np.full(
+                (len(self.get_scanner_count_channels()), self._trigger_line_length), 0, dtype=np.float64)
+            for i, task in enumerate(self._timetagger_trigger_tasks):
+                counts = np.nan_to_num(task.getData())
+                data = np.reshape(counts,(1, self._trigger_line_length))
+                all_data[i] = data * self._trigger_clock_frequency
+            if self._scanner_ai_channels:
+                analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._trigger_line_length +1))
+                all_data[len(self._timetagger_trigger_tasks):] = analog_data[:, :-1]
+        except:
+            self.log.exception('Error while scanning line.')
+            return np.array([[-1.]])
+        # return values is a rate of counts/s
+        return all_data
+    
     def close_scanner(self):
         """ Closes the scanner and cleans up afterwards.
 
@@ -481,5 +576,21 @@ class NITT(Base):
         self._scanner_clock_task = None
         return self._nicard.close_co_task(taskname = 'nitt_scanner_clock')
 
+    def close_trigger_tasks(self):
+        """ Closes the clock and cleans up afterwards.
+
+        @return int: error code (0:OK, -1:error)
+        """
+        
+        for i, task in enumerate(self._timetagger_trigger_tasks):
+            if task.isRunning():
+                task.stop()
+            task.clear()
+        if self._scanner_ai_channels and self._scanner_ai_task is not None:
+            if not self._scanner_ai_task.is_task_done():
+                self._scanner_ai_task.stop()        
+
+        self._scanner_clock_task = None
+        return self._nicard.close_co_task(taskname = 'nitt_trigger_clock')
 
 
