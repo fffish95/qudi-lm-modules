@@ -79,14 +79,7 @@ class MicrowaveSmiq(MicrowaveInterface):
     def on_activate(self):
         """ Initialisation performed during activation of the module. """
         # Connect to hardware
-        self._rm = visa.ResourceManager()
-        if self._visa_baud_rate is None:
-            self._device = self._rm.open_resource(self._visa_address,
-                                                  timeout=self._comm_timeout)
-        else:
-            self._device = self._rm.open_resource(self._visa_address,
-                                                  timeout=self._comm_timeout,
-                                                  baud_rate=self._visa_baud_rate)
+        self._connect()
 
         self._model = self._device.query('*IDN?').split(',')[1]
         # Reset device
@@ -133,7 +126,7 @@ class MicrowaveSmiq(MicrowaveInterface):
             sample_rate_limits=(0.1, 100),  # FIXME: Look up the proper specs for sample rate
             scan_modes=(SamplingOutputMode.JUMP_LIST, SamplingOutputMode.EQUIDISTANT_SWEEP)
         )
-
+        self._close()
         self._scan_frequencies = None
         self._scan_power = self._constraints.min_power
         self._cw_power = self._constraints.min_power
@@ -143,11 +136,7 @@ class MicrowaveSmiq(MicrowaveInterface):
 
     def on_deactivate(self):
         """ Cleanup performed during deactivation of the module. """
-        self._device.close()
-        self._rm.close()
-        self._device = None
-        self._rm = None
-
+        self._close()
     @property
     def constraints(self):
         return self._constraints
@@ -230,6 +219,7 @@ class MicrowaveSmiq(MicrowaveInterface):
         @param float power: power to set in dBm
         """
         with self._thread_lock:
+            self._connect()
             if self.module_state() != 'idle':
                 raise RuntimeError('Unable to set CW parameters. Microwave output active.')
             self._assert_cw_parameters_args(frequency, power)
@@ -240,6 +230,7 @@ class MicrowaveSmiq(MicrowaveInterface):
             self._command_wait(f':POW {power:f}')
             self._cw_power = float(self._device.query(':POW?'))
             self._cw_frequency = float(self._device.query(':FREQ?'))
+            self._close()
 
     def configure_scan(self, power, frequencies, mode, sample_rate):
         """
@@ -281,6 +272,7 @@ class MicrowaveSmiq(MicrowaveInterface):
                 if list_mode:
                     self._command_wait(':LIST:LEARN')
                     self._command_wait(':FREQ:MODE LIST')
+                self._close()
                 self.module_state.unlock()
 
     def cw_on(self):
@@ -289,6 +281,7 @@ class MicrowaveSmiq(MicrowaveInterface):
         Must return AFTER the output is actually active.
         """
         with self._thread_lock:
+            self._connect()
             if self.module_state() != 'idle':
                 if self._in_cw_mode():
                     return
@@ -313,6 +306,7 @@ class MicrowaveSmiq(MicrowaveInterface):
         Must return AFTER the output is actually active (and can receive triggers for example).
         """
         with self._thread_lock:
+            self._connect()
             if self.module_state() != 'idle':
                 if not self._in_cw_mode():
                     return
@@ -372,21 +366,26 @@ class MicrowaveSmiq(MicrowaveInterface):
 
         @param str command_str: The command to be written
         """
+        self._connect()
         self._device.write(command_str)
         self._device.write('*WAI')
         while int(float(self._device.query('*OPC?'))) != 1:
             time.sleep(0.2)
 
     def _in_list_mode(self):
+        self._connect()
         return self._device.query(':FREQ:MODE?').strip('\n').lower() == 'list'
 
     def _in_sweep_mode(self):
+        self._connect()
         return self._device.query(':FREQ:MODE?').strip('\n').lower() == 'swe'
 
     def _in_cw_mode(self):
+        self._connect()
         return self._device.query(':FREQ:MODE?').strip('\n').lower() == 'cw'
 
     def _write_list(self):
+        self._connect()
         # Cant change list parameters if in list mode
         if not self._in_cw_mode():
             self._command_wait(':FREQ:MODE CW')
@@ -416,6 +415,7 @@ class MicrowaveSmiq(MicrowaveInterface):
         self._command_wait(':FREQ:MODE LIST')
 
     def _write_sweep(self):
+        self._connect()
         if not self._in_sweep_mode():
             self._command_wait(':FREQ:MODE SWEEP')
 
@@ -436,8 +436,28 @@ class MicrowaveSmiq(MicrowaveInterface):
         self._command_wait(':TRIG1:SWE:SOUR EXT')
 
     def _set_trigger_edge(self):
+        self._connect()
         edge = 'POS' if self._rising_edge_trigger else 'NEG'
         self._command_wait(f':TRIG1:SLOP {edge}')
+
+    def _connect(self):
+        if self._rm or self._device is None:
+            self._rm = visa.ResourceManager()
+            if self._visa_baud_rate is None:
+                self._device = self._rm.open_resource(self._visa_address,
+                                                    timeout=self._comm_timeout)
+            else:
+                self._device = self._rm.open_resource(self._visa_address,
+                                                    timeout=self._comm_timeout,
+                                                    baud_rate=self._visa_baud_rate)
+
+    def _close(self):
+        if self._device is not None:
+            self._device.close()
+            self._device = None
+        if self._rm is not None:
+            self._rm.close()
+            self._rm = None
 
 
     #########################################################################################

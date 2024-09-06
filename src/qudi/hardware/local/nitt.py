@@ -414,7 +414,7 @@ class NITT(Base):
         try:
             # Start instance of TimeTagger.CountBetweenMarkers with the correct channels. Does this every time a line is scanned
             self._timetagger_trigger_tasks = list()
-            for i,ch in enumerate(self._timetagger_channels):
+            for _i,ch in enumerate(self._timetagger_channels):
                 self._timetagger_trigger_tasks.append(self._tt.count_between_markers(click_channel = self._tt.channel_codes[ch], begin_channel = self._tt.channel_codes[self._timetagger_cbm_trigger_begin_channel[0]], n_values=self._trigger_line_length))
 
             if self._scanner_ai_channels:
@@ -518,30 +518,33 @@ class NITT(Base):
             return all_data.transpose()
         
     def scan_trigger_line(self):
-        try:
-            self._trigger_clock_task.stop()
-            self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
-            self._trigger_clock_task.start()
-            self._trigger_clock_task.wait_until_done(timeout = 10 * 2 * self._trigger_line_length)
-            if self._scanner_ai_channels:
-                self._analog_data = self._scanner_ai_task.read(self._trigger_line_length + 1)
-                self._scanner_ai_task.stop()
-            self._trigger_clock_task.stop()
-            self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
-            all_data = np.full(
-                (len(self.get_scanner_count_channels()), self._trigger_line_length), 0, dtype=np.float64)
-            for i, task in enumerate(self._timetagger_trigger_tasks):
-                counts = np.nan_to_num(task.getData())
-                data = np.reshape(counts,(1, self._trigger_line_length))
-                all_data[i] = data * self._trigger_clock_frequency
-            if self._scanner_ai_channels:
-                analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._trigger_line_length +1))
-                all_data[len(self._timetagger_trigger_tasks):] = analog_data[:, :-1]
-        except:
-            self.log.exception('Error while scanning line.')
-            return np.array([[-1.]])
-        # return values is a rate of counts/s
-        return all_data
+        with self.threadlock:
+            try:
+                self._trigger_clock_task.stop()
+                self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+                self._trigger_clock_task.start()
+                
+                self._trigger_clock_task.wait_until_done(timeout = 10 * 2 * self._trigger_line_length)
+                if self._scanner_ai_channels:
+                    self._analog_data = self._scanner_ai_task.read(self._trigger_line_length + 1)
+                    self._scanner_ai_task.stop()
+                self._trigger_clock_task.stop()
+                self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+                all_data = np.full(
+                    (len(self.get_scanner_count_channels()), self._trigger_line_length), 0, dtype=np.float64)
+                for i, task in enumerate(self._timetagger_trigger_tasks):
+                    counts = np.nan_to_num(task.getData())
+                    task.clear()
+                    data = np.reshape(counts,(1, self._trigger_line_length))
+                    all_data[i] = data * self._trigger_clock_frequency
+                if self._scanner_ai_channels:
+                    analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._trigger_line_length +1))
+                    all_data[len(self._timetagger_trigger_tasks):] = analog_data[:, :-1]
+            except:
+                self.log.exception('Error while scanning line.')
+                return np.array([[-1.]])
+            # return values is a rate of counts/s
+            return all_data
     
     def close_scanner(self):
         """ Closes the scanner and cleans up afterwards.
