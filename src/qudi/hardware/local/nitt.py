@@ -89,6 +89,7 @@ class NITT(Base):
     _trigger_clock_channel = ConfigOption('trigger_clock_channel', missing='nothing') 
     _pixel_clock_channel = ConfigOption('pixel_clock_channel', None, missing='nothing')
     _trigger_pixel_clock_channel = ConfigOption('trigger_pixel_clock_channel', None, missing='nothing')
+    _trigger_pixel_clock_channel_2 = ConfigOption('trigger_pixel_clock_channel_2', None, missing='nothing')
     _timetagger_channels = ConfigOption('timetagger_channels', list(), missing='info')
     _timetagger_cbm_begin_channel = ConfigOption('timetagger_cbm_begin_channel', missing='info')
     _timetagger_cbm_trigger_begin_channel = ConfigOption('timetagger_cbm_trigger_begin_channel', missing='info')
@@ -522,6 +523,7 @@ class NITT(Base):
             try:
                 self._trigger_clock_task.stop()
                 self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+                self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel_2[0])
                 self._trigger_clock_task.start()
                 
                 self._trigger_clock_task.wait_until_done(timeout = 10 * 2 * self._trigger_line_length)
@@ -530,6 +532,7 @@ class NITT(Base):
                     self._scanner_ai_task.stop()
                 self._trigger_clock_task.stop()
                 self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+                self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel_2[0])
                 all_data = np.full(
                     (len(self.get_scanner_count_channels()), self._trigger_line_length), 0, dtype=np.float64)
                 for i, task in enumerate(self._timetagger_trigger_tasks):
