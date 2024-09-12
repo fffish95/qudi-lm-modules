@@ -199,7 +199,7 @@ class TimetaggerWrite(QtCore.QObject):
             self.timer_counter = 0
             self.timer = QtCore.QTimer()
             filepath = self._parentclass._save_logic.get_path_for_module('timetagger')
-            filelabel = timestamp.strftime('%Y%m%d-%H%M-%S' + '_' + self._parentclass._writeintofile_params['sample_name'])
+            filelabel = timestamp.strftime(self._parentclass._writeintofile_params['sample_name'] + '_' + '%Y%m%d-%H%M-%S')
             filename = os.path.join(filepath, filelabel)
             self.writeintofile_task = self._parentclass._timetagger.write_into_file(filename = filename, apdChans = self._parentclass._writeintofile_params['trigger'], filteredChans = self._parentclass._writeintofile_params['filtered'])
             # every _refresh_time (ms) send out the signal
