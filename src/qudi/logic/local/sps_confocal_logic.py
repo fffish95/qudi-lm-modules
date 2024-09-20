@@ -319,7 +319,7 @@ class ConfocalLogic(LogicBase):
         self._save_logic = self.savelogic()
         self._loop_scan_logic = self.loopscanlogic1()
         
-        # Reads in the maximal scanning range. The unit of that scan range is micrometer!
+        # Reads in the maximal scanning range.
         self.x_range = self._scanning_device.get_position_range()[0]
         self.y_range = self._scanning_device.get_position_range()[1]
         self.z_range = self._scanning_device.get_position_range()[2]

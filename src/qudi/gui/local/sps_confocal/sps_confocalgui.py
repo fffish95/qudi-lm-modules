@@ -308,7 +308,7 @@ class ConfocalGui(GuiBase):
 
         # Create crosshair for depth image:
         self._mw.depth_ViewWidget.toggle_crosshair(True, movable=True)
-        self._mw.depth_ViewWidget.set_crosshair_min_size_factor(0.02)
+        self._mw.depth_ViewWidget.set_crosshair_min_size_factor(0.1)
         self._mw.depth_ViewWidget.set_crosshair_pos((ini_pos_x_crosshair, ini_pos_z_crosshair))
         self._mw.depth_ViewWidget.set_crosshair_size(
             (self._optimizer_logic.refocus_XY_size, self._optimizer_logic.refocus_Z_size))
