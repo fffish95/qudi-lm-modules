@@ -92,7 +92,7 @@ class NITT(Base):
     _trigger_pixel_clock_channel_2 = ConfigOption('trigger_pixel_clock_channel_2', None, missing='nothing')
     _timetagger_channels = ConfigOption('timetagger_channels', list(), missing='info')
     _timetagger_cbm_begin_channel = ConfigOption('timetagger_cbm_begin_channel', missing='info')
-    _timetagger_cbm_trigger_begin_channel = ConfigOption('timetagger_cbm_trigger_begin_channel', missing='info')
+    _timetagger_cbm_trigger_begin_channel = ConfigOption('timetagger_cbm_trigger_begin_channel', missing='nothing')
     _scanner_ai_channels = ConfigOption('scanner_ai_channels', list(), missing='nothing')
     _ai_voltage_ranges = ConfigOption('ai_voltage_ranges', None, missing='nothing')
     _channel_labelsandunits = ConfigOption('channel_labelsandunits', missing='error')
