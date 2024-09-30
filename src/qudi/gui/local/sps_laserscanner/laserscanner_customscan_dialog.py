@@ -130,11 +130,19 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
         # motor_layout
         sm_motor_layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QLabel('step_motor_number')
+        sm_motor_layout.addWidget(label)
+        self.sm_step_motor_number_lineedit = QtWidgets.QLineEdit()
+        self.sm_step_motor_number_lineedit.setText('{0}'.format(self._params[modenum]['step_motor_number']))
+        self.sm_step_motor_number_lineedit.editingFinished.connect(lambda: self.sm_step_motor_number_changed(modenum))
+        sm_motor_layout.addWidget(self.sm_step_motor_number_lineedit)
+
+
         label = QtWidgets.QLabel('motor_channel')
         sm_motor_layout.addWidget(label)
         self.sm_motor_channel_lineedit = QtWidgets.QLineEdit()
         self.sm_motor_channel_lineedit.setText('{0}'.format(self._params[modenum]['motor_channel']))
-        self.sm_motor_channel_lineedit.editingFinished.connect(lambda: self.sm_motor_channel_changed(modenum))
+        self.sm_motor_channel_lineedit.editingFinished.connect(lambda: self.sm_step_motor_number_changed(modenum))
         sm_motor_layout.addWidget(self.sm_motor_channel_lineedit)
 
         label = QtWidgets.QLabel('start_deg')
@@ -152,9 +160,9 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         sm_motor_layout.addWidget(self.sm_step_deg_lineedit)    
 
         sm_layout = QtWidgets.QGridLayout()
-        sm_layout.addLayout(sm_measurements_per_action_layout, 0, 0, 1, 4)
-        sm_layout.addLayout(sm_delete_button_layout, 0, 5, 1, 1)
-        sm_layout.addLayout(sm_motor_layout, 1, 0, 1, 6)
+        sm_layout.addLayout(sm_measurements_per_action_layout, 0, 0, 1, 5)
+        sm_layout.addLayout(sm_delete_button_layout, 0, 6, 1, 1)
+        sm_layout.addLayout(sm_motor_layout, 1, 0, 1, 7)
 
         value = self._customscan_mode[modenum]
         sm_groupbox = QtWidgets.QGroupBox(value)
@@ -219,6 +227,13 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         self.pr_motor_on_checkbox.setChecked(self._params[modenum]['motor_on'])
         self.pr_motor_on_checkbox.stateChanged.connect(lambda: self.pr_motor_on_changed(modenum))
         pr_motor_layout.addWidget(self.pr_motor_on_checkbox)
+
+        label = QtWidgets.QLabel('step_motor_number')
+        pr_motor_layout.addWidget(label)
+        self.pr_step_motor_number_lineedit = QtWidgets.QLineEdit()
+        self.pr_step_motor_number_lineedit.setText('{0}'.format(self._params[modenum]['step_motor_number']))
+        self.pr_step_motor_number_lineedit.editingFinished.connect(lambda: self.pr_step_motor_number_changed(modenum))
+        pr_motor_layout.addWidget(self.pr_step_motor_number_lineedit)        
 
         label = QtWidgets.QLabel('motor_channel')
         pr_motor_layout.addWidget(label)
@@ -488,6 +503,9 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
     def sm_measurements_per_action_changed(self, modenum):
         self._params[modenum]['measurements_per_action'] = int(self.sm_measurements_per_action_lineedit.text())
 
+    def sm_step_motor_number_changed(self, modenum):
+        self._params[modenum]['step_motor_number'] = int(self.sm_step_motor_number_lineedit.text())        
+
     def sm_motor_channel_changed(self, modenum):
         self._params[modenum]['motor_channel'] = int(self.sm_motor_channel_lineedit.text())
 
@@ -509,6 +527,9 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
     def pr_motor_on_changed(self, modenum):
         self._params[modenum]['motor_on'] = self.pr_motor_on_checkbox.isChecked()
+
+    def pr_step_motor_number_changed(self, modenum):
+        self._params[modenum]['step_motor_number'] = int(self.pr_step_motor_number_lineedit.text())
 
     def pr_motor_channel_changed(self, modenum):
         self._params[modenum]['motor_channel'] = int(self.pr_motor_channel_lineedit.text())
