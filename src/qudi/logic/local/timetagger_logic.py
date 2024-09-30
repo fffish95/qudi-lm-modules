@@ -199,7 +199,7 @@ class TimetaggerWrite(QtCore.QObject):
             self.timer_counter = 0
             self.timer = QtCore.QTimer()
             filepath = self._parentclass._save_logic.get_path_for_module('timetagger')
-            filelabel = timestamp.strftime('%Y%m%d-%H%M-%S' + '_' + self._parentclass._writeintofile_params['sample_name'])
+            filelabel = timestamp.strftime(self._parentclass._writeintofile_params['sample_name'] + '_' + '%Y%m%d-%H%M-%S')
             filename = os.path.join(filepath, filelabel)
             self.writeintofile_task = self._parentclass._timetagger.write_into_file(filename = filename, apdChans = self._parentclass._writeintofile_params['trigger'], filteredChans = self._parentclass._writeintofile_params['filtered'])
             # every _refresh_time (ms) send out the signal
@@ -284,7 +284,7 @@ class TimeTaggerLogic(LogicBase):
         self.signal_timetagger_pull_handle_timer.connect(self._timetagger_pull.handle_timer)
         self._timetagger_pull.sig_TimetaggerPull.connect(self.handle_timetaggerpull, QtCore.Qt.DirectConnection)
         self.signal_timetagger_write_handle_timer.connect(self._timetagger_write.handle_timer)
-        self._timetagger_write.sig_TimetaggerWrite.connect(self.handle_timetaggerwrtie, QtCore.Qt.DirectConnection)
+        self._timetagger_write.sig_TimetaggerWrite.connect(self.handle_timetaggerwrite, QtCore.Qt.DirectConnection)
 
         # start the event loop for the hardware
         self.timetaggerpull_thread.start()
@@ -374,7 +374,7 @@ class TimeTaggerLogic(LogicBase):
         self.histogram_y = histogram_all_data
         self.signal_plots_updated.emit()
 
-    def handle_timetaggerwrtie(self, measure_time, total_size):
+    def handle_timetaggerwrite(self, measure_time, total_size):
         self.mearsure_time = measure_time
         self.total_size = total_size
         self.signal_writeintofile_updated.emit()
