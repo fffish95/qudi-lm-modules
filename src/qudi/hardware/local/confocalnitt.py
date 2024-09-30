@@ -188,7 +188,6 @@ class ConfocalNITT(Base):
         self._scanner_clock_task = self._nicard.create_co_task(taskname = 'confocalnitt_scanner_clock', channels = self._scanner_clock_channel, freq = self._scanner_clock_frequency, duty_cycle = 0.5)
         # Create buffer for generating signal
         self._nicard.samp_timing_type(self._scanner_clock_task, type = 'implicit')
-        self._nicard.cfg_implicit_timing(self._scanner_clock_task, sample_mode='continuous', samps_per_chan=10000)
         return 0
 
 
