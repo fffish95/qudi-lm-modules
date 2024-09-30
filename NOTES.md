@@ -58,3 +58,27 @@ copy libstdc++.so.6 from Computer/lib/x86_64-linux-gnu to anaconda3/envs/qudi-en
 ## module 'numpy' has no attribute 'bool'
 in new numpy version np.bool is changed to np.bool_
 find out the function in your environment packages, change .bool to .bool_
+
+# change command level to 1
+CCL 1 advanced
+
+## commands in PIMikroMove to activate analog control
+The full range of -10 V to +10 V is to be used:
+So you have to send:
+SPA 4 0x02000200 50 
+SPA 4 0x02000300 0.7 (Set Input1's offset and gain, seeE727T0005-UserManual p85)
+
+SPA 5 0x02000200 50 
+SPA 5 0x02000300 0.7 (Set Input2's offset and gain, seeE727T0005-UserManual p85)
+
+SPA 6 0x02000200 50 
+SPA 6 0x02000300 0.7 (Set Input3's offset and gain, seeE727T0005-UserManual p85)
+
+SPA 1 0x06000500 4 (Connect axis1 to input1, seeE727T0005-UserManual p88)
+SPA 2 0x06000500 5 (Connect axis2 to input2, seeE727T0005-UserManual p88)
+SPA 3 0x06000500 6 (Connect axis3 to input3, seeE727T0005-UserManual p88)
+
+## commands in PIMikroMove to deactivate analog control
+SPA 1 0x06000500 0 
+SPA 2 0x06000500 0 
+SPA 3 0x06000500 0  (seeE727T0005-UserManual p90)

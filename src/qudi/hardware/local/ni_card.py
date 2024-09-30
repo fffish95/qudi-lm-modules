@@ -25,6 +25,8 @@ import re
 
 from qudi.core.module import Base
 from qudi.core.configoption import ConfigOption
+from qudi.util.helpers import in_range
+
 import nidaqmx as ni
 from nidaqmx._lib import lib_importer  # Due to NIDAQmx C-API bug needed to bypass property getter
 from nidaqmx.constants import  SampleTimingType, ChannelType, UsageTypeCO
@@ -35,6 +37,7 @@ from nidaqmx._task_modules.write_functions import (
 from nidaqmx.errors import DaqError
 from nidaqmx.error_codes import DAQmxErrors
 from nidaqmx.constants import AcquisitionType
+
 
 
 class UnsetNumSamplesSentinel(object):
@@ -103,8 +106,11 @@ class NICardConstraints:
             self.counter_max_timebase = None
         else:
             self.counter_max_timebase = counter_max_timebase
+        
+        self._sample_rate_limits = tuple()
 
-        return
+    def sample_rate_in_range(self, rate):
+        return in_range(rate, *self._sample_rate_limits)
 
 
 class NICard(Base):
@@ -169,6 +175,7 @@ class NICard(Base):
         self._constraints.ai_rate = [self._device_handle.ai_min_rate, self._device_handle.ai_max_multi_chan_rate] 
         self._constraints.digital_max_rate = self._device_handle.di_max_rate
         self._constraints.counter_max_timebase = self._device_handle.ci_max_timebase
+        self._constraints._sample_rate_limits = (1,float(self._constraints.digital_max_rate))
 
         self.terminate_all_tasks()
 
