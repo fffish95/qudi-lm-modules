@@ -300,8 +300,8 @@ class SPSCustonScanLogic(LogicBase):
             self._timetaggerlogic.stop_recording()
             # wait until done 3000ms
             tools.delay(3000)
-        self._timetaggerlogic._writeintofile_params['sample_name'] = f'{self.Params[self._tw_modenum]["sample_name"]}_{scan_counter}'
-        self._timetaggerlogic.start_recording()            
+            self._timetaggerlogic._writeintofile_params['sample_name'] = f'{self.Params[self._tw_modenum]["sample_name"]}_{scan_counter}'
+            self._timetaggerlogic.start_recording()            
 
     def stop_scanner_handler(self, current): 
 
