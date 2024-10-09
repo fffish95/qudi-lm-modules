@@ -17,7 +17,8 @@ unix_dep = [
     'PySide2>=5.15.2',
     'PyVisa>=1.12.0',
     'scipy==1.12.0',
-    'zaber_motion>=2.14.6'
+    'zaber_motion>=2.14.6',
+    'pylablib>=1.4.3'
 ]
 
 windows_dep = [
@@ -33,7 +34,8 @@ windows_dep = [
     'PySide2>=5.15.2',
     'PyVisa>=1.12.0',
     'scipy==1.12.0',
-    'zaber_motion>=2.14.6'
+    'zaber_motion>=2.14.6',
+    'pylablib>=1.4.3'
 ]
 
 with open('VERSION', 'r') as file:
