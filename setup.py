@@ -25,7 +25,7 @@ windows_dep = [
     'entrypoints>=0.4',
     'fysom>=2.1.6',
     'lmfit==1.0.3',
-    'lxml>=4.9.1',exi
+    'lxml>=4.9.1',
     'matplotlib>=3.6.0',
     'nidaqmx==0.7.0',
     'numpy>=1.23.3,<2.0',
