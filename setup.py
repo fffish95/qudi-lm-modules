@@ -11,12 +11,12 @@ unix_dep = [
     'lmfit==1.0.3',
     'lxml>=4.9.1',
     'matplotlib>=3.6.0',
-    'nidaqmx>=0.5.7',
+    'nidaqmx==0.7.0',
     'numpy>=1.23.3,<2.0',
     'pyqtgraph>=0.13.1',
     'PySide2>=5.15.2',
     'PyVisa>=1.12.0',
-    'scipy>=1.9.1',
+    'scipy==1.12.0',
     'zaber_motion>=2.14.6'
 ]
 
@@ -25,14 +25,14 @@ windows_dep = [
     'entrypoints>=0.4',
     'fysom>=2.1.6',
     'lmfit==1.0.3',
-    'lxml>=4.9.1',
+    'lxml>=4.9.1',exi
     'matplotlib>=3.6.0',
-    'nidaqmx>=0.5.7',
+    'nidaqmx==0.7.0',
     'numpy>=1.23.3,<2.0',
     'pyqtgraph>=0.13.1',
     'PySide2>=5.15.2',
     'PyVisa>=1.12.0',
-    'scipy>=1.9.1',
+    'scipy==1.12.0',
     'zaber_motion>=2.14.6'
 ]
 
