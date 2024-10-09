@@ -11,8 +11,8 @@ unix_dep = [
     'lmfit==1.0.3',
     'lxml>=4.9.1',
     'matplotlib>=3.6.0',
-    'nidaqmx==0.7.0', # The internal nidaqmx._task_modules.read_functions and nidaqmx._task_modules.write_functions modules have been removed. Since 0.8.0
-    'numpy>=1.23.3',
+    'nidaqmx>=0.5.7',
+    'numpy>=1.23.3,<2.0',
     'pyqtgraph>=0.13.1',
     'PySide2>=5.15.2',
     'PyVisa>=1.12.0',
@@ -27,8 +27,8 @@ windows_dep = [
     'lmfit==1.0.3',
     'lxml>=4.9.1',
     'matplotlib>=3.6.0',
-    'nidaqmx==0.7.0', # The internal nidaqmx._task_modules.read_functions and nidaqmx._task_modules.write_functions modules have been removed. Since 0.8.0
-    'numpy>=1.23.3',
+    'nidaqmx>=0.5.7',
+    'numpy>=1.23.3,<2.0',
     'pyqtgraph>=0.13.1',
     'PySide2>=5.15.2',
     'PyVisa>=1.12.0',
