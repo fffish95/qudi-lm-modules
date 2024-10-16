@@ -151,7 +151,7 @@
        <item row="3" column="5">
         <widget class="ScienDSpinBox" name="speedDoubleSpinBox">
          <property name="suffix">
-          <string>MHz/s</string>
+          <string>GHz/s</string>
          </property>
          <property name="decimals">
           <number>2</number>

@@ -339,7 +339,7 @@ class LaserScannerLogic(LogicBase):
 
     def set_clock_frequency(self):
         scan_range = abs(self._scan_range[1] - self._scan_range[0])
-        duration = scan_range / self._scan_speed
+        duration = scan_range / self._scan_speed /1000
         clock_frequency = self._resolution / duration
         self._clock_frequency = float(clock_frequency)
         self.signal_clock_frequency_updated.emit()
@@ -496,7 +496,7 @@ class LaserScannerLogic(LogicBase):
         if position_start == position_end:
             ramp = np.array([position_start, position_end])
         else:
-            linear_position_step = self._scan_speed / self._clock_frequency
+            linear_position_step = self._scan_speed*1000 / self._clock_frequency
             smoothing_range = self._smoothing_steps + 1
 
             position_range_of_accel = sum(n * linear_position_step / smoothing_range for n in range(0, smoothing_range)
@@ -644,7 +644,7 @@ class LaserScannerLogic(LogicBase):
 
     def set_scan_speed(self, scan_speed):
         """ Set scan speed in volt per second """
-        self._scan_speed = np.clip(scan_speed, 1e-9, 2e6)
+        self._scan_speed = np.clip(scan_speed, 1e-2, 2e2)
         self.set_clock_frequency()
     
     def set_resolution(self, resolution):
@@ -680,7 +680,7 @@ class LaserScannerLogic(LogicBase):
         parameters['Number_of_frequency_sweeps'] = self._scan_counter
         parameters['Start_Position_(MHz)'] = self._scan_range[0]
         parameters['Stop_Position_(MHz)'] = self._scan_range[1]
-        parameters['Scan_speed'] = self._scan_speed
+        parameters['Scan_speed_(GHz)'] = self._scan_speed
         parameters['Resolution'] = self._resolution
         parameters['Clock_Frequency_(Hz)'] = self._clock_frequency
 
