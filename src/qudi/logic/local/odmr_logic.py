@@ -648,7 +648,7 @@ class OdmrLogic(LogicBase):
                 return
 
             try:
-                new_counts = self._scanner.scan_trigger_line()
+                new_counts = self._scanner.scan_trigger_line().transpose()
                 if self._oversampling_factor > 1:
                     for ch in new_counts:
                         new_counts[ch] = np.mean(
