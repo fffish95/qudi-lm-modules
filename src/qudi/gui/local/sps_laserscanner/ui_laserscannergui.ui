@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2027</width>
+    <width>1132</width>
     <height>2277</height>
    </rect>
   </property>
@@ -48,7 +48,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2027</width>
+     <width>1132</width>
      <height>21</height>
     </rect>
    </property>
@@ -105,7 +105,7 @@
    <addaction name="action_stop_scanning"/>
    <addaction name="action_custom_scan_start"/>
   </widget>
-  <widget class="QDockWidget" name="scan_control_DockWidget">
+  <widget class="QDockWidget" name="scan_control_dockWidget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
      <horstretch>0</horstretch>
@@ -609,7 +609,7 @@
   </widget>
   <widget class="QDockWidget" name="Retrace_dockWidget">
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -969,7 +969,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>scan_control_DockWidget</sender>
+   <sender>scan_control_dockWidget</sender>
    <signal>visibilityChanged(bool)</signal>
    <receiver>actionScan_control_view</receiver>
    <slot>setChecked(bool)</slot>
@@ -1035,7 +1035,7 @@
   <connection>
    <sender>actionScan_control_view</sender>
    <signal>toggled(bool)</signal>
-   <receiver>scan_control_DockWidget</receiver>
+   <receiver>scan_control_dockWidget</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">

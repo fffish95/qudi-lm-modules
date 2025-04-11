@@ -53,6 +53,7 @@ class ConfocalHistoryEntry(QtCore.QObject):
 
         self.depth_scan_dir_is_xz = True
         self.depth_img_is_xz = True
+        self._zscan = False
 
         # Reads in the maximal scanning range. The unit of that scan range is meters!
         self.x_range = confocal._scanning_device.get_position_range()[0]
@@ -137,7 +138,7 @@ class ConfocalHistoryEntry(QtCore.QObject):
                 confocal.depth_image = np.copy(self.depth_image)
         except AttributeError:
             self.depth_image = np.copy(confocal.depth_image)
-        confocal._zscan = False
+        confocal._zscan = self._zscan
 
     def snapshot(self, confocal):
         """ Extract all necessary data from a confocal logic and keep it for later use """
@@ -152,6 +153,7 @@ class ConfocalHistoryEntry(QtCore.QObject):
         self.z_resolution = confocal.z_resolution
         self.depth_scan_dir_is_xz = confocal.depth_scan_dir_is_xz
         self.depth_img_is_xz = confocal.depth_img_is_xz
+        self._zscan = confocal._zscan 
         self.xy_line_position = confocal._xy_line_pos
         self.depth_line_position = confocal._depth_line_pos
         self.xy_scan_continuable = confocal._xyscan_continuable
@@ -178,6 +180,7 @@ class ConfocalHistoryEntry(QtCore.QObject):
         serialized['xy_resolution'] = self.xy_resolution
         serialized['z_resolution'] = self.z_resolution
         serialized['depth_img_is_xz'] = self.depth_img_is_xz
+        serialized['_zscan'] = self._zscan
         serialized['depth_scan_dir_is_xz'] = self.depth_scan_dir_is_xz
         serialized['xy_line_position'] = self.xy_line_position
         serialized['depth_line_position'] = self.depth_line_position
@@ -213,6 +216,8 @@ class ConfocalHistoryEntry(QtCore.QObject):
             self.z_resolution = serialized['z_resolution']
         if 'depth_img_is_xz' in serialized:
             self.depth_img_is_xz = serialized['depth_img_is_xz']
+        if '_zscan' in serialized:
+            self._zscan = serialized['_zscan']
         if 'depth_scan_dir_is_xz' in serialized:
             self.depth_scan_dir_is_xz = serialized['depth_scan_dir_is_xz']
         if 'xy_line_position' in serialized:
@@ -904,10 +909,7 @@ class ConfocalLogic(LogicBase):
 
             # update image with counts from the line we just scanned
             if self._zscan:
-                if self.depth_img_is_xz:
-                    self.depth_image[self._scan_counter, :, 3:3 + s_ch] = line_counts
-                else:
-                    self.depth_image[self._scan_counter, :, 3:3 + s_ch] = line_counts
+                self.depth_image[self._scan_counter, :, 3:3 + s_ch] = line_counts
                 self.signal_depth_image_updated.emit()
             else:
                 self.xy_image[self._scan_counter, :, 3:3 + s_ch] = line_counts
@@ -925,7 +927,6 @@ class ConfocalLogic(LogicBase):
                     else:
                         self._xyscan_continuable = False
                 else:
-                    self._scan_counter = 0
                     self._move_to_start = True
                     for mode in self._current_loop_scan_mode:
                         self._loop_scan_logic.process_scanner_handler(current = mode)

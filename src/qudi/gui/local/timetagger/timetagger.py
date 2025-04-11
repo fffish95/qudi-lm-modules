@@ -25,8 +25,38 @@ class TimeTaggerMainWindow(QtWidgets.QMainWindow):
 
         # Load it
         super(TimeTaggerMainWindow, self).__init__()
+        self._dock_visibility = {}
         uic.loadUi(ui_file, self)
+        self.docks = [
+            self.Autocorr_DockWidget,
+            self.Histogram_DockWidget,
+            self.WriteFiles_DockWidget
+        ]
+        for dock in self.docks:
+            if dock:
+                self._dock_visibility[dock.objectName()]=dock.isVisible()
+                dock.visibilityChanged.connect(self.updateDockVisibility)
+        self.showMaximized()
         self.show()
+
+    def updateDockVisibility(self, visible):
+        if self.isMinimized():
+            return
+        dock = self.sender()
+        if dock:
+            self._dock_visibility[dock.objectName()]=visible
+
+    def changeEvent(self, event):
+        if event.type()==event.WindowStateChange:
+            if not self.isMinimized():
+                # Restoring window
+                for dock in self.docks:
+                    if dock:
+                        was_visible = self._dock_visibility.get(dock.objectName(), True)
+                        if was_visible:
+                            dock.show()
+        super().changeEvent(event)
+
 
 class SaveDialog(QtWidgets.QDialog):
     """ Dialog to provide feedback and block GUI while saving """

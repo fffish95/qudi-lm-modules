@@ -43,6 +43,7 @@ class LaserScannerMainWindow(QtWidgets.QMainWindow):
 
         # Load it
         super(LaserScannerMainWindow, self).__init__()
+
         self._dock_visibility = {}
         uic.loadUi(ui_file, self)
         self.docks = [
@@ -74,7 +75,6 @@ class LaserScannerMainWindow(QtWidgets.QMainWindow):
                         if was_visible:
                             dock.show()
         super().changeEvent(event)
-
 class SettingDialog(QtWidgets.QDialog):
     """ Create the SettingsDialog window, based on the corresponding *.ui file."""
 
@@ -182,8 +182,8 @@ class LaserscannerGui(GuiBase):
         self._linenum = self._scanning_logic._scan_counter
 
         # Get the image for the display from the logic
-        raw_data_trace_scan_matrix= self._scanning_logic.trace_scan_matrix[:, :, 4 + self._channel]
-        raw_data_retrace_scan_matrix = self._scanning_logic.retrace_scan_matrix[:, :, 4 + self._channel]
+        raw_data_trace_scan_matrix= self._scanning_logic.trace_scan_matrix[:, :, self._channel]
+        raw_data_retrace_scan_matrix = self._scanning_logic.retrace_scan_matrix[:, :, self._channel]
         raw_data_trace_plot_y_sum = self._scanning_logic.trace_plot_y_sum[self._channel,:]
         raw_data_trace_plot_y = self._scanning_logic.trace_plot_y[self._channel,:]
         raw_data_retrace_plot_y = self._scanning_logic.retrace_plot_y[self._channel,:]
@@ -447,8 +447,8 @@ class LaserscannerGui(GuiBase):
         if self._linenum not in range(0, self._scanning_logic._scan_counter + 1):
             self.log.error('Line num set value exceeds range.')
             return -1
-        self._scanning_logic.trace_plot_y = self._scanning_logic.trace_scan_matrix[self._linenum-1, :, 4:].transpose()
-        self._scanning_logic.retrace_plot_y = self._scanning_logic.retrace_scan_matrix[self._linenum-1, :, 4:].transpose()
+        self._scanning_logic.trace_plot_y = self._scanning_logic.trace_scan_matrix[self._linenum-1, :].transpose()
+        self._scanning_logic.retrace_plot_y = self._scanning_logic.retrace_scan_matrix[self._linenum-1, :].transpose()
         self.refresh_trace_plots()
         self.refresh_retrace_plots()
 
@@ -530,7 +530,7 @@ class LaserscannerGui(GuiBase):
         """ Refresh the trace-matrix image """
         self._mw.trace_plot_y_sum_ViewWidget.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['unit'])
         self._mw.trace_plot_y_ViewWidget.setLabel('left', self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['label'], units=self._scanning_logic._channel_labelsandunits[str(self._mw.channel_ComboBox.currentText())]['unit'])
-        trace_image_data = self._scanning_logic.trace_scan_matrix[:self._scanning_logic._scan_counter, :, 4 + self._channel]
+        trace_image_data = self._scanning_logic.trace_scan_matrix[:self._scanning_logic._scan_counter, :, self._channel]
         cb_range = self.get_cb_range()
         
         # Now update image with new color scale, and update colorbar
@@ -551,7 +551,7 @@ class LaserscannerGui(GuiBase):
 
     def refresh_retrace_plots(self):
         """ Refresh the retrace-matrix image """
-        retrace_image_data = self._scanning_logic.retrace_scan_matrix[:self._scanning_logic._scan_counter, :, 4 + self._channel]
+        retrace_image_data = self._scanning_logic.retrace_scan_matrix[:self._scanning_logic._scan_counter, :, self._channel]
         cb_range = self.get_cb_range()
 
         # Now update image with new color scale, and update colorbar
@@ -636,7 +636,6 @@ class LaserscannerGui(GuiBase):
                 self._save_dialog.hide()
             except:
                 self._save_dialog.hide()
-                print(variables)
                 self.log.exception('Failed to save status variables to {0}'.format(filename))
 
     def load_configuration(self):
@@ -830,8 +829,8 @@ class LaserscannerGui(GuiBase):
         self._scanning_logic.set_resolution(self._mw.resolutionSpinBox.value())
 
     def initialise_matrix(self):
-        raw_data_trace_scan_matrix= self._scanning_logic.trace_scan_matrix[:, :, 4 + self._channel]
-        raw_data_retrace_scan_matrix = self._scanning_logic.retrace_scan_matrix[:, :, 4 + self._channel]
+        raw_data_trace_scan_matrix= self._scanning_logic.trace_scan_matrix[:, :, self._channel]
+        raw_data_retrace_scan_matrix = self._scanning_logic.retrace_scan_matrix[:, :, self._channel]
         # Load the images in the display:
         self.trace_scan_matrix_image.setImage(
             raw_data_trace_scan_matrix,

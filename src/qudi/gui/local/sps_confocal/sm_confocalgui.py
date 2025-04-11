@@ -58,8 +58,40 @@ class ConfocalMainWindow(QtWidgets.QMainWindow):
 
         # Load it
         super(ConfocalMainWindow, self).__init__()
+        self._dock_visibility = {}
         uic.loadUi(ui_file, self)
+        self.docks = [
+            self.depth_scan_dockWidget,
+            self.optimizer_dockWidget,
+            self.scan_control_dockWidget,
+            self.xy_scan_dockWidget,
+            self.tilt_correction_dockWidget,
+            self.scanLineDockWidget
+        ]
+        for dock in self.docks:
+            if dock:
+                self._dock_visibility[dock.objectName()]=dock.isVisible()
+                dock.visibilityChanged.connect(self.updateDockVisibility)
+        self.showMaximized()
         self.show()
+
+    def updateDockVisibility(self, visible):
+        if self.isMinimized():
+            return
+        dock = self.sender()
+        if dock:
+            self._dock_visibility[dock.objectName()]=visible
+
+    def changeEvent(self, event):
+        if event.type()==event.WindowStateChange:
+            if not self.isMinimized():
+                # Restoring window
+                for dock in self.docks:
+                    if dock:
+                        was_visible = self._dock_visibility.get(dock.objectName(), True)
+                        if was_visible:
+                            dock.show()
+        super().changeEvent(event)
 
     def keyPressEvent(self, event):
         """Pass the keyboard press event from the main window further. """
@@ -222,7 +254,10 @@ class ConfocalGui(GuiBase):
         sc = self._scanning_logic._scan_counter
         sc = sc - 1 if sc >= 1 else sc
         if self._scanning_logic._zscan:
-            data = self._scanning_logic.depth_image[sc, :, 0:4:3]
+            if self._scanning_logic.depth_img_is_xz:
+                data = self._scanning_logic.depth_image[sc, :, 0:4:3]
+            else:
+                data = self._scanning_logic.depth_image[sc, :, 1:4:2]
         else:
             data = self._scanning_logic.xy_image[sc, :, 0:4:3]
 
@@ -1510,7 +1545,10 @@ class ConfocalGui(GuiBase):
         sc = self._scanning_logic._scan_counter
         sc = sc - 1 if sc >= 1 else sc
         if self._scanning_logic._zscan:
-            self.scan_line_plot.setData(self._scanning_logic.depth_image[sc, :, 0:4:3])
+            if self._scanning_logic.depth_img_is_xz:
+                self.scan_line_plot.setData(self._scanning_logic.depth_image[sc, :, 0:4:3])
+            else:
+                self.scan_line_plot.setData(self._scanning_logic.depth_image[sc, :, 1:4:2])
         else:
             self.scan_line_plot.setData(self._scanning_logic.xy_image[sc, :, 0:4:3])
 

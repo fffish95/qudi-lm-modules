@@ -526,19 +526,20 @@ class NITT(Base):
             # return values is a rate of counts/s
             return all_data.transpose()
         
-    def scan_trigger_line(self,line_path=None):
+    def scan_trigger_line(self,line_length=None):
         with self.threadlock:
             try:
-                if line_path is not None:
-                    self._set_up_trigger_line(np.shape(line_path)[1])
-                self._trigger_clock_task.start()
-
+                if line_length is not None:
+                    self._set_up_trigger_line(line_length)
                 if self._scanner_ai_channels:
-                    pass
-                    # self._analog_data = self._scanner_ai_task.read(self._trigger_line_length)
-                    # self._scanner_ai_task.stop()
+                    self._scanner_ai_task.start()
+                self._trigger_clock_task.start()
                 self._trigger_clock_task.wait_until_done(timeout = 10 * 2 * self._trigger_line_length)
+                if self._scanner_ai_channels:
+                    self._analog_data = self._scanner_ai_task.read(self._trigger_line_length)
                 self._trigger_clock_task.stop()
+                if self._scanner_ai_channels:
+                    self._scanner_ai_task.stop()                    
                 all_data = np.full(
                     (len(self.get_scanner_count_channels()), self._trigger_line_length), 0, dtype=np.float64)
                 for i, task in enumerate(self._timetagger_trigger_tasks):
@@ -547,9 +548,8 @@ class NITT(Base):
                     data = np.reshape(counts,(1, self._trigger_line_length))
                     all_data[i] = data * self._trigger_clock_frequency
                 if self._scanner_ai_channels:
-                    pass
-                    # analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._trigger_line_length))
-                    # all_data[len(self._timetagger_trigger_tasks):] = analog_data
+                    analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._trigger_line_length))
+                    all_data[len(self._timetagger_trigger_tasks):] = analog_data
             except:
                 self.log.exception('Error while scanning line.')
                 return np.array([[-1.]])

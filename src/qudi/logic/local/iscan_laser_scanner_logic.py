@@ -374,8 +374,8 @@ class LaserScannerLogic(LogicBase):
 
 
     def initialise_data_matrix(self): 
-        self.trace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution, 4 + len(self.get_scanner_count_channels())))
-        self.retrace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution, 4 + len(self.get_scanner_count_channels())))
+        self.trace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution, len(self.get_scanner_count_channels())))
+        self.retrace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution, len(self.get_scanner_count_channels())))
         self.trace_plot_y_sum = np.zeros((len(self.get_scanner_count_channels()), self._resolution))
         self.trace_plot_y = np.zeros((len(self.get_scanner_count_channels()), self._resolution))
         self.retrace_plot_y = np.zeros((len(self.get_scanner_count_channels()), self._resolution))
@@ -521,7 +521,8 @@ class LaserScannerLogic(LogicBase):
             ))
 
         self.start_oneline_scanner(tag)
-        move_line_counts = self._scanning_device.scan_trigger_line(move_line)
+        line_length = int(self._resolution)
+        move_line_counts = self._scanning_device.scan_trigger_line(line_length)
         self.kill_scanner()
         if tag != 'activate': # in activate no modle_state available
             self.module_state.unlock()
@@ -538,6 +539,9 @@ class LaserScannerLogic(LogicBase):
 
         # stops scanning
         if self.stopRequested:
+            ## move to the middle position
+            line_length = int(self._resolution/2)
+            move_line_counts = self._scanning_device.scan_trigger_line(line_length)
             with self.threadlock:
                 self.kill_scanner()
                 self.stopRequested = False
@@ -559,14 +563,14 @@ class LaserScannerLogic(LogicBase):
         try:
             if self._move_to_start:
                 self._move_to_start = False
-                move_line = self._generate_ramp(self._scanning_device.get_scanner_position()[3], self._scan_range[0])
-                move_line_counts = self._scanning_device.scan_trigger_line(move_line)
+                line_length = int(self._resolution/2)
+                move_line_counts = self._scanning_device.scan_trigger_line(line_length)
                 if np.any(move_line_counts == -1):
                     self.stop_scanning()
                     self.signal_scan_lines_next.emit()
                     return
-            trace_line = self._generate_ramp(self._scan_range[0], self._scan_range[1])
-            counts_on_trace_line = self._scanning_device.scan_trigger_line(trace_line)
+            line_length = int(self._resolution)
+            counts_on_trace_line = self._scanning_device.scan_trigger_line(line_length)
             if np.any(counts_on_trace_line == -1):
                 self.stop_scanning()
                 self.signal_scan_lines_next.emit()
@@ -574,22 +578,20 @@ class LaserScannerLogic(LogicBase):
             scan_counter = self._scan_counter
             # add scan counter here to make sure the display in gui displays the corresponding number for the nth line
             self._scan_counter += 1
-            self.trace_scan_matrix[scan_counter, :, :4] = trace_line.transpose()
-            self.trace_scan_matrix[scan_counter, :, 4:] = counts_on_trace_line
+            self.trace_scan_matrix[scan_counter, :] = counts_on_trace_line
             self.trace_plot_y_sum +=  counts_on_trace_line.transpose()
             self.trace_plot_y = counts_on_trace_line.transpose()
             self.signal_trace_plots_updated.emit()
 
 
-            retrace_line = self._generate_ramp(self._scan_range[1], self._scan_range[0])
-            counts_on_retrace_line = self._scanning_device.scan_trigger_line(retrace_line)
+            line_length = int(self._resolution)
+            counts_on_retrace_line = self._scanning_device.scan_trigger_line(line_length)
             if np.any(counts_on_retrace_line == -1):
                 self.stop_scanning()
                 self.signal_scan_lines_next.emit()
                 return
-            
-            self.retrace_scan_matrix[scan_counter, :, :4] = retrace_line.transpose()           
-            self.retrace_scan_matrix[scan_counter, :, 4:] = counts_on_retrace_line
+                    
+            self.retrace_scan_matrix[scan_counter, :] = counts_on_retrace_line
             self.retrace_plot_y = counts_on_retrace_line.transpose()
             self.signal_retrace_plots_updated.emit()
 
@@ -665,7 +667,7 @@ class LaserScannerLogic(LogicBase):
                 parameters[self._custom_scan_logic.CustomScanMode[mode]] = copy.deepcopy(self._custom_scan_logic.Params[mode])
 
         fit_y = np.zeros(len(self.plot_x))
-        figs = {ch: self.draw_figure(matrix_data=self.trace_scan_matrix[:self._scan_counter, :, 4 + n],
+        figs = {ch: self.draw_figure(matrix_data=self.trace_scan_matrix[:self._scan_counter, :, n],
                                      freq_data = self.plot_x,
                                      count_data = self.trace_plot_y[n,:],
                                      fit_freq_vals = self.plot_x,
@@ -679,7 +681,7 @@ class LaserScannerLogic(LogicBase):
         for n, ch in enumerate(self.get_scanner_count_channels()):
             # data for the text-array "image":
             image_data = OrderedDict()
-            image_data['Trace matrix data.\n'] = self.trace_scan_matrix[:self._scan_counter, :, 4 + n]
+            image_data['Trace matrix data.\n'] = self.trace_scan_matrix[:self._scan_counter, :, n]
 
             filelabel = 'Laserscanner_trace_image_{0}'.format(ch.replace('/', ''))
             self._save_logic.save_data(image_data,
@@ -695,7 +697,7 @@ class LaserScannerLogic(LogicBase):
         
 
         fit_y = np.zeros(len(self.plot_x))
-        figs = {ch: self.draw_figure(matrix_data=self.retrace_scan_matrix[:self._scan_counter, :, 4 + n],
+        figs = {ch: self.draw_figure(matrix_data=self.retrace_scan_matrix[:self._scan_counter, :, n],
                                      freq_data = self.plot_x,
                                      count_data = self.retrace_plot_y[n,:],
                                      fit_freq_vals = self.plot_x,
@@ -709,7 +711,7 @@ class LaserScannerLogic(LogicBase):
         for n, ch in enumerate(self.get_scanner_count_channels()):
             # data for the text-array "image":
             image_data = OrderedDict()
-            image_data['Rerace matrix data.\n'] = self.retrace_scan_matrix[:self._scan_counter, :, 4 + n]
+            image_data['Rerace matrix data.\n'] = self.retrace_scan_matrix[:self._scan_counter, :, n]
 
             filelabel = 'Laserscanner_retrace_image_{0}'.format(ch.replace('/', ''))
             self._save_logic.save_data(image_data,
@@ -724,18 +726,13 @@ class LaserScannerLogic(LogicBase):
             # prepare the full raw data in an OrderedDict:
         data = OrderedDict()
 
-        data['x_position'] = self.trace_scan_matrix[:, :, 0].flatten()
-        data['y_position'] = self.trace_scan_matrix[:, :, 1].flatten()
-        data['z_position'] = self.trace_scan_matrix[:, :, 2].flatten()
-        data['Frequency_(MHz)'] = self.trace_scan_matrix[:, :, 3].flatten()
-
         for n, ch in enumerate(self.get_scanner_count_channels()):
             if ch.lower().startswith('ch') or ch.lower().startswith('all'):
-                data['count_rate_{0}_(Hz)'.format(ch)] = self.trace_scan_matrix[:self._scan_counter, :, 4 + n].flatten()
+                data['count_rate_{0}_(Hz)'.format(ch)] = self.trace_scan_matrix[:self._scan_counter, :, n].flatten()
             elif ch.lower().startswith('ai'):
-                data['signal_{0}_(V)'.format(ch)] = self.trace_scan_matrix[:self._scan_counter, :, 4 + n].flatten()
+                data['signal_{0}_(V)'.format(ch)] = self.trace_scan_matrix[:self._scan_counter, :, n].flatten()
             else:
-                data['signal_{0}_(a.u.)'.format(ch)] = self.trace_scan_matrix[:self._scan_counter, :, 4 + n].flatten()
+                data['signal_{0}_(a.u.)'.format(ch)] = self.trace_scan_matrix[:self._scan_counter, :, n].flatten()
 
         # Save the raw data to file
         filelabel = 'laser_scanner_trace_raw_data'
