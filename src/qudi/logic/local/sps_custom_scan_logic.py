@@ -38,13 +38,13 @@ class SPSCustonScanLogic(LogicBase):
         module.Class: 'local.sps_custom_scan_logic.SPSCustonScanLogic'
     """
     # connector
-    stepmotor1 = Connector(interface='MotorInterface')
-    stepmotor2 = Connector(interface='MotorInterface')
-    thorlabspm1 = Connector(interface = "ThorlabsPM")
-    nicard = Connector(interface = "NICard")
-    wavemeter = Connector(interface= "HighFinesseWavemeter")
-    fugsourcelogic = Connector(interface = "FugSourceLogic")
-    timetaggerlogic = Connector(interface = "TimeTaggerLogic")
+    stepmotor1 = Connector(interface='MotorInterface', optional=True)
+    stepmotor2 = Connector(interface='MotorInterface', optional=True)
+    thorlabspm1 = Connector(interface = "ThorlabsPM", optional=True)
+    nicard = Connector(interface = "NICard", optional=True)
+    wavemeter = Connector(interface= "HighFinesseWavemeter", optional=True)
+    fugsourcelogic = Connector(interface = "FugSourceLogic", optional=True)
+    timetaggerlogic = Connector(interface = "TimeTaggerLogic", optional=True)
 
     # status vars
 
