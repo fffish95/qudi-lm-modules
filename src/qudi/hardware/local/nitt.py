@@ -393,12 +393,12 @@ class NITT(Base):
             # Set up the configuration of ai task for scanning with certain length
             # dont't put ai task into self._timetagger_cbm_tasks
             if self._scanner_ai_channels:
-                self._nicard.cfg_samp_clk_timing(self._scanner_ai_task, rate = self._scanner_clock_frequency, source= self._scanner_clock_channel[0], samps_per_chan = self._line_length)
+                self._nicard.cfg_samp_clk_timing(self._scanner_ai_task, rate = self._scanner_clock_frequency, source= self._scanner_clock_channel[0], samps_per_chan = self._line_length+1)
 
 
             # Configure Implicit Timing for the clock.
             # Set timing for scanner clock task to the number of pixel.
-            self._nicard.cfg_implicit_timing(self._scanner_clock_task, sample_mode='finite', samps_per_chan = self._line_length)
+            self._nicard.cfg_implicit_timing(self._scanner_clock_task, sample_mode='finite', samps_per_chan = self._line_length+1)
         except:
             self.log.exception('Error while setting up scanner to scan a line.')
             return -1
@@ -495,7 +495,7 @@ class NITT(Base):
 
                 # data readout from ai channels
                 if self._scanner_ai_channels:
-                    self._analog_data = self._scanner_ai_task.read(self._line_length)
+                    self._analog_data = self._scanner_ai_task.read(self._line_length + 1)
                     self._scanner_ai_task.stop()
 
                 # stop the clock task
@@ -514,8 +514,8 @@ class NITT(Base):
                     data = np.reshape(counts,(1, self._line_length))
                     all_data[i] = data * self._scanner_clock_frequency
                 if self._scanner_ai_channels:
-                    analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._line_length))
-                    all_data[len(self._timetagger_cbm_tasks):] = analog_data
+                    analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._line_length +1))
+                    all_data[len(self._timetagger_cbm_tasks):] = analog_data[:, :-1]
 
                 # update the scanner position instance variable
                 self._current_position = np.array(line_path[:, -1])
