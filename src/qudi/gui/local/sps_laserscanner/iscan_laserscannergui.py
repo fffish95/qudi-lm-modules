@@ -232,7 +232,7 @@ class LaserscannerGui(GuiBase):
         # set cursor
         self.region_cursor = pg.LinearRegionItem([int(self._scanning_logic.a_range[0]), int(self._scanning_logic.a_range[1])], swapMode='block')
         self.region_cursor.setBounds([int(self._scanning_logic.a_range[0]), int(self._scanning_logic.a_range[1])])
-        self.main_cursor = pg.InfiniteLine(pos = self._scanning_logic._current_a, angle = 90, movable = True, bounds = [int(self._scanning_logic.a_range[0]), int(self._scanning_logic.a_range[1])])
+        self.main_cursor = pg.InfiniteLine(pos = self._scanning_logic._scan_offset, angle = 90, movable = True, bounds = [int(self._scanning_logic.a_range[0]), int(self._scanning_logic.a_range[1])])
 
 
 
@@ -269,7 +269,7 @@ class LaserscannerGui(GuiBase):
         self._mw.startDoubleSpinBox.setValue(self._scanning_logic._scan_range[0])
         self._mw.speedDoubleSpinBox.setValue(self._scanning_logic._scan_speed)
         self._mw.stopDoubleSpinBox.setValue(self._scanning_logic._scan_range[1])
-        self._mw.cursorpositionDoubleSpinBox.setValue(self._scanning_logic._current_a)
+        self._mw.cursorpositionDoubleSpinBox.setValue(self._scanning_logic._scan_offset)
         self._mw.resolutionSpinBox.setValue(self._scanning_logic._resolution)
         self._mw.noofrepeatsSpinBox.setValue(self._scanning_logic._number_of_repeats)
         self._mw.linenumspinBox.setValue(self._linenum)
@@ -567,7 +567,7 @@ class LaserscannerGui(GuiBase):
 
 
     def update_cursor_position_from_logic(self):
-        self._mw.cursorpositionDoubleSpinBox.setValue(self._scanning_logic._current_a)
+        self._mw.cursorpositionDoubleSpinBox.setValue(self._scanning_logic._scan_offset)
         self.main_cursor.setValue(self._mw.cursorpositionDoubleSpinBox.value())
         
 
@@ -728,7 +728,7 @@ class LaserscannerGui(GuiBase):
         """ Update the display of cursor position
         """
         self._mw.cursorpositionDoubleSpinBox.setValue(int(self.main_cursor.value()))
-        self._scanning_logic._current_a = self._mw.cursorpositionDoubleSpinBox.value()
+        self._scanning_logic._scan_offset = self._mw.cursorpositionDoubleSpinBox.value()
         self._scanning_logic._change_position('gui')
 
     def setRegionCursorPosition(self):
@@ -736,7 +736,7 @@ class LaserscannerGui(GuiBase):
         self.set_scan_range()
 
     def setCursorPosition(self):
-        self._scanning_logic._current_a = self._mw.cursorpositionDoubleSpinBox.value()
+        self._scanning_logic._scan_offset = self._mw.cursorpositionDoubleSpinBox.value()
         self._scanning_logic._change_position('gui')
         self.main_cursor.setValue(self._mw.cursorpositionDoubleSpinBox.value())
 

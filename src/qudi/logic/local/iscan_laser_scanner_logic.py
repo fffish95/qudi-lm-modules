@@ -47,20 +47,16 @@ class LaserScannerHistoryEntry(QtCore.QObject):
         """ Make a laser scan data setting with default values. """
         super().__init__()
 
-        # Reads in the maximal scanning range.
-        self.x_range = laserscanner._scanning_device.get_position_range()[0]
-        self.y_range = laserscanner._scanning_device.get_position_range()[1]
-        self.z_range = laserscanner._scanning_device.get_position_range()[2]
+        # Read in the maximal scanning range.
         self.a_range = laserscanner._scanning_device.get_position_range()[3]
 
-        # Sets the current position to the center of the maximal scanning range
-        self.current_x = laserscanner._scanning_device.get_scanner_position()[0]
-        self.current_y = laserscanner._scanning_device.get_scanner_position()[1]
-        self.current_z = laserscanner._scanning_device.get_scanner_position()[2]
-        self.current_a = (self.a_range[0] + self.a_range[1]) / 2
 
-        # Sets the scan range of the image to the maximal scanning range
+
+        # Set the scan range of the image to the maximal scanning range
         self.scan_range = self.a_range
+
+        # Set the current position to the center of the scan range
+        self.scan_offset = int((self.scan_range[0] + self.scan_range[1]) / 2)
 
         # Default values for the resolution of the scan
         self.resolution = 5000
@@ -80,7 +76,7 @@ class LaserScannerHistoryEntry(QtCore.QObject):
 
     def restore(self, laserscanner):
         """ Write data back into laser scan logic and pull all the necessary strings"""
-        laserscanner._current_a = self.current_a
+        laserscanner._scan_offset = self.scan_offset
         laserscanner._scan_range = np.copy(self.scan_range)
         laserscanner._resolution = self.resolution
         laserscanner._number_of_repeats = self.number_of_repeats
@@ -111,7 +107,7 @@ class LaserScannerHistoryEntry(QtCore.QObject):
 
     def snapshot(self, laserscanner):
         """ Extract all necessary data from a laserscanner logic and keep it for later use """
-        self.current_a = laserscanner._current_a 
+        self.scan_offset = laserscanner._scan_offset
         self.scan_range = np.copy(laserscanner._scan_range)
         self.resolution = laserscanner._resolution
         self.number_of_repeats = laserscanner._number_of_repeats
@@ -130,14 +126,13 @@ class LaserScannerHistoryEntry(QtCore.QObject):
     def serialize(self):
         """ Give out a dictionary that can be saved via the usua means """
         serialized = dict()
-        serialized['focus_position'] = [self.current_x, self.current_y, self.current_z, self.current_a]
+        serialized['scan_offset'] = self.scan_offset
         serialized['scan_range'] = list(self.scan_range)
         serialized['resolution'] = self.resolution
         serialized['number_of_repeats'] = self.number_of_repeats
         serialized['scan_speed'] = self.scan_speed
         serialized['scan_counter'] = self.scan_counter
         serialized['scan_continuable'] = self.scan_continuable
-
         serialized['trace_scan_matrix'] = self.trace_scan_matrix
         serialized['retrace_scan_matrix'] = self.retrace_scan_matrix
         serialized['trace_plot_y_sum'] = self.trace_plot_y_sum
@@ -148,11 +143,8 @@ class LaserScannerHistoryEntry(QtCore.QObject):
 
     def deserialize(self, serialized):
         """ Restore laser scanner history object from a dict """
-        if 'focus_position' in serialized and len(serialized['focus_position']) == 4:
-            self.current_x = serialized['focus_position'][0]
-            self.current_y = serialized['focus_position'][1]
-            self.current_z = serialized['focus_position'][2]
-            self.current_a = serialized['focus_position'][3]
+        if 'scan_offset' in serialized:
+            self.scan_offset = serialized['scan_offset']
         if 'scan_range' in serialized and len(serialized['scan_range']) ==2:
             self.scan_range = serialized['scan_range']
         if 'resolution' in serialized:
@@ -188,6 +180,7 @@ class LaserScannerLogic(LogicBase):
 
     # declare connectors
     laserscanner1 = Connector(interface='Base')
+    iscan = Connector(interface='Base')
     customscanlogic1 = Connector(interface='SPSCustonScanLogic')
     savelogic = Connector(interface='SaveLogic')
 
@@ -232,6 +225,7 @@ class LaserScannerLogic(LogicBase):
         """ Initialisation performed during activation of the module.
         """
         self._scanning_device = self.laserscanner1()
+        self._iscan = self.iscan()
         self._save_logic = self.savelogic()
         self._custom_scan_logic = self.customscanlogic1()
 
@@ -243,6 +237,8 @@ class LaserScannerLogic(LogicBase):
 
         # restore history in StatusVariables
         self.load_history_config()
+
+        
 
         # Sets connections between signals and functions
         self.signal_scan_lines_next.connect(self._scan_line, QtCore.Qt.QueuedConnection)
@@ -261,7 +257,6 @@ class LaserScannerLogic(LogicBase):
         closing_state = LaserScannerHistoryEntry(self)
         closing_state.snapshot(self)
         self._statusVariables['history_0'] = closing_state.serialize()
-        self._current_a = (self.a_range[0] + self.a_range[1]) / 2
         self._change_position('on_deactivate')
         return 0
     
@@ -344,7 +339,7 @@ class LaserScannerLogic(LogicBase):
         self._clock_frequency = float(clock_frequency)
         self.signal_clock_frequency_updated.emit()
         # checks if scanner is still running:
-        if self._clock_frequency > 250000:
+        if self._clock_frequency > 5000:
             self.log.error('Clock frequency too high, please reduce resolution or slow down speed.')
             return -1
         if self.module_state() == 'locked':
@@ -398,6 +393,14 @@ class LaserScannerLogic(LogicBase):
             self.module_state.unlock()
             return -1
         
+        # synchronize the settings to the iscan
+        scan_range = int(abs(self._scan_range[1] - self._scan_range[0]))
+        self.iscan_set_scanwidth(scan_range)
+        self._scan_offset = int((self._scan_range[0] + self._scan_range[1]) / 2)
+        self._change_position('start_scanner')
+        self.iscan_set_scanoffset(self._scan_offset)
+        self.iscan_set_scannmbofsteps(self._resolution)
+        self.iscan_set_scanenable(True)
         
         if self._custom_scan:
             for mode in self._current_custom_scan_mode:
@@ -409,21 +412,7 @@ class LaserScannerLogic(LogicBase):
 
         self.current_a = self._scanning_device.get_scanner_position()[3]
         return 0
-    
-    def start_oneline_scanner(self,tag):
-        if tag != 'activate': # in activate no module_state available
-            self.module_state.lock()
-        self._scanning_device.module_state.lock()
 
-        clock_status = self._scanning_device.set_up_trigger_clock(
-            clock_frequency=self._oneline_scanner_frequency)
-
-        if clock_status < 0:
-            self._scanning_device.module_state.unlock()
-            self.module_state.unlock()
-            return -1
-
-        return 0
     
     def continue_scanner(self):
         """Continue the scanning procedure
@@ -439,6 +428,14 @@ class LaserScannerLogic(LogicBase):
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
             return -1
+        
+        # synchronize the settings to the iscan
+        scan_range = int(abs(self._scan_range[1] - self._scan_range[0]))
+        self.iscan_set_scanwidth(scan_range)
+        self._scan_offset = int((self._scan_range[0] + self._scan_range[1]) / 2)
+        self._change_position('start_scanner')
+        self.iscan_set_scannmbofsteps(self._resolution)
+        self.iscan_set_scanenable(True)
 
         self.signal_scan_lines_next.emit()
         return 0
@@ -456,76 +453,15 @@ class LaserScannerLogic(LogicBase):
             self._scanning_device.module_state.unlock()
         except Exception as e:
             self.log.exception('Could not unlock scanning device.')
+        self.iscan_set_scanenable(False)
 
         return 0
 
-    def _generate_ramp(self, position_start, position_end, x = None, y = None, z = None):
-        if x is None:
-            x = self._scanning_device.get_scanner_position()[0]
-        if y is None:
-            y = self._scanning_device.get_scanner_position()[1]
-        if z is None:
-            z = self._scanning_device.get_scanner_position()[2]
-        
-        if position_start == position_end:
-            ramp = np.array([position_start, position_end])
-        else:
-            linear_position_step = self._scan_speed*1000 / self._clock_frequency
-            smoothing_range = self._smoothing_steps + 1
-
-            position_range_of_accel = sum(n * linear_position_step / smoothing_range for n in range(0, smoothing_range)
-            )
-            if position_start < position_end:
-                position_min = position_start
-                position_max = position_end
-            else:
-                position_min = position_end
-                position_max = position_start
-            position_min_linear = position_min + position_range_of_accel
-            position_max_linear = position_max - position_range_of_accel
-
-            if (position_max_linear - position_min_linear) / linear_position_step < self._smoothing_steps:
-                ramp = np.linspace(position_start,position_end, self._resolution)
-            else:
-                num_of_linear_steps = np.round(self._resolution - 2*self._smoothing_steps)
-
-                smooth_curve = np.array(
-                    [sum(
-                        n * linear_position_step / smoothing_range for n in range(1, N)
-                    ) for N in range(1, smoothing_range)
-                    ])
-                accel_part = position_min + smooth_curve
-                decel_part = position_max - smooth_curve[::-1]
-
-                linear_part = np.linspace(position_min_linear, position_max_linear, num_of_linear_steps)
-                ramp = np.hstack((accel_part, linear_part, decel_part))
-                if position_start > position_end:
-                    ramp = ramp[::-1]
-        move_line = np.vstack((
-            np.ones((len(ramp), )) * x,
-            np.ones((len(ramp), )) * y,
-            np.ones((len(ramp), )) * z,
-            ramp
-            ))
-        return move_line
-
-
     def _change_position(self, tag):
-        """ Let hardware move to current a"""
-        ramp = np.linspace(self._scanning_device.get_scanner_position()[3], self._current_a, self._goto_speed)
-        move_line = np.vstack((
-            np.ones((len(ramp), )) * self._scanning_device.get_scanner_position()[0],
-            np.ones((len(ramp), )) * self._scanning_device.get_scanner_position()[1],
-            np.ones((len(ramp), )) * self._scanning_device.get_scanner_position()[2],
-            ramp
-            ))
-
-        self.start_oneline_scanner(tag)
-        line_length = int(self._resolution)
-        move_line_counts = self._scanning_device.scan_trigger_line(line_length)
-        self.kill_scanner()
-        if tag != 'activate': # in activate no modle_state available
-            self.module_state.unlock()
+        
+        self.iscan_set_regonoff(False)
+        self.iscan_set_scanoffset(self._scan_offset)
+        self.iscan_set_regonoff(True)
         return 0
     
     def get_scanner_count_channels(self):
@@ -614,9 +550,10 @@ class LaserScannerLogic(LogicBase):
 
 
     def set_scan_range(self, scan_range):
-        """ Set the scan rnage """
+        """ Set the scan range """
         self._scan_range = scan_range
         self.set_clock_frequency()
+
 
     def set_scan_speed(self, scan_speed):
         """ Set scan speed in volt per second """
@@ -869,3 +806,26 @@ class LaserScannerLogic(LogicBase):
                              )
 
         return fig
+    
+    def iscan_set_scanenable(self, scan_state):
+        if scan_state:
+            scan_state_value = 1
+        else:
+            scan_state_value = 0
+        self._iscan.set_variable('ScanEnable', scan_state_value)
+    
+    def iscan_set_regonoff(self, reg_state):
+        if reg_state:
+            reg_state_value = 1
+        else:
+            reg_state_value = 0
+        self._iscan.set_variable('RegOnOff', reg_state_value)
+    
+    def iscan_set_scanoffset(self, scanoffset):
+        self._iscan.set_variable('ScanOffset', scanoffset)
+
+    def iscan_set_scanwidth(self, scanwidth):
+        self._iscan.set_variable('ScanWidth', scanwidth)
+
+    def iscan_set_scannmbofsteps(self, scannmbofsteps):
+        self._iscan.set_variable('ScanNmbOfSteps', scannmbofsteps)
