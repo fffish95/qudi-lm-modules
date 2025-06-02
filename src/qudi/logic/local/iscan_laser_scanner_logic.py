@@ -258,6 +258,7 @@ class LaserScannerLogic(LogicBase):
         closing_state.snapshot(self)
         self._statusVariables['history_0'] = closing_state.serialize()
         self._change_position('on_deactivate')
+        self.iscan_set_regonoff(False)
         return 0
     
     def save_history_config(self):
@@ -822,10 +823,10 @@ class LaserScannerLogic(LogicBase):
         self._iscan.set_variable('RegOnOff', reg_state_value)
     
     def iscan_set_scanoffset(self, scanoffset):
-        self._iscan.set_variable('ScanOffset', scanoffset)
+        self._iscan.set_variable('ScanOffset', int(scanoffset))
 
     def iscan_set_scanwidth(self, scanwidth):
-        self._iscan.set_variable('ScanWidth', scanwidth)
+        self._iscan.set_variable('ScanWidth', int(scanwidth))
 
     def iscan_set_scannmbofsteps(self, scannmbofsteps):
-        self._iscan.set_variable('ScanNmbOfSteps', scannmbofsteps)
+        self._iscan.set_variable('ScanNmbOfSteps', int(scannmbofsteps))
