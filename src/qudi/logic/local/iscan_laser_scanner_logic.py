@@ -522,7 +522,7 @@ class LaserScannerLogic(LogicBase):
 
 
             line_length = int(self._resolution)
-            counts_on_retrace_line = self._scanning_device.scan_trigger_line(line_length)
+            counts_on_retrace_line = self._scanning_device.scan_trigger_line(line_length)[::-1]
             if np.any(counts_on_retrace_line == -1):
                 self.stop_scanning()
                 self.signal_scan_lines_next.emit()

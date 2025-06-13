@@ -608,7 +608,7 @@ class LaserScannerLogic(LogicBase):
 
 
             retrace_line = self._generate_ramp(self._scan_range[1], self._scan_range[0])
-            counts_on_retrace_line = self._scanning_device.scan_line(retrace_line, pixel_clock = True)
+            counts_on_retrace_line = self._scanning_device.scan_line(retrace_line, pixel_clock = True)[::-1]
             if np.any(counts_on_retrace_line == -1):
                 self.stop_scanning()
                 self.signal_scan_lines_next.emit()
