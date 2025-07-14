@@ -10,7 +10,7 @@ conda update --all
 conda install python=3.10
 conda create --name qudi-env python=3.10
 conda activate qudi-env
-python -m pip install qudi-core
+conda install -c conda-forge pyside2
 python -m pip install git+https://github.com/fffish95/qudi-core.git@main  
 # when update use python -m pip install --ignore-installed git+https://github.com/fffish95/qudi-core.git@main
 python -m pip install -e .
