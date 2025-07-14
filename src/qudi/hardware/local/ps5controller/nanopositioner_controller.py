@@ -5,7 +5,7 @@ import select
 import numpy as np
 
 
-attocube_ip = '10.140.1.111'
+attocube_ip = '10.140.0.212'
 password = b"123456\n"
 
 button_presses = {                          # ecodes.EV_KEY

@@ -20,9 +20,12 @@ class TTInstreamInterfuse(DataInStreamInterface):
 
     """
 
+    nicard = Connector(interface = "NICard")
     timetagger = Connector(interface = "TT")
     # config options
-    __available_channels = ConfigOption(name='available_channels', default=tuple(), missing='nothing')
+    _timetagger_channels = ConfigOption('timetagger_channels', list(), missing='info')
+    _stream_ai_channels = ConfigOption('stream_ai_channels', list(), missing='nothing')
+    _ai_voltage_ranges = ConfigOption('ai_voltage_ranges', None, missing='nothing')
     __sample_rate = ConfigOption(name='sample_rate', default=50, missing='nothing')
     __buffer_size = ConfigOption(name='buffer_size', default=10000000, missing='nothing')
 
@@ -53,7 +56,11 @@ class TTInstreamInterfuse(DataInStreamInterface):
         self._constraints = DataInStreamConstraints()
         self._constraints.digital_channels = tuple(
             StreamChannel(name=ch, type=StreamChannelType.DIGITAL, unit='Cps') for ch in
-            self.__available_channels)
+            self._timetagger_channels)
+        self._constraints.analog_channels = tuple(
+            StreamChannel(name=ch, type=StreamChannelType.ANALOG, unit='V') for ch in
+            self._stream_ai_channels)
+        self.__available_channels = self._constraints.digital_channels + self._constraints.analog_channels
 
 
 
@@ -64,7 +71,8 @@ class TTInstreamInterfuse(DataInStreamInterface):
             self._is_running = False
         if hasattr(self, 'Counterfunc'):
             for chn in self.__active_channels:
-                self.Counterfunc[chn].clear()
+                if chn.type == StreamChannelType.DIGITAL:
+                    self.Counterfunc[chn.name].clear()
 
     def configure(self, *args, **kwargs):
         """
@@ -84,8 +92,9 @@ class TTInstreamInterfuse(DataInStreamInterface):
 
             if 'channel' in param_dict.keys():
                 self.__active_channels = tuple(param_dict['channel'])
-            # else:
-            #     self.__active_channels = tuple(self._available_channels)
+                self.__active_channels = tuple(ch for ch in self.__available_channels if ch.name in param_dict['channel'])
+            else:
+                self.__active_channels = self.__available_channels 
 
             if 'sample_rate' in param_dict.keys():
                 self.__sample_rate = param_dict['sample_rate']
@@ -190,9 +199,7 @@ class TTInstreamInterfuse(DataInStreamInterface):
         @return dict: currently active data channel properties with keys being the channel names
                       and values being the corresponding StreamChannel instances.
         """
-        constr = self._constraints
-        return (*(ch.copy() for ch in constr.digital_channels if ch.name in self.__active_channels),
-                *(ch.copy() for ch in constr.analog_channels if ch.name in self.__active_channels))
+        return (ch.copy() for ch in self.__active_channels)
 
     @active_channels.setter
     def active_channels(self, channels):

@@ -5,7 +5,7 @@ import select
 import numpy as np
 
 
-picomotor_ip = '10.140.1.153'
+picomotor_ip = '10.140.0.213'
 
 button_presses = {                          # ecodes.EV_KEY
     304: 'x',

@@ -140,14 +140,7 @@ class TimeSeriesGui(GuiBase):
             # FIXME: Choosing a pen width != 1px (not cosmetic) causes massive performance drops
             # For mixed signals each signal type (digital or analog) has the same color
             # If just a single signal type is present, alternate the colors accordingly
-            if digital_channels and analog_channels:
-                if ch in digital_channels:
-                    pen1 = pg.mkPen(palette.c2, cosmetic=True)
-                    pen2 = pg.mkPen(palette.c1, cosmetic=True)
-                else:
-                    pen1 = pg.mkPen(palette.c3, cosmetic=True)
-                    pen2 = pg.mkPen(palette.c4, cosmetic=True)
-            elif i % 3 == 0:
+            if i % 3 == 0:
                 pen1 = pg.mkPen(palette.c2, cosmetic=True)
                 pen2 = pg.mkPen(palette.c1, cosmetic=True)
             elif i % 3 == 1:
