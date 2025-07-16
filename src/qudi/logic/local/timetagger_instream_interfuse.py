@@ -305,7 +305,9 @@ class TTInstreamInterfuse(DataInStreamInterface):
 
         write_offset = 0
         for i, chn in enumerate(self.__active_channels):
-            buffer[write_offset:(write_offset+number_of_samples)] = self.Counterfunc[chn].getData()[0][-number_of_samples:]
+            raw_data = self.Counterfunc[chn].getData()
+            cleaned_data = np.array(raw_data).copy()  # fully serialize it from RPyC proxy to real NumPy array
+            buffer[write_offset:(write_offset+number_of_samples)] = cleaned_data[0][-number_of_samples:]
             write_offset += number_of_samples
         return number_of_samples
 

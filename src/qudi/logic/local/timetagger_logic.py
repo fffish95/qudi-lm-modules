@@ -162,11 +162,15 @@ class TimetaggerPull(QtCore.QObject):
         # update as long as the state is busy
         if self._parentclass.module_state() == 'locked':
             for i, task in enumerate(self.autocorr_tasks):
-                counts = np.nan_to_num(task.getData())
+                raw_data = task.getData()
+                cleaned_data = np.array(raw_data).copy()  # fully serialize it from RPyC proxy to real NumPy array
+                counts = np.nan_to_num(cleaned_data)
                 data = np.reshape(counts,(1, list(self._parentclass._autocorr_params.values())[0]['number_of_bins']))
                 self.autocorr_all_data[i] = data
             for i, task in enumerate(self.histogram_tasks):
-                counts = np.nan_to_num(task.getData())
+                raw_data = task.getData()
+                cleaned_data = np.array(raw_data).copy()  # fully serialize it from RPyC proxy to real NumPy array
+                counts = np.nan_to_num(cleaned_data)
                 data = np.reshape(counts,(1, list(self._parentclass._histogram_params.values())[0]['number_of_bins']))
                 self.histogram_all_data[i] = data
 

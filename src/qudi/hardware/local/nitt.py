@@ -308,7 +308,8 @@ class NITT(Base):
 
         # then directly write the position to the hardware
         try:
-            self._nicard.write_task(task = self._scanner_task, data = self._scanner_position_to_volt(my_position), auto_start = True )
+            data = np.array(self._scanner_position_to_volt(my_position), dtype=np.float64).copy()
+            self._nicard.write_task(task = self._scanner_task, data = data, auto_start = True )
         except:
             return -1
         return 0
@@ -474,6 +475,7 @@ class NITT(Base):
                 self._set_up_line(np.shape(line_path)[1])
                 line_volts = self._scanner_position_to_volt(line_path)
                 # write the positions to the analog output
+                line_volts = np.array(line_volts, dtype=np.float64).copy()
                 self._nicard.write_task(task = self._scanner_task, data = line_volts, auto_start = False)
 
                 # set up the configuration of co task for scanning with certain length
@@ -510,7 +512,9 @@ class NITT(Base):
                 all_data = np.full(
                     (len(self.get_scanner_count_channels()), self._line_length), 0, dtype=np.float64)
                 for i, task in enumerate(self._timetagger_cbm_tasks):
-                    counts = np.nan_to_num(task.getData())
+                    raw_data = task.getData()
+                    cleaned_data = np.array(raw_data).copy()  # fully serialize it from RPyC proxy to real NumPy array
+                    counts = np.nan_to_num(cleaned_data)
                     data = np.reshape(counts,(1, self._line_length))
                     all_data[i] = data * self._scanner_clock_frequency
                 if self._scanner_ai_channels:
@@ -543,7 +547,9 @@ class NITT(Base):
                 all_data = np.full(
                     (len(self.get_scanner_count_channels()), self._trigger_line_length), 0, dtype=np.float64)
                 for i, task in enumerate(self._timetagger_trigger_tasks):
-                    counts = np.nan_to_num(task.getData())
+                    raw_data = task.getData()
+                    cleaned_data = np.array(raw_data).copy()  # fully serialize it from RPyC proxy to real NumPy array
+                    counts = np.nan_to_num(cleaned_data)
                     task.clear()
                     data = np.reshape(counts,(1, self._trigger_line_length))
                     all_data[i] = data * self._trigger_clock_frequency
