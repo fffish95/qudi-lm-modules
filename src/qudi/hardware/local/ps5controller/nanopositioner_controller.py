@@ -5,7 +5,7 @@ import select
 import numpy as np
 
 
-attocube_ip = '10.140.1.111'
+attocube_ip = '10.140.0.212'
 password = b"123456\n"
 
 button_presses = {                          # ecodes.EV_KEY
@@ -241,7 +241,7 @@ class pos_controller:
 if __name__ == '__main__':
     while(True):
         try:
-            gamepad = InputDevice('/dev/input/event2')
+            gamepad = InputDevice('/dev/input/event4')
 
             while True:
                 r, w, x = select.select([gamepad],[],[])

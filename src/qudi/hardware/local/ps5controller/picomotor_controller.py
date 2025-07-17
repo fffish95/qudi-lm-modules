@@ -5,7 +5,7 @@ import select
 import numpy as np
 
 
-picomotor_ip = '10.140.1.153'
+picomotor_ip = '10.140.0.213'
 
 button_presses = {                          # ecodes.EV_KEY
     304: 'x',
@@ -232,7 +232,7 @@ class pico_controller:
 if __name__ == '__main__':
     while(True):
         try:
-            gamepad = InputDevice('/dev/input/event2')
+            gamepad = InputDevice('/dev/input/event4')
 
             while True:
                 r, w, x = select.select([gamepad],[],[])
