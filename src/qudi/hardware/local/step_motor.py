@@ -21,11 +21,12 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 
 from qudi.core.configoption import ConfigOption
-from qudi.interface.motor_interface import MotorInterface
+from qudi.core.module import Base
 
 import pyvisa as visa
+import time
 
-class StepMotor(MotorInterface):
+class StepMotor(Base):
     """ Designed for driving a servo motor through Arduino.
 
     See [arduino-python3 Command API] & [arduino-libraries/Servo] for details.
@@ -83,26 +84,48 @@ class StepMotor(MotorInterface):
             return -1
 
         self._my_instrument.write('MOVEABS {} {} deg'.format(motor_channel, degree))
-        
-
-
-    def abort(self):
-        pass
-
 
     def get_pos(self):
-        pass
+        try:
+            pos = self._my_instrument.query('GETPOS')
+            position = float(''.join(char for char in pos if char.isdigit() or char in '.-'))
+            return position #returns position in degrees
+        except Exception as e:
+            self.log.error(f'Error getting position: {e}')
+            return -1
+        
+    def set_zero(self, motor_channel=None):
+        """Set the current position as zero for the specified motor channel."""
+        if motor_channel is None:
+            self.log.error('The motor channel is None.')
+            return -1
 
+        position = self.get_pos()
+        self._my_instrument.write('SETOPTZEROPOS {} {}'.format(motor_channel, position))
 
-    def get_status(self):
-        pass
-    def calibrate(self):
-        pass
-    def get_velocity(self):
-        pass
-    def set_velocity(self):
-        pass
+    def calibrate(self, motor_channel=None):
+        if motor_channel is None:
+            self.log.error('The motor channel is None.')
+            return -1
+        self._my_instrument.write('ZERORUN {}'.format(motor_channel))
 
-    def _attach(self):
-        pass
+    def stop(self, motor_channel=None):
+        if motor_channel is None:
+            self.log.error('The motor channel is None.')
+            return -1
+        self._my_instrument.write('STOP {}'.format(motor_channel))
+
+    def scan_line(self, motor_channel=None, start=None, stop=None, stepnum=None, frequency=None):
+        if motor_channel is None:
+            self.log.error('The motor channel is None.')
+            return -1
+        if start is None or stop is None or stepnum is None or frequency is None:
+            self.log.error('One or more parameters are None: start={}, stop={}, stepnum={}, frequency={}'.format(start, stop, stepnum, frequency))
+            return -1
+
+        degree = (stop - start) / stepnum
+        sleep_time = 1 / frequency
+        for i in range(stepnum):
+            self.move_rel(motor_channel, degree)
+            time.sleep(sleep_time)
  

@@ -21,11 +21,11 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 
 from qudi.core.configoption import ConfigOption
-from qudi.interface.motor_interface import MotorInterface
+from qudi.core.module import Base
 
 import pyvisa as visa
 
-class StepMotor(MotorInterface):
+class StepMotor(Base):
     """ Designed for driving a servo motor through Arduino.
 
     See [arduino-python3 Command API] & [arduino-libraries/Servo] for details.

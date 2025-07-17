@@ -38,8 +38,8 @@ class SPSCustonScanLogic(LogicBase):
         module.Class: 'local.sps_custom_scan_logic.SPSCustonScanLogic'
     """
     # connector
-    stepmotor1 = Connector(interface='MotorInterface', optional=True)
-    stepmotor2 = Connector(interface='MotorInterface', optional=True)
+    stepmotor1 = Connector(interface='StepMotor', optional=True)
+    stepmotor2 = Connector(interface='StepMotor', optional=True)
     thorlabspm1 = Connector(interface = "ThorlabsPM", optional=True)
     nicard = Connector(interface = "NICard", optional=True)
     wavemeter = Connector(interface= "HighFinesseWavemeter", optional=True)

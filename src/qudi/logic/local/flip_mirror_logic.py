@@ -29,7 +29,7 @@ import time
 import numpy as np
 
 class FlipMirrorLogic(LogicBase):
-    servomotor1 = Connector(interface='MotorInterface')
+    servomotor1 = Connector(interface='StepMotor')
 
     sigOntoOffProcessing = QtCore.Signal()
     sigOfftoOnProcessing = QtCore.Signal()

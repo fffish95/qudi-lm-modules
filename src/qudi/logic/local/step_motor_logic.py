@@ -28,7 +28,7 @@ from qudi.util.mutex import Mutex
 
 
 class StepMotorLogic(LogicBase):
-    stepmotor1 = Connector(interface='MotorInterface')
+    stepmotor1 = Connector(interface='StepMotor')
 
     def on_activate(self):
         self._motor = self.stepmotor1()

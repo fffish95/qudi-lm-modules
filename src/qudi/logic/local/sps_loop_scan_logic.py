@@ -37,7 +37,7 @@ class SPSLoopScanLogic(LogicBase):
         module.Class: 'local.sps_loop_scan_logic.SPSLoopScanLogic'
     """
     # connector
-    stepmotor1 = Connector(interface='MotorInterface', optional= True)
+    stepmotor1 = Connector(interface='StepMotor', optional= True)
     nicard = Connector(interface = "NICard")
 
     # status vars
