@@ -13,6 +13,15 @@ class TCPClient(Base):
             port: 2101
             timeout: 0.01
             buffer: 1024
+
+        
+        newfocus_8752_tcp_client:
+        module.Class: 'local.tcpclient.TCP_client.TCPClient'
+        options:
+            ip: '10.140.1.247'
+            port: 23
+            timeout: 0.1
+            buffer: 1024
     """
     # config options
     _ip = ConfigOption('ip', missing='error')
