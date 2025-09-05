@@ -1,8 +1,7 @@
-# Modified from (c) 2020-2021, ETH Zurich, Power Electronic Systems Laboratory, T. Guillod
+# Modified from (c) 2022 Marc de Cea Falco
 
 from qudi.core.connector import Connector
 from qudi.core.module import LogicBase
-import time
 import math
 
 
@@ -77,6 +76,14 @@ class NF8752Logic(LogicBase):
         cmd = 'mon'  # Turn drivers on
         self.send(cmd)
 
+    def define_home(self):
+        """
+        Define current position as home position
+        """
+        cmd = 'mon'  # Turn drivers on
+        self.send(cmd)
+
+
     def move_to_limit(
             self,
             axis,
@@ -95,7 +102,7 @@ class NF8752Logic(LogicBase):
             cmd = 'rli {driver}'.format(driver=f'a{math.ceil(self.axis_codes[axis]/3)}')
         return self.sendrecv(cmd)
 
-    def move_steps(self, steps, axis, vel=None, acc=None, go=True):
+    def move_rel(self, steps, axis, vel=None, acc=None, go=True):
         """
         Send command to move `axis` of the given `steps`.
 
@@ -106,6 +113,21 @@ class NF8752Logic(LogicBase):
         self.set_axis(axis, vel=vel, acc=acc)
         cmd = 'rel {driver}={steps}'.format(
             driver=f'a{math.ceil(self.axis_codes[axis]/3)}', steps=steps)
+        if go:
+            cmd = cmd + ' g'
+        return self.send(cmd)
+
+    def move_abs(self, position, axis, vel=None, acc=None, go=True):
+        """
+        Send command to move `axis` to the given `position`.
+
+        :param steps: how many steps to move with respect to the current position
+        :param go: if True, the command is executed right away
+        """
+
+        self.set_axis(axis, vel=vel, acc=acc)
+        cmd = 'abs {driver}={position}'.format(
+            driver=f'a{math.ceil(self.axis_codes[axis]/3)}', position=position)
         if go:
             cmd = cmd + ' g'
         return self.send(cmd)
