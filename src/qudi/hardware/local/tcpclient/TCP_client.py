@@ -9,7 +9,7 @@ class TCPClient(Base):
         fugsource_tcp_client:
         module.Class: 'local.tcpclient.TCP_client.TCPClient'
         options:
-            ip: '10.140.1.45'
+            ip: '10.140.0.211'
             port: 2101
             timeout: 0.01
             buffer: 1024
