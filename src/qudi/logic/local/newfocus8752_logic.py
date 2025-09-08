@@ -21,7 +21,7 @@ class NF8752Logic(LogicBase):
         # We define axis codes. The driver channel is calculated as the ceiling of the axis code divided by 3,
         # the motor channel is the remainder of the axis code divided by 3. 
         # The axis alphabet in the hardware corresponds to the ports, ordered from left to right and from top to bottom.
-        self.axis_alphabet = ['x1','x2','z','y1','y2']
+        self.axis_alphabet = ['x1','y1','z','x2','y2']
         self.axis_codes = dict(zip(self.axis_alphabet, list(range(1,6,1))))
 
 
@@ -72,9 +72,6 @@ class NF8752Logic(LogicBase):
             assert 0 < vel <= 2000, 'Velocity out of range (1..2000).'
             cmd = basecmd.format(cmd='VEL', value=vel, **fmt)
             self.send(cmd)
-
-        cmd = 'mon'  # Turn drivers on
-        self.send(cmd)
 
     def define_home(self):
         """

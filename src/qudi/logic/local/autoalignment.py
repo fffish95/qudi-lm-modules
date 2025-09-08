@@ -6,9 +6,7 @@ from qudi.core.statusvariable import StatusVar
 from qudi.util import tools
 from qudi.core.module import LogicBase
 from qudi.util.mutex import Mutex
-
-
-
+import time
 
 
 
@@ -37,8 +35,12 @@ class autoalignmentLogic(LogicBase):
             self._tlpm.connect()
         # Number of samples wanted. The read time per sample is 1 second.
         self.num_samples = 4
-        self.motor_alphabet = ['x1','x2','y1','y2','z']
-        self.simplex_range = dict(zip(self.motor_alphabet, list([1000]*4+[10000])))
+        self.motor_alphabet = ['x1','y1','x2','y2','z']
+        self.full_simplex_range = dict(zip(self.motor_alphabet, list([1000]*4+[10000])))
+        self.motor_list = ['x1','y1','x2','y2','z'] # optional ['x1','y1','x2','y2']
+        self.correct_hysteresis_steps = {'x1':10,'y1':10,'x2':10,'y2':10,'z':10}
+        #The length of optimization time in seconds. 
+        self.timeout = 300
 
     def on_deactivate(self):
         """ Deinitialisation performed during deactivation of the module.
@@ -61,323 +63,300 @@ class autoalignmentLogic(LogicBase):
             value = np.mean(power_measurements)
         return value
 
-    def randomize_initial_simplex(self, motor_list, simplex_range):
+    def move_motors_abs(self, position):
         """
+        Move the motors to the absolute position, return the corresponding read out.
+        """
+        self.motor_number = len(self.motor_list)
+        if len(position) != self.motor_number:
+            self.log.error('position dimension doesnt match motor list dimension.')
+            return
+        for i in self.motor_number:
+            self._pmc.move_abs(position=position[i], axis= self.motor_list[i])
+        output = self.read_output()
+        return 
+    
+    def move_two_motors_rel(self, motor1, motor2, motor1_displacement, motor2_displacement):
+        """
+        Relative motion of two motors. Used in the correct_hysteresis funtion.
+        """
+        self._pmc.move_rel(steps = motor1_displacement, axis = motor1)
+        self._pmc.move_rel(steps = motor2_displacement, axis = motor2)
+
+    def randomize_initial_simplex(self,simplex_range):
+        """
+        Set current position to 0.
         pick motor_number +1 positions for initial the simplex, the randomized range could be defined individually for different motors.
         """
         # set current postion to 0
         self._pmc.define_home()
 
-        motor_number = len(motor_list)
-        motor_position = [0]*motor_number
+        self.motor_number = len(self.motor_list)
+        if self.motor_number <4:
+            self.log.error('Need at least 2 axises for optimization.')
+            return
+        motor_position = [0]*self.motor_number
         output = self.read_output()
-        self.simplex = []
-        self.output_simplex = []
-        self.simplex.append
+        simplex = []
+        output_simplex = []
+        simplex.append(motor_position)
+        output_simplex.append(output)
         # we need to measure motor_number + 1 positions
 
+        for i in range(self.motor_number):
+            motor_position = []
+            for motor in self.motor_list:
+                position = np.random.randint(low=-(simplex_range[motor]/2), high=(simplex_range[motor]/2))
+                self._pmc.move_abs(position=position, axis= motor)
+                motor_position.append(position)
+            output = self.read_output()
+            simplex.append(motor_position)
+            output_simplex.append(output)
 
-
-
-    def start_scanner_handler(self, current): 
-
-        value = self.CustomScanMode[current]
-        func_map = {
-            self.CustomScanMode[0]: self.step_motor_start_scanner,
-            self.CustomScanMode[1]: self.power_record_start_scanner,
-            self.CustomScanMode[2]: self.EIT_start_scanner,
-            self.CustomScanMode[3]: self.stark_shift_scan_start_scanner,
-            self.CustomScanMode[4]: self.scan_trigger_start_scanner,
-            self.CustomScanMode[5]: self.timetagger_writeintofile_start_scanner,
-        }
-        func = func_map.get(value)
-        func()
-
-    def step_motor_start_scanner(self):
-        # select which stepmotor controller
-        if self.Params[self._sm_modenum]['step_motor_number'] == 1:
-            motor = self.stepmotor1()
-        elif self.Params[self._sm_modenum]['step_motor_number']== 2:
-            motor = self.stepmotor2()
-        else:
-            self.log.error("wrong stepmotor number!")
-            return -1
-        # move the motor to the start point 
-        motor.move_abs(self.Params[self._sm_modenum]['motor_channel'], self.Params[self._sm_modenum]['start_deg'])
-        # wait until done, the longest wait time = 180*(60/4)*3 = 8100 ms
-        t_delay = int(8100)
-        tools.delay(t_delay)
-
-    def power_record_start_scanner(self):
-        self.Params[self._pr_modenum]['lines_power'] = []
-        self._tlpm.connect()     
+        #Orders simplex positions from least to greatest output.
+        sorted_output_simplex, sorted_simplex = zip(*sorted(zip(output_simplex,simplex)))
+        return sorted_simplex, sorted_output_simplex
     
-    def EIT_start_scanner(self):
-        if self.Params[self._eit_modenum]['wavelength_ramp']:
-            self.Params[self._eit_modenum]['lines_frequency'] = []
-            self._wavemeter.start_acquisition() # start the measurement
-            self._wavemeter.set_exposure_mode(True) # automatically change the exposure time
-            set_wavelength = self._wavemeter.convert_unit(self.Params[self._eit_modenum]['start_frequency(THz)'], 'Frequency', 'WavelengthVac')
-            self._wavemeter.set_reference_course(set_wavelength)
-            self._wavemeter.set_deviation_mode(True)
-            # wait until wavelength is stable
-            if not self.Params[self._eit_modenum]['Background_subtract']:
-                timecounter = 0
-                while timecounter < 80:
-                    if self._wavemeter._is_stable:
-                        break
-                    tools.delay(250)
-                    timecounter += 1
-                if not timecounter<80:
-                    self.log.warning('Wavelength not stablized!')
-            
+    def downhill_simplex(self, sorted_simplex, sorted_output_simplex):
+        """
+        optimize the simplex
+        """
 
-
-        if self.Params[self._eit_modenum]['Background_subtract']:
-            for param in self.Params:
-                param['measurements_per_action'] *= 2 # add 1 action for background substract
-            self._shutter_task = self._nicard.create_do_task(taskname = 'shutter', channels = self.Params[self._eit_modenum]['shutter_channels'])
-            # Stop deviation and automatical exposure time before close the shutter
-            if self.Params[self._eit_modenum]['wavelength_ramp']:
-                self._wavemeter.set_deviation_mode(False)
-                self._wavemeter.set_exposure_mode(False)
-            self._nicard.write_task(task= self._shutter_task, data = False)
-        
-
-
-    def stark_shift_scan_start_scanner(self):
-        # enable voltage source
-        self._fugsourcelogic.enable()
-        # set to initial voltage
-        self._fugsourcelogic.set_V(self.Params[self._ss_modenum]['start_V'])
-
-    def scan_trigger_start_scanner(self):
-        # output a trigger before each loop
-        self._trigger_task = self._nicard.create_do_task(taskname = 'trigger1', channels = self.Params[self._st_modenum]['trigger_channel'])
-        self._nicard.write_task(task= self._trigger_task, data = True)
-        # keep the do on for trigger length time
-        t_delay = int(self.Params[self._st_modenum]['trigger_length'])
-        tools.delay(t_delay)
-        self._nicard.write_task(task= self._trigger_task, data = False)
+        # Solves for the centroid of the simplex excluding the worst position. Used in elements of downhill_simplex and optimize function.
+        # Requires no inputs and uses whatever the current simplex is.
+        sorted_simplex = np.asarray(sorted_simplex, dtype=float)
+        centroid_position = sorted_simplex[:1].mean(axis=0)
+        #Solves for a position reflected from the worst position. Used in elements of downhill_simplex and optimize function.
+        worst_position = sorted_simplex[0]
+        reflection_position = centroid_position + 1*(centroid_position-worst_position)
+        # move motors to the reflection position
+        reflection_output = self.move_motors_abs(reflection_position)
+        # if the reflection point is within the rest output_simplex range, accept the reflection.
+        if sorted_output_simplex[1] < reflection_output <= sorted_output_simplex[-1]:
+            sorted_simplex[0] = reflection_position
+            sorted_output_simplex[0] = reflection_output
+        # if reflection was very good, try expanding further
+        elif reflection_output > sorted_output_simplex[-1]:
+            expansion_position = centroid_position + 2 * (reflection_position - centroid_position)
+            expansion_output = self.move_motors_abs(expansion_position)
+            # Keep whichever is better
+            if reflection_output > expansion_output:
+                sorted_simplex[0] = reflection_position
+                sorted_output_simplex[0] = reflection_output
+            else:
+                sorted_simplex[0] = expansion_position
+                sorted_output_simplex[0] = expansion_output
+        # if reflection is not so good but better than the worst, try outside contraction
+        elif sorted_output_simplex[0] < reflection_output <= sorted_output_simplex[1]:
+            contraction_position = centroid_position + 0.5 * (reflection_position - centroid_position)
+            contraction_output = self.move_motors_abs(contraction_position)
+            # if contraction output is better than the reflection output, keep it. Otherwise shrink step: all new simplex positions shrunk toward the current best position
+            if contraction_output > reflection_output:
+                sorted_simplex[0] = contraction_position
+                sorted_output_simplex[0] = contraction_output
+            else:
+                for i in range(self.motor_number):
+                    sorted_simplex[i] = sorted_simplex[-1] + 0.5 * (sorted_simplex[i] - sorted_simplex[-1])
+                    sorted_output_simplex[i] = self.move_motors_abs(sorted_simplex[i])
+        # if the reflection is worse than the worst, try inside contraction
+        else:
+            contraction_position = centroid_position + 0.5 * (worst_position - centroid_position)
+            contraction_output = self.move_motors_abs(contraction_position)
+            # if contraction output is better than the worst output, keep it. Otherwise shrink step: all new simplex positions shrunk toward the current best position
+            if contraction_output > sorted_output_simplex[0]:
+                sorted_simplex[0] = contraction_position
+                sorted_output_simplex[0] = contraction_output
+            else:
+                for i in range(self.motor_number):
+                    sorted_simplex[i] = sorted_simplex[-1] + 0.5 * (sorted_simplex[i] - sorted_simplex[-1])
+                    sorted_output_simplex[i] = self.move_motors_abs(sorted_simplex[i])
+        final_output_simplex, final_simplex = zip(*sorted(zip(sorted_output_simplex,sorted_simplex)))
+        return final_simplex, final_output_simplex
     
-    def timetagger_writeintofile_start_scanner(self):
-        self._timetaggerlogic._writeintofile_params['sample_name'] = f'{self.Params[self._tw_modenum]["sample_name"]}_0'
-        self._timetaggerlogic.start_recording()
+    def correct_hysteresis(self):
+        """
+        Because of the pizeo hysteresis, the picomotor could not remeber previous absolute positions. 
+        This function corrects the hysteresis of the best position by determining which direction each motor needs to move to get back to maximum.
+        """
+        # correct hysteresis 'z'
+        if 'z' in self.motor_list:
+            prev_output = self.read_output()
+            self._pmc.move_rel(steps = self.correct_hysteresis_steps['z'], axis = 'z')
+            new_output = self.read_output()
+            if new_output < prev_output:
+                self.correct_hysteresis_steps['z'] = -self.correct_hysteresis_steps['z']
+                self._pmc.move_rel(steps = 2*self.correct_hysteresis_steps['z'], axis = 'z')
+                new_output = self.read_output()
+            if new_output < prev_output:
+                self.log.info("correct hysteresis for z failed. You may want to assign a smaller value for self.correct_hysteresis_steps['z']")
+            while new_output >= prev_output:
+                prev_output = new_output
+                self._pmc.move_rel(steps = self.correct_hysteresis_steps['z'], axis = 'z')
+            self._pmc.move_rel(steps = -self.correct_hysteresis_steps['z'], axis = 'z')
 
-    def process_scanner_handler(self, current, scan_counter): 
+        # correct hysteresis 'x1' and 'x2'
+        prev_output = self.read_output()
+        self._pmc.move_rel(steps = self.correct_hysteresis_steps['x1'], axis = 'x1')
+        new_output = self.read_output()
+        if new_output < prev_output:
+            self.correct_hysteresis_steps['x1'] = -self.correct_hysteresis_steps['x1']
+            self._pmc.move_rel(steps = 2*self.correct_hysteresis_steps['x1'], axis = 'x1')
+            new_output = self.read_output()
+        if new_output < prev_output:
+            self.log.info("correct hysteresis for x1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x1']")
+        prev_output = new_output
+        self._pmc.move_rel(steps = self.correct_hysteresis_steps['x2'], axis = 'x2')
+        new_output = self.read_output()
+        if new_output < prev_output:
+            self.correct_hysteresis_steps['x2'] = -self.correct_hysteresis_steps['x2']
+            self._pmc.move_rel(steps = 2*self.correct_hysteresis_steps['x2'], axis = 'x2')
+            new_output = self.read_output()
+        if new_output < prev_output:
+            self.log.info("correct hysteresis for x2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x2']")
+        while new_output >= prev_output:
+            prev_output = new_output
+            self.move_two_motors_rel(motor1 = 'x1', motor2 = 'x2', motor1_displacement = self.correct_hysteresis_steps['x1'], motor2_displacement = self.correct_hysteresis_steps['x2'])
+        self.move_two_motors_rel(motor1 = 'x1', motor2 = 'x2', motor1_displacement = -self.correct_hysteresis_steps['x1'], motor2_displacement = -self.correct_hysteresis_steps['x2'])
 
-        value = self.CustomScanMode[current]
-        func_map = {
-            self.CustomScanMode[0]: self.step_motor_process_scanner,
-            self.CustomScanMode[1]: self.power_record_process_scanner,
-            self.CustomScanMode[2]: self.EIT_process_scanner,
-            self.CustomScanMode[3]: self.stark_shift_scan_process_scanner,
-            self.CustomScanMode[4]: self.scan_trigger_process_scanner,
-            self.CustomScanMode[5]: self.timetagger_writeintofile_process_scanner,
-        }
-        func = func_map.get(value)
-        func(scan_counter)
+        # correct hysteresis 'y1' and 'y2'
+        prev_output = self.read_output()
+        self._pmc.move_rel(steps = self.correct_hysteresis_steps['y1'], axis = 'y1')
+        new_output = self.read_output()
+        if new_output < prev_output:
+            self.correct_hysteresis_steps['y1'] = -self.correct_hysteresis_steps['y1']
+            self._pmc.move_rel(steps = 2*self.correct_hysteresis_steps['y1'], axis = 'y1')
+            new_output = self.read_output()
+        if new_output < prev_output:
+            self.log.info("correct hysteresis for y1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y1']")
+        prev_output = new_output
+        self._pmc.move_rel(steps = self.correct_hysteresis_steps['y2'], axis = 'y2')
+        new_output = self.read_output()
+        if new_output < prev_output:
+            self.correct_hysteresis_steps['y2'] = -self.correct_hysteresis_steps['y2']
+            self._pmc.move_rel(steps = 2*self.correct_hysteresis_steps['y2'], axis = 'y2')
+            new_output = self.read_output()
+        if new_output < prev_output:
+            self.log.info("correct hysteresis for y2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y2']")
+        while new_output >= prev_output:
+            prev_output = new_output
+            self.move_two_motors_rel(motor1 = 'y1', motor2 = 'y2', motor1_displacement = self.correct_hysteresis_steps['y1'], motor2_displacement = self.correct_hysteresis_steps['y2'])
+        self.move_two_motors_rel(motor1 = 'y1', motor2 = 'y2', motor1_displacement = -self.correct_hysteresis_steps['y1'], motor2_displacement = -self.correct_hysteresis_steps['y2'])
 
-    def step_motor_process_scanner(self, scan_counter):
-        if self.Params[self._sm_modenum]['step_motor_number'] == 1:
-            motor = self.stepmotor1()
-        elif self.Params[self._sm_modenum]['step_motor_number']== 2:
-            motor = self.stepmotor2()
+    def explore_motor(self, motor, direction):
+        """
+        Explores one motor in one direction 2000 steps by moving this far and working back to the original position 100 steps at a time. Used in optimize function.
+        Requires the motor to be explored and the direction of exploration (1 is forward and -1 is backward).
+        """
+        explore_step = 100
+        if direction < 0:
+            explore_step = -explore_step
+        explore_counter = 20
+        best_count = 0
+        target_output = self.read_output()
+        self._pmc.move_rel(steps = explore_counter*explore_step, axis = motor)
+        while explore_counter >= 0:
+            explore_counter = explore_counter - 1
+            self._pmc.move_rel(steps = -explore_step, axis = motor)
+            explore_output = self.read_output()
+            if explore_output > target_output:
+                best_count = explore_counter
+                target_output = explore_output    
+        self._pmc.move_rel(steps = explore_step*best_count, axis = motor)
+
+    def optimize(self, desired_power):
+        """
+        Optimizes motors and finds a local maximum of power. Begins with intializing a simplex and performing downhill simplex. After 3 iterations of same best postion
+        this function corrects for hystersis and prompts the user to decide if they would like to continue optimizing. If a low output is found, optimizer will explore to find
+        the global peak instead. Optimization with stop if desired power is achieved.
+        """
+        hysteresis_counter = 0
+        power_achieved_counter = 0
+        final_output = self.read_output()
+        if final_output > desired_power:
+            self.log.info('Desired Power achieved. Initializing small search.')
+            simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
+            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+        elif desired_power > final_output > 0.9*desired_power:
+            simplex_range = {k:v/10 for k, v in self.full_simplex_range.items()}
+            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+        elif 0.9*desired_power > final_output > 0.5*desired_power:
+            simplex_range = {k:v/5 for k, v in self.full_simplex_range.items()}
+            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
         else:
-            self.log.error("wrong stepmotor number!")
-            return -1
-        if scan_counter % self.Params[self._sm_modenum]['measurements_per_action'] == 0:
-            # move the motor 
-            motor.move_rel(self.Params[self._sm_modenum]['motor_channel'], self.Params[self._sm_modenum]['step_deg'])
-            # wait until done
-            t_delay = int(self.Params[self._sm_modenum]['step_deg']*(60/4)*3) 
-            tools.delay(t_delay)
-
-    def power_record_process_scanner(self, scan_counter):
-        if self.Params[self._pr_modenum]['step_motor_number'] == 1:
-            motor = self.stepmotor1()
-        elif self.Params[self._pr_modenum]['step_motor_number']== 2:
-            motor = self.stepmotor2()
-        else:
-            self.log.error("wrong stepmotor number!")
-            return -1
-        
-        if scan_counter % self.Params[self._pr_modenum]['measurements_per_action'] == 0:      
-            # connect power meter
-
-            if self.Params[self._pr_modenum]['motor_on']:
-                # move the motor to the measurement point 
-                motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['running_deg'])
-                # wait until done, the longest wait time = 90*(60/4)*3 = 4050 ms
+            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(self.full_simplex_range)
+        deadline = time.time() + self.timeout
+        while deadline > time.time():
+            prev_best_position = sorted_simplex[-1]
+            final_simplex, final_output_simplex = self.downhill_simplex(sorted_simplex, sorted_output_simplex)
+            final_position = final_simplex[-1]
+            final_output = final_output_simplex[-1]
+            self.log.info(f'Best position = {final_position}')
+            self.log.info(f'Best output = {final_output}')
+            if power_achieved_counter>2:
+                self.log.info('Optimization succeed.')
+                break
                 
-                t_delay = int(abs(self.Params[self._pr_modenum]['running_deg'] - self.Params[self._pr_modenum]['idle_deg'])*(60/4)*3)
-                tools.delay(t_delay)
-
-            # measurement
-            power_measurements = []
-            count = 0 
-            while count < self.Params[self._pr_modenum]['averages']:
-                power_measurements.append(self._tlpm.get_power())
-                count+=1
-                tools.delay(1000)
-            if self.Params[self._pr_modenum]['motor_on']:
-                # move the motor to the idle point 
-                motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['idle_deg'])
-                tools.delay(t_delay)
-            power_measurements = np.array(power_measurements)
-            value = np.mean(power_measurements) * self.Params[self._pr_modenum]['realpower_to_readout_ratio']
-            self.Params[self._pr_modenum]['lines_power'].append(value)
-
-    
-    def EIT_process_scanner(self,scan_counter):
-        if self.Params[self._eit_modenum]['Background_subtract']:
-            if scan_counter % self.Params[self._eit_modenum]['measurements_per_action'] == 0:
-                # close the shutter
-                if self.Params[self._eit_modenum]['wavelength_ramp']:
-                    self._wavemeter.set_deviation_mode(False)
-                    self._wavemeter.set_exposure_mode(False)
-                self._nicard.write_task(task= self._shutter_task, data = False)
-            elif scan_counter % self.Params[self._eit_modenum]['measurements_per_action'] == int(self.Params[self._eit_modenum]['measurements_per_action']/2):
-                # open the shutter
-                self._nicard.write_task(task= self._shutter_task, data = True)
-                if self.Params[self._eit_modenum]['wavelength_ramp']:
-                    self._wavemeter.set_deviation_mode(True)
-                    self._wavemeter.set_exposure_mode(True)
-                    set_frequency = float(self.Params[self._eit_modenum]['start_frequency(THz)'] + self.Params[self._eit_modenum]['step_frequency(MHz)']* (scan_counter // self.Params[self._eit_modenum]['measurements_per_action'])/1e6)
-                    set_wavelength = self._wavemeter.convert_unit(set_frequency, 'Frequency', 'WavelengthVac')
-                    self._wavemeter.set_reference_course(set_wavelength)
-                    self.Params[self._eit_modenum]['lines_frequency'].append(set_frequency)
-                    timecounter = 0
-                    while timecounter < 80:
-                        if self._wavemeter._is_stable:
-                            break
-                        tools.delay(250)
-                        timecounter += 1
-                    if not timecounter<80:
-                        self.log.warning('Wavelength not stablized!')
-
-        
-        elif self.Params[self._eit_modenum]['wavelength_ramp']:
-            if scan_counter % self.Params[self._eit_modenum]['measurements_per_action'] == 0:
-                set_frequency = float(self.Params[self._eit_modenum]['start_frequency(THz)'] + self.Params[self._eit_modenum]['step_frequency(MHz)']* (scan_counter // self.Params[self._eit_modenum]['measurements_per_action'])/1e6)
-                set_wavelength = self._wavemeter.convert_unit(set_frequency, 'Frequency', 'WavelengthVac')
-                self._wavemeter.set_reference_course(set_wavelength)
-                self.Params[self._eit_modenum]['lines_frequency'].append(set_frequency)
-                timecounter = 0
-                while timecounter < 80:
-                    if self._wavemeter._is_stable:
-                        break
-                    tools.delay(250)
-                    timecounter += 1
-                if not timecounter<80:
-                    self.log.warning('Wavelength not stablized!')
-        
-
-    def stark_shift_scan_process_scanner(self,scan_counter):
-        if scan_counter % self.Params[self._ss_modenum]['measurements_per_action'] == 0:
-            current_V = self._fugsourcelogic.get_V()
-            set_V = current_V + self.Params[self._ss_modenum]['step_V']
-            self._fugsourcelogic.set_V(set_V)
-
-    def scan_trigger_process_scanner(self,scan_counter):
-
-        self._nicard.write_task(task= self._trigger_task, data = True)
-        # keep the do on for trigger length time
-        t_delay = int(self.Params[self._st_modenum]['trigger_length'])
-        tools.delay(t_delay)
-        self._nicard.write_task(task= self._trigger_task, data = False)
-
-    def timetagger_writeintofile_process_scanner(self,scan_counter):
-        if scan_counter % self.Params[self._tw_modenum]['measurements_per_action'] == 0:
-            self._timetaggerlogic.stop_recording()
-            # wait until done 3000ms
-            tools.delay(3000)
-            self._timetaggerlogic._writeintofile_params['sample_name'] = f'{self.Params[self._tw_modenum]["sample_name"]}_{scan_counter}'
-            self._timetaggerlogic.start_recording()            
-
-    def stop_scanner_handler(self, current): 
-
-        value = self.CustomScanMode[current]
-        func_map = {
-            self.CustomScanMode[0]: self.step_motor_stop_scanner,
-            self.CustomScanMode[1]: self.power_record_stop_scanner,
-            self.CustomScanMode[2]: self.EIT_stop_scanner,
-            self.CustomScanMode[3]: self.stark_shift_scan_stop_scanner,
-            self.CustomScanMode[4]: self.scan_trigger_stop_scanner,
-            self.CustomScanMode[5]: self.timetagger_writeintofile_stop_scanner,
-        }
-        func = func_map.get(value)
-        func()
-
-    def step_motor_stop_scanner(self):
-        if self.Params[self._pr_modenum]['step_motor_number'] == 1:
-            motor = self.stepmotor1()
-        elif self.Params[self._pr_modenum]['step_motor_number']== 2:
-            motor = self.stepmotor2()
-        else:
-            self.log.error("wrong stepmotor number!")
-            return -1
-
-        # move the motor to the start point 
-        motor.move_abs(self.Params[self._sm_modenum]['motor_channel'], self.Params[self._sm_modenum]['start_deg'])
-        # wait until done, the longest wait time = 180*(60/4)*3 = 8100 ms
-        t_delay = int(8100)
-        tools.delay(t_delay)    
-
-    def power_record_stop_scanner(self):
-        self._tlpm.disconnect()     
-    
-    def EIT_stop_scanner(self):
-        if self.Params[self._eit_modenum]['Background_subtract']:
-            for param in self.Params:
-                param['measurements_per_action'] = int(param['measurements_per_action']/2) # remove 1 action added before
-            # keep the shutter open
-            self._nicard.write_task(task= self._shutter_task, data = True)
-            self._nicard.close_do_task(taskname = 'shutter')
-            self._shutter_task = None
-        if self.Params[self._eit_modenum]['wavelength_ramp']:
-            self._wavemeter.stop_acquisition()
-
-
-    def stark_shift_scan_stop_scanner(self):
-        self._fugsourcelogic.disable()
-
-    def scan_trigger_stop_scanner(self):
-
-        self._nicard.close_do_task(taskname = 'trigger1')
-        self._trigger_task = None
-
-    def timetagger_writeintofile_stop_scanner(self):
-        self._timetaggerlogic.stop_recording()
-
-    def function_0_handler(self, current): 
-
-        value = self.CustomScanMode[current]
-        func_map = {
-            self.CustomScanMode[0]: self.step_motor_function_0,
-            self.CustomScanMode[1]: self.power_record_function_0,
-            self.CustomScanMode[2]: self.EIT_function_0,
-            self.CustomScanMode[3]: self.stark_shift_scan_function_0,
-            self.CustomScanMode[4]: self.scan_trigger_stop_scanner_0,
-            self.CustomScanMode[5]: self.timetagger_writeintofile_stop_scanner_0,
-        }
-        func = func_map.get(value)
-        func()
-
-    def step_motor_function_0(self):
-        pass
-
-    def power_record_function_0(self):
-        pass   
-    
-    def EIT_function_0(self):
-        pass
-
-    def stark_shift_scan_function_0(self):
-        pass
-
-    def scan_trigger_stop_scanner_0(self):
-        pass
-
-    def timetagger_writeintofile_stop_scanner_0(self):
-        pass
+            if final_position == prev_best_position:
+                hysteresis_counter = hysteresis_counter + 1
+                if hysteresis_counter > 2:
+                    self.move_motors_abs(final_position)
+                    self.log.info('Correcting hysteresis...')
+                    self.correct_hysteresis()
+                    self.log.info('Local Max Achieved.')
+                    final_output = self.read_output()
+                if final_output > desired_power:
+                    self.log.info('Desired Power achieved. Initializing small search.')
+                    simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
+                    sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+                    power_achieved_counter +=1
+                elif desired_power > final_output > 0.9*desired_power:
+                    simplex_range = {k:v/10 for k, v in self.full_simplex_range.items()}
+                    sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+                elif 0.9*desired_power > final_output > 0.5*desired_power:
+                    simplex_range = {k:v/5 for k, v in self.full_simplex_range.items()}
+                    sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+                elif 0.5*desired_power > final_output > 0.1*desired_power:
+                    sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(self.full_simplex_range)
+                else:
+                    self.log.info('Exploring...')
+                    explore = True
+                    exploring_motor = 0
+                    direction = 1
+                    explore_counter = 0
+                    while explore == True:
+                        explore_counter = explore_counter + 1
+                        self.explore_motor(self.motor_list[exploring_motor], direction)
+                        direction = -direction
+                        self.correct_hysteresis()
+                        explore_output=self.read_output()
+                        if explore_output > 10*final_output:
+                            self.log.info('Explore Success.')
+                            explore = False
+                        if explore_counter > 1:
+                            exploring_motor = exploring_motor + 1
+                            explore_counter = 0
+                        if exploring_motor >= len(self.motor_list):
+                            self.correct_hysteresis()
+                            self.log.info('Explore Failed. Optimizer may be stuck or output is too low. Couple manually to better output.')
+                            explore = False
+                    self.log.info(f'Explore Output = {explore_output}')
+                    if explore_output > desired_power:
+                        self.log.info('Desired Power achieved. Initializing small search.')
+                        simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
+                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+                    elif desired_power > explore_output > 0.9*desired_power:
+                        simplex_range = {k:v/10 for k, v in self.full_simplex_range.items()}
+                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+                    elif 0.9*desired_power > explore_output > 0.5*desired_power:
+                        simplex_range = {k:v/5 for k, v in self.full_simplex_range.items()}
+                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
+                    else:
+                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(self.full_simplex_range)
+            else:
+                hysteresis_counter = 0
+        self.move_motors_abs(final_position)
+        self.log.info('Correcting hysteresis...')
+        self.correct_hysteresis()
+        self.log.info('Local Max Achieved.')
+        final_output = self.read_output()
+        self.log(f'Final power ={final_output}')
