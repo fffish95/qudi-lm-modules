@@ -3,7 +3,7 @@
 from qudi.core.connector import Connector
 from qudi.core.module import LogicBase
 import math
-
+import time
 
 class NF8752Logic(LogicBase):
     """
@@ -34,9 +34,17 @@ class NF8752Logic(LogicBase):
     def send(self, cmd):
         """Send a command to the picomotor driver."""
         # reset the buffer
-        self._tcpclient.start_command()
-        line = cmd + '\r\n'
-        self._tcpclient.send_byte(line)
+
+        try:
+            self._tcpclient.start_command()
+            line = cmd + '\r\n'
+            self._tcpclient.send_byte(line)
+        except:
+            self._tcpclient.disconnect()
+            self._tcpclient.connect()
+            self._tcpclient.start_command()
+            line = cmd + '\r\n'
+            self._tcpclient.send_byte(line)
 
     def readlines(self):
         """Read response from picomotor driver."""
@@ -72,14 +80,9 @@ class NF8752Logic(LogicBase):
             assert 0 < vel <= 2000, 'Velocity out of range (1..2000).'
             cmd = basecmd.format(cmd='VEL', value=vel, **fmt)
             self.send(cmd)
-
-    def define_home(self):
-        """
-        Define current position as home position
-        """
+        
         cmd = 'mon'  # Turn drivers on
         self.send(cmd)
-
 
     def move_to_limit(
             self,
@@ -97,9 +100,9 @@ class NF8752Logic(LogicBase):
             cmd = 'fli {driver}'.format(driver=f'a{math.ceil(self.axis_codes[axis]/3)}')
         elif direction == 'reverse':
             cmd = 'rli {driver}'.format(driver=f'a{math.ceil(self.axis_codes[axis]/3)}')
-        return self.sendrecv(cmd)
+        return self.send(cmd)
 
-    def move_rel(self, steps, axis, vel=None, acc=None, go=True):
+    def move_rel(self, steps, axis, vel=100, acc=500, go=True):
         """
         Send command to move `axis` of the given `steps`.
 
@@ -107,27 +110,15 @@ class NF8752Logic(LogicBase):
         :param go: if True, the command is executed right away
         """
 
+        steps = int(steps)
         self.set_axis(axis, vel=vel, acc=acc)
         cmd = 'rel {driver}={steps}'.format(
             driver=f'a{math.ceil(self.axis_codes[axis]/3)}', steps=steps)
         if go:
             cmd = cmd + ' g'
-        return self.send(cmd)
-
-    def move_abs(self, position, axis, vel=None, acc=None, go=True):
-        """
-        Send command to move `axis` to the given `position`.
-
-        :param steps: how many steps to move with respect to the current position
-        :param go: if True, the command is executed right away
-        """
-
-        self.set_axis(axis, vel=vel, acc=acc)
-        cmd = 'abs {driver}={position}'.format(
-            driver=f'a{math.ceil(self.axis_codes[axis]/3)}', position=position)
-        if go:
-            cmd = cmd + ' g'
-        return self.send(cmd)
+        delay = math.ceil(abs(steps/vel))
+        self.send(cmd)
+        time.sleep(delay+0.5)
 
     def go(self):
         """Send 'go' command to execute all previously sent move commands."""

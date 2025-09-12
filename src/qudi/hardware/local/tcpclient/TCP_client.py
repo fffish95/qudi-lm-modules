@@ -30,22 +30,33 @@ class TCPClient(Base):
     _buffer = ConfigOption('buffer', missing='error')
 
     def on_activate(self):
+        self._connected = False
+        self.connect()
+        
+
+
+    def on_deactivate(self):
+        self.disconnect()
+
+    def connect(self):
         """
         Connect to the power source and set the timeout of the connection.
         """
+        if not self._connected:
+            self.link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.link.connect((self._ip, self._port))
+            self.link.settimeout(self._timeout)
+            self._connected = True
 
-        self.link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.link.connect((self._ip, self._port))
-        self.link.settimeout(self._timeout)
-
-    def on_deactivate(self):
+    def disconnect(self):
         """
         Close the connection.
         """
-
-        self.data_buffer = ''
-        self.link.close()
-        self.link = None
+        if self._connected:
+            self.data_buffer = ''
+            self.link.close()
+            self.link = None
+            self._connected = False
 
     def start_command(self):
         """
