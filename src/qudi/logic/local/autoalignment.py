@@ -35,14 +35,15 @@ class autoalignmentLogic(LogicBase):
         # Number of samples wanted. The read time per sample is 1 second.
         self._vel = 100 # picomotor moving velocity
         self._acc = 500 # picomotor acceleration
-        self.num_samples = 5
+        self.num_samples = 10
         self.motor_alphabet = ['x1','y1','x2','y2','z']
-        self.full_simplex_range = dict(zip(self.motor_alphabet, list([500]*4+[1000])))
+        self.full_simplex_range = dict(zip(self.motor_alphabet, list([300]*4+[900])))
+        self.explore_step = dict(zip(self.motor_alphabet, list([20]*4+[60])))
         self.motor_list = ['x1','y1','x2','y2','z'] # optional ['x1','y1','x2','y2']
-        self.correct_hysteresis_steps = {'x1':10,'y1':10,'x2':10,'y2':10,'z':10}
+        self.correct_hysteresis_steps = {'x1':5,'y1':5,'x2':5,'y2':5,'z':15}
         self.channel_codes = {'x1':0,'y1':1,'x2':2,'y2':3,'z':4}
         #The length of optimization time in seconds. 
-        self.timeout = 300000
+        self.timeout = 300
         self._current_position = [0,0,0,0,0]
 
     def on_deactivate(self):
@@ -79,25 +80,25 @@ class autoalignmentLogic(LogicBase):
             # move z axis
             steps_z = position[self.channel_codes['z']] - self._current_position[self.channel_codes['z']]
             if steps_z < 0:
-                steps_z = steps_z *1.25 # calibrate the backlash
+                steps_z = steps_z *1.20 # calibrate the backlash
             self._pmc.move_rel(steps=steps_z, axis= 'z',vel=self._vel, acc=self._acc)
 
         # move 'x1' and 'x2'
         steps_x1 = position[self.channel_codes['x1']] - self._current_position[self.channel_codes['x1']]
         if steps_x1 < 0:
-            steps_x1 = steps_x1 *1.38 # calibrate the backlash
+            steps_x1 = steps_x1 *1.3 # calibrate the backlash
         self._pmc.move_rel(steps=steps_x1, axis= 'x1',vel=self._vel, acc=self._acc)
 
         steps_x2 = position[self.channel_codes['x2']] - self._current_position[self.channel_codes['x2']]
         if steps_x2 < 0:
-            steps_x2 = steps_x2 *1.26 # calibrate the backlash
+            steps_x2 = steps_x2 *1.19 # calibrate the backlash
         self._pmc.move_rel(steps=steps_x2, axis= 'x2',vel=self._vel, acc=self._acc)
 
 
         # move 'y1' and 'y2'
         steps_y1 = position[self.channel_codes['y1']] - self._current_position[self.channel_codes['y1']]
         if steps_y1 < 0:
-            steps_y1 = steps_y1 *1.54 # calibrate the backlash
+            steps_y1 = steps_y1 *1.34 # calibrate the backlash
         self._pmc.move_rel(steps=steps_y1, axis= 'y1',vel=self._vel, acc=self._acc)
 
         steps_y2 = position[self.channel_codes['y2']] - self._current_position[self.channel_codes['y2']]
@@ -208,25 +209,9 @@ class autoalignmentLogic(LogicBase):
         This function corrects the hysteresis of the best position by determining which direction each motor needs to move to get back to maximum.
         """
         # correct hysteresis 'z'
+        old_position = self._current_position.copy()
         if 'z' in self.motor_list:
-            prev_output = self.read_output()
-            new_position = self._current_position.copy()
-            new_position[self.channel_codes['z']] = self._current_position[self.channel_codes['z']] + self.correct_hysteresis_steps['z']
-            new_output= self.move_motors_abs(new_position)
-            if new_output < prev_output:
-                self.correct_hysteresis_steps['z'] = -self.correct_hysteresis_steps['z']
-                new_position = self._current_position.copy()
-                new_position[self.channel_codes['z']] = self._current_position[self.channel_codes['z']] + 2*self.correct_hysteresis_steps['z']
-                new_output= self.move_motors_abs(new_position)
-            if new_output < prev_output:
-                self.log.info("correct hysteresis for z failed. You may want to assign a smaller value for self.correct_hysteresis_steps['z']")
-            while new_output > prev_output:
-                prev_output = new_output
-                new_position = self._current_position.copy()
-                new_position[self.channel_codes['z']] = self._current_position[self.channel_codes['z']] + self.correct_hysteresis_steps['z']
-                new_output= self.move_motors_abs(new_position)
-            new_position[self.channel_codes['z']] = self._current_position[self.channel_codes['z']] - self.correct_hysteresis_steps['z']
-            self.move_motors_abs(new_position)
+            self.correct_hysteresis_oneaxis('z')
 
         # correct hysteresis 'x1' and 'x2'
         prev_output = self.read_output()
@@ -240,26 +225,30 @@ class autoalignmentLogic(LogicBase):
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
             self.log.info("correct hysteresis for x1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x1']")
-        prev_output = new_output
-        new_position = self._current_position.copy()
-        new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] + self.correct_hysteresis_steps['x2']
-        new_output= self.move_motors_abs(new_position)
-        if new_output < prev_output:
-            self.correct_hysteresis_steps['x2'] = -self.correct_hysteresis_steps['x2']
-            new_position = self._current_position.copy()
-            new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] + 2*self.correct_hysteresis_steps['x2']
-            new_output= self.move_motors_abs(new_position)
-        if new_output < prev_output:
-            self.log.info("correct hysteresis for x2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x2']")
-        while new_output > prev_output:
+            self.correct_hysteresis_oneaxis('x2')
+        else:
             prev_output = new_output
             new_position = self._current_position.copy()
-            new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] + self.correct_hysteresis_steps['x1']
             new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] + self.correct_hysteresis_steps['x2']
             new_output= self.move_motors_abs(new_position)
-        new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] - self.correct_hysteresis_steps['x1']
-        new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] - self.correct_hysteresis_steps['x2']
-        new_output= self.move_motors_abs(new_position)
+            if new_output < prev_output:
+                self.correct_hysteresis_steps['x2'] = -self.correct_hysteresis_steps['x2']
+                new_position = self._current_position.copy()
+                new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] + 2*self.correct_hysteresis_steps['x2']
+                new_output= self.move_motors_abs(new_position)
+            if new_output < prev_output:
+                self.log.info("correct hysteresis for x2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x2']")
+                self.correct_hysteresis_oneaxis('x1')
+            else:
+                while new_output > prev_output:
+                    prev_output = new_output
+                    new_position = self._current_position.copy()
+                    new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] + self.correct_hysteresis_steps['x1']
+                    new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] + self.correct_hysteresis_steps['x2']
+                    new_output= self.move_motors_abs(new_position)
+                new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] - self.correct_hysteresis_steps['x1']
+                new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] - self.correct_hysteresis_steps['x2']
+                new_output= self.move_motors_abs(new_position)
 
         # correct hysteresis 'y1' and 'y2'
         prev_output = new_output
@@ -273,33 +262,61 @@ class autoalignmentLogic(LogicBase):
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
             self.log.info("correct hysteresis for y1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y1']")
-        prev_output = new_output
+            self.correct_hysteresis_oneaxis('y2')
+        else:
+            prev_output = new_output
+            new_position = self._current_position.copy()
+            new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] + self.correct_hysteresis_steps['y2']
+            new_output= self.move_motors_abs(new_position)
+            if new_output < prev_output:
+                self.correct_hysteresis_steps['y2'] = -self.correct_hysteresis_steps['y2']
+                new_position = self._current_position.copy()
+                new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] + 2*self.correct_hysteresis_steps['y2']
+                new_output= self.move_motors_abs(new_position)
+            if new_output < prev_output:
+                self.log.info("correct hysteresis for y2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y2']")
+                self.correct_hysteresis_oneaxis('y1')
+            else:
+                while new_output > prev_output:
+                    prev_output = new_output
+                    new_position = self._current_position.copy()
+                    new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] + self.correct_hysteresis_steps['y1']
+                    new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] + self.correct_hysteresis_steps['y2']
+                    new_output= self.move_motors_abs(new_position)
+                new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] - self.correct_hysteresis_steps['y1']
+                new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] - self.correct_hysteresis_steps['y2']
+                new_output= self.move_motors_abs(new_position)
+        print(f'correct_hysteresis: new_position = {new_position}, old_position = {old_position}')
+
+    def correct_hysteresis_oneaxis(self, motor):
+        old_position = self._current_position.copy()
+        
+        prev_output = self.read_output()
         new_position = self._current_position.copy()
-        new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] + self.correct_hysteresis_steps['y2']
+        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + self.correct_hysteresis_steps['z']
         new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
-            self.correct_hysteresis_steps['y2'] = -self.correct_hysteresis_steps['y2']
+            self.correct_hysteresis_steps[motor] = -self.correct_hysteresis_steps[motor]
             new_position = self._current_position.copy()
-            new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] + 2*self.correct_hysteresis_steps['y2']
+            new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + 2*self.correct_hysteresis_steps[motor]
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
-            self.log.info("correct hysteresis for y2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y2']")
+            self.log.info(f"correct hysteresis for {motor} failed. You may want to assign a smaller value for self.correct_hysteresis_steps[{motor}]")
         while new_output > prev_output:
             prev_output = new_output
             new_position = self._current_position.copy()
-            new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] + self.correct_hysteresis_steps['y1']
-            new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] + self.correct_hysteresis_steps['y2']
+            new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + self.correct_hysteresis_steps[motor]
             new_output= self.move_motors_abs(new_position)
-        new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] - self.correct_hysteresis_steps['y1']
-        new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] - self.correct_hysteresis_steps['y2']
-        new_output= self.move_motors_abs(new_position)
+        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] - self.correct_hysteresis_steps[motor]
+        self.move_motors_abs(new_position)
+        print(f'correct_hysteresis_oneaxis: new_position = {new_position}, old_position = {old_position}')
 
     def explore_motor(self, motor, direction):
         """
         Explores one motor in one direction 2000 steps by moving this far and working back to the original position 100 steps at a time. Used in optimize function.
         Requires the motor to be explored and the direction of exploration (1 is forward and -1 is backward).
         """
-        explore_step = 100
+        explore_step = self.explore_step[motor]
         if direction < 0:
             explore_step = -explore_step
         explore_counter = 10
@@ -317,6 +334,7 @@ class autoalignmentLogic(LogicBase):
                 best_count = explore_counter
                 target_output = explore_output    
         new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + explore_step*best_count
+        self.move_motors_abs(new_position)
 
     def optimize(self, desired_power):
         """
@@ -353,7 +371,8 @@ class autoalignmentLogic(LogicBase):
                 self.log.info('Optimization succeed.')
                 break
             if final_output > desired_power:
-                self.log.info('Desired Power achieved. Initializing small search.')
+                final_output = self.move_motors_abs(final_position)
+                print(final_output)
                 simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
                 sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
                 power_achieved_counter +=1
@@ -361,8 +380,6 @@ class autoalignmentLogic(LogicBase):
                 hysteresis_counter = hysteresis_counter + 1
                 if hysteresis_counter > 2:
                     self.move_motors_abs(final_position)
-                    final_output = self.read_output()
-                    print(final_output)
                     self.log.info('Correcting hysteresis...')
                     self.correct_hysteresis()
                     self.log.info('Local Max Achieved.')
