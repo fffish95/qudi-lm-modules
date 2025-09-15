@@ -40,10 +40,10 @@ class autoalignmentLogic(LogicBase):
         self.full_simplex_range = dict(zip(self.motor_alphabet, list([300]*4+[900])))
         self.explore_step = dict(zip(self.motor_alphabet, list([20]*4+[60])))
         self.motor_list = ['x1','y1','x2','y2','z'] # optional ['x1','y1','x2','y2']
-        self.correct_hysteresis_steps = {'x1':5,'y1':5,'x2':5,'y2':5,'z':15}
+        self.correct_hysteresis_steps = {'x1':10,'y1':10,'x2':10,'y2':10,'z':30}
         self.channel_codes = {'x1':0,'y1':1,'x2':2,'y2':3,'z':4}
         #The length of optimization time in seconds. 
-        self.timeout = 300
+        self.timeout = 1200
         self._current_position = [0,0,0,0,0]
 
     def on_deactivate(self):
@@ -225,6 +225,8 @@ class autoalignmentLogic(LogicBase):
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
             self.log.info("correct hysteresis for x1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x1']")
+            new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] - self.correct_hysteresis_steps['x1']
+            self.move_motors_abs(new_position)
             self.correct_hysteresis_oneaxis('x2')
         else:
             prev_output = new_output
@@ -238,6 +240,8 @@ class autoalignmentLogic(LogicBase):
                 new_output= self.move_motors_abs(new_position)
             if new_output < prev_output:
                 self.log.info("correct hysteresis for x2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x2']")
+                new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] - self.correct_hysteresis_steps['x2']
+                self.move_motors_abs(new_position)
                 self.correct_hysteresis_oneaxis('x1')
             else:
                 while new_output > prev_output:
@@ -262,6 +266,8 @@ class autoalignmentLogic(LogicBase):
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
             self.log.info("correct hysteresis for y1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y1']")
+            new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] - self.correct_hysteresis_steps['y1']
+            self.move_motors_abs(new_position)
             self.correct_hysteresis_oneaxis('y2')
         else:
             prev_output = new_output
@@ -275,6 +281,8 @@ class autoalignmentLogic(LogicBase):
                 new_output= self.move_motors_abs(new_position)
             if new_output < prev_output:
                 self.log.info("correct hysteresis for y2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y2']")
+                new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] - self.correct_hysteresis_steps['y2']
+                self.move_motors_abs(new_position)
                 self.correct_hysteresis_oneaxis('y1')
             else:
                 while new_output > prev_output:
@@ -319,7 +327,7 @@ class autoalignmentLogic(LogicBase):
         explore_step = self.explore_step[motor]
         if direction < 0:
             explore_step = -explore_step
-        explore_counter = 10
+        explore_counter = 15
         best_count = 0
         target_output = self.read_output()
         new_position = self._current_position.copy()
@@ -361,6 +369,8 @@ class autoalignmentLogic(LogicBase):
         while deadline > time.time():
             prev_best_position = sorted_simplex[-1]
             final_simplex, final_output_simplex = self.downhill_simplex(sorted_simplex, sorted_output_simplex)
+            sorted_simplex = final_simplex
+            sorted_output_simplex = final_output_simplex
             final_position = final_simplex[-1]
             final_output = final_output_simplex[-1]
             print(f'final_simple = {final_simplex}')
