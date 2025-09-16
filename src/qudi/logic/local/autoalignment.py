@@ -40,10 +40,10 @@ class autoalignmentLogic(LogicBase):
         self.full_simplex_range = dict(zip(self.motor_alphabet, list([300]*4+[900])))
         self.explore_step = dict(zip(self.motor_alphabet, list([20]*4+[60])))
         self.motor_list = ['x1','y1','x2','y2','z'] # optional ['x1','y1','x2','y2']
-        self.correct_hysteresis_steps = {'x1':10,'y1':10,'x2':10,'y2':10,'z':30}
+        self.correct_hysteresis_steps = {'x1':5,'y1':5,'x2':5,'y2':5,'z':15}
         self.channel_codes = {'x1':0,'y1':1,'x2':2,'y2':3,'z':4}
         #The length of optimization time in seconds. 
-        self.timeout = 1200
+        self.timeout = 600
         self._current_position = [0,0,0,0,0]
 
     def on_deactivate(self):
@@ -227,7 +227,6 @@ class autoalignmentLogic(LogicBase):
             self.log.info("correct hysteresis for x1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x1']")
             new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] - self.correct_hysteresis_steps['x1']
             self.move_motors_abs(new_position)
-            self.correct_hysteresis_oneaxis('x2')
         else:
             prev_output = new_output
             new_position = self._current_position.copy()
@@ -242,7 +241,6 @@ class autoalignmentLogic(LogicBase):
                 self.log.info("correct hysteresis for x2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x2']")
                 new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] - self.correct_hysteresis_steps['x2']
                 self.move_motors_abs(new_position)
-                self.correct_hysteresis_oneaxis('x1')
             else:
                 while new_output > prev_output:
                     prev_output = new_output
@@ -268,7 +266,6 @@ class autoalignmentLogic(LogicBase):
             self.log.info("correct hysteresis for y1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y1']")
             new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] - self.correct_hysteresis_steps['y1']
             self.move_motors_abs(new_position)
-            self.correct_hysteresis_oneaxis('y2')
         else:
             prev_output = new_output
             new_position = self._current_position.copy()
@@ -283,7 +280,6 @@ class autoalignmentLogic(LogicBase):
                 self.log.info("correct hysteresis for y2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y2']")
                 new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] - self.correct_hysteresis_steps['y2']
                 self.move_motors_abs(new_position)
-                self.correct_hysteresis_oneaxis('y1')
             else:
                 while new_output > prev_output:
                     prev_output = new_output
@@ -319,19 +315,18 @@ class autoalignmentLogic(LogicBase):
         self.move_motors_abs(new_position)
         print(f'correct_hysteresis_oneaxis: new_position = {new_position}, old_position = {old_position}')
 
-    def explore_motor(self, motor, direction):
+    def explore_motor(self, motor):
         """
         Explores one motor in one direction 2000 steps by moving this far and working back to the original position 100 steps at a time. Used in optimize function.
         Requires the motor to be explored and the direction of exploration (1 is forward and -1 is backward).
         """
         explore_step = self.explore_step[motor]
-        if direction < 0:
-            explore_step = -explore_step
-        explore_counter = 15
+        explore_counter = 30
+        explore_range = int(explore_counter/2)*explore_step
         best_count = 0
         target_output = self.read_output()
         new_position = self._current_position.copy()
-        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + explore_counter*explore_step
+        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + explore_range
         self.move_motors_abs(new_position)
         while explore_counter >= 0:
             explore_counter = explore_counter - 1
