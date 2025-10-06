@@ -40,7 +40,7 @@ class OmegaTemperatureController(Base):
         return struct.unpack('!f', bytes.fromhex(registers_hex_value))[0]
 
     def read_setpoint(self, host):
-        client = ModbusClient(host = h, port = self._port)
+        client = ModbusClient(host = host, port = self._port)
         client.connect()
         registers_decimal_value = client.read_holding_registers(544,2).registers
         registers_hex_value = ''.join(format(e,'04x') for e in registers_decimal_value)
