@@ -43,7 +43,7 @@ class autoalignmentLogic(LogicBase):
         self.correct_hysteresis_steps = {'x1':5,'y1':5,'x2':5,'y2':5,'z':15}
         self.channel_codes = {'x1':0,'y1':1,'x2':2,'y2':3,'z':4}
         #The length of optimization time in seconds. 
-        self.timeout = 600
+        self.timeout = 1200
         self._current_position = [0,0,0,0,0]
 
     def on_deactivate(self):
@@ -407,12 +407,10 @@ class autoalignmentLogic(LogicBase):
                         self.log.info('Exploring...')
                         explore = True
                         exploring_motor = 0
-                        direction = 1
                         explore_counter = 0
                         while explore == True:
                             explore_counter = explore_counter + 1
-                            self.explore_motor(self.motor_list[exploring_motor], direction)
-                            direction = -direction
+                            self.explore_motor(self.motor_list[exploring_motor])
                             self.correct_hysteresis()
                             explore_output=self.read_output()
                             if explore_output > 10*final_output:
@@ -422,7 +420,6 @@ class autoalignmentLogic(LogicBase):
                                 exploring_motor = exploring_motor + 1
                                 explore_counter = 0
                             if exploring_motor >= len(self.motor_list):
-                                self.correct_hysteresis()
                                 self.log.info('Explore Failed. Optimizer may be stuck or output is too low. Couple manually to better output.')
                                 explore = False
                         self.log.info(f'Explore Output = {explore_output}')
