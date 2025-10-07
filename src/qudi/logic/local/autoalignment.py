@@ -3,6 +3,7 @@ import numpy as np
 
 from qudi.core.connector import Connector
 from qudi.core.statusvariable import StatusVar
+from qudi.core.configoption import ConfigOption
 from qudi.util import tools
 from qudi.core.module import LogicBase
 from qudi.util.mutex import Mutex
@@ -17,19 +18,22 @@ class autoalignmentLogic(LogicBase):
         connect:
             pmc: 'nf8752'
             # thorlabspm1: 'thorlabspm'
-            # timetagger: 'tagger'
+            # timetaggerlogic: 'timetaggerlogic'
+        options:
+            timetagger_read_channel: 'APDset2'
     """
     # connector
     pmc = Connector(interface='NF8752Logic')
     thorlabspm1 = Connector(interface = "ThorlabsPM", optional=True)
-    timetagger = Connector(interface = "TT", optional=True)
+    _time_series_logic_con = Connector(interface='TimeSeriesReaderLogic', optional = True)
+    _timetagger_read_channel = ConfigOption('timetagger_read_channel', missing='info')
 
     def on_activate(self):
         """ Initialisation performed during activation of the module.
         """
         self._pmc = self.pmc()
         self._tlpm = self.thorlabspm1()
-        self._tt = self.timetagger()
+        self._time_series_logic = self._time_series_logic_con()
         if self._tlpm is not None:
             self._tlpm.connect()
         # Number of samples wanted. The read time per sample is 1 second.
@@ -65,6 +69,17 @@ class autoalignmentLogic(LogicBase):
                 tools.delay(500)
             power_measurements = np.array(power_measurements)
             value = np.mean(power_measurements)
+        else:
+            power_measurements = []
+            count = 0 
+            while count < self.num_samples:
+                data_time, data = self._time_series_logic.trace_data
+                power_measurements.append(data[self._timetagger_read_channel][-1])
+                count+=1
+                tools.delay(1100)
+            power_measurements = np.array(power_measurements)
+            value = np.mean(power_measurements)
+
         return value
 
     def move_motors_abs(self, position):
