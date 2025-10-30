@@ -241,10 +241,10 @@ class pos_controller:
 if __name__ == '__main__':
     while(True):
         try:
-            try:
-                gamepad = InputDevice('/dev/input/event8')
-            except FileNotFoundError:
-                gamepad = InputDevice('/dev/input/event4')
+            # try:
+            gamepad = InputDevice('/dev/input/event7')
+            # except FileNotFoundError:
+            #     gamepad = InputDevice('/dev/input/event4')
 
             while True:
                 r, w, x = select.select([gamepad],[],[])
