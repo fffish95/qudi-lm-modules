@@ -142,7 +142,7 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         sm_motor_layout.addWidget(label)
         self.sm_motor_channel_lineedit = QtWidgets.QLineEdit()
         self.sm_motor_channel_lineedit.setText('{0}'.format(self._params[modenum]['motor_channel']))
-        self.sm_motor_channel_lineedit.editingFinished.connect(lambda: self.sm_step_motor_number_changed(modenum))
+        self.sm_motor_channel_lineedit.editingFinished.connect(lambda: self.sm_motor_channel_changed(modenum))
         sm_motor_layout.addWidget(self.sm_motor_channel_lineedit)
 
         label = QtWidgets.QLabel('start_deg')

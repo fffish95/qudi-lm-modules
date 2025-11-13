@@ -118,7 +118,7 @@ class SPSCustonScanLogic(LogicBase):
 
     def power_record_start_scanner(self):
         self.Params[self._pr_modenum]['lines_power'] = []
-        self._tlpm.connect()     
+
     
     def EIT_start_scanner(self):
         if self.Params[self._eit_modenum]['wavelength_ramp']:
@@ -212,12 +212,11 @@ class SPSCustonScanLogic(LogicBase):
         
         if scan_counter % self.Params[self._pr_modenum]['measurements_per_action'] == 0:      
             # connect power meter
-
+            self._tlpm.connect()     
             if self.Params[self._pr_modenum]['motor_on']:
                 # move the motor to the measurement point 
                 motor.move_abs(self.Params[self._pr_modenum]['motor_channel'], self.Params[self._pr_modenum]['running_deg'])
                 # wait until done, the longest wait time = 90*(60/4)*3 = 4050 ms
-                
                 t_delay = int(abs(self.Params[self._pr_modenum]['running_deg'] - self.Params[self._pr_modenum]['idle_deg'])*(60/4)*3)
                 tools.delay(t_delay)
 
@@ -235,7 +234,7 @@ class SPSCustonScanLogic(LogicBase):
             power_measurements = np.array(power_measurements)
             value = np.mean(power_measurements) * self.Params[self._pr_modenum]['realpower_to_readout_ratio']
             self.Params[self._pr_modenum]['lines_power'].append(value)
-
+            self._tlpm.disconnect()     
     
     def EIT_process_scanner(self,scan_counter):
         if self.Params[self._eit_modenum]['Background_subtract']:
@@ -333,7 +332,8 @@ class SPSCustonScanLogic(LogicBase):
         tools.delay(t_delay)    
 
     def power_record_stop_scanner(self):
-        self._tlpm.disconnect()     
+        pass
+        #self._tlpm.disconnect()     
     
     def EIT_stop_scanner(self):
         if self.Params[self._eit_modenum]['Background_subtract']:
