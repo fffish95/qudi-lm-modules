@@ -31,7 +31,7 @@ from qudi.core.configoption import ConfigOption
 from qudi.core.module import LogicBase
 from qudi.util.mutex import Mutex
 from qudi.util.units import ScaledFloat
-from qudi.interface.data_instream_interface import StreamChannelType
+from qudi.interface.local.data_instream_interface import StreamChannelType
 from qudi.util.datastorage import TextDataStorage, ImageFormat
 
 

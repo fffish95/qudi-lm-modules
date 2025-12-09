@@ -29,7 +29,7 @@ from qudi.core.connector import Connector
 from qudi.core.configoption import ConfigOption
 from qudi.util.colordefs import QudiPalettePale as palette
 from qudi.core.module import GuiBase
-from qudi.interface.data_instream_interface import StreamChannelType
+from qudi.interface.local.data_instream_interface import StreamChannelType
 
 
 class TimeSeriesMainWindow(QtWidgets.QMainWindow):

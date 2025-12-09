@@ -8,8 +8,8 @@ import time
 from qudi.core.configoption import ConfigOption
 from qudi.core.connector import Connector
 from qudi.util.helpers import natural_sort
-from qudi.interface.data_instream_interface import DataInStreamInterface, DataInStreamConstraints
-from qudi.interface.data_instream_interface import StreamChannelType, StreamChannel
+from qudi.interface.local.data_instream_interface import DataInStreamInterface, DataInStreamConstraints
+from qudi.interface.local.data_instream_interface import StreamChannelType, StreamChannel
 from qudi.util import tools
 
 
