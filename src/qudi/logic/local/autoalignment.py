@@ -47,7 +47,7 @@ class autoalignmentLogic(LogicBase):
         self.correct_hysteresis_steps = {'x1':5,'y1':5,'x2':5,'y2':5,'z':15}
         self.channel_codes = {'x1':0,'y1':1,'x2':2,'y2':3,'z':4}
         #The length of optimization time in seconds. 
-        self.timeout = 1200
+        self.timeout = 100
         self._current_position = [0,0,0,0,0]
 
     def on_deactivate(self):
