@@ -91,11 +91,8 @@ class iScan(Base):
         self.write_termination='\r\n'
         self.read_termination='\r\n'
         self.rm = visa.ResourceManager()
-        try:
-            self._my_instrument = self.rm.open_resource(resource_name = self._resurce_name[0], baud_rate=57600, write_termination=self.write_termination, read_termination=self.read_termination)
-        except:
-            self.log.error('Could not connect to iScan.')
-            self.rm.close()
+        self._my_instrument = self.rm.open_resource(resource_name = self._resurce_name[0], baud_rate=57600, write_termination=self.write_termination, read_termination=self.read_termination)
+
         self._readout_timing = 100
 
 
@@ -121,7 +118,6 @@ class iScan(Base):
         self.sig_handle_timer.disconnect()
         self._hardware_pull.iscan_msg_update.disconnect()
         self._my_instrument.close()
-        self.rm.close()
         return 0
 
 

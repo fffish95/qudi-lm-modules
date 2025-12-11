@@ -48,11 +48,8 @@ class StepMotor(Base):
 
     def on_activate(self):
         self.rm = visa.ResourceManager()
-        try:
-            self._my_instrument = self.rm.open_resource(resource_name = self._resurce_name[0], baud_rate=57600, write_termination='\n')
-        except:
-            print("PANIC, COULDNT OPEN")
-            self.rm.close()
+        self._my_instrument = self.rm.open_resource(resource_name = self._resurce_name[0], baud_rate=57600, write_termination='\n')
+
         
 
     def on_deactivate(self):
