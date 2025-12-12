@@ -54,6 +54,8 @@ class TimeSeriesReaderLogic(LogicBase):
     sigStatusChanged = QtCore.Signal(bool, bool)
     sigSettingsChanged = QtCore.Signal(dict)
     _sigNextDataFrame = QtCore.Signal()  # internal signal
+    sigNewRawData = QtCore.Signal(object, object)
+    sigStopped = QtCore.Signal()
 
     # declare connectors
     _streamer_con = Connector(interface='DataInStreamInterface')
@@ -510,6 +512,10 @@ class TimeSeriesReaderLogic(LogicBase):
         with self.threadlock:
             if self.module_state() == 'locked':
                 self._stop_requested = True
+                try:
+                    self.sigStopped.emit()
+                except:
+                    self.log.error('Could not stop time series!')
         return 0
 
     @QtCore.Slot()
@@ -555,6 +561,8 @@ class TimeSeriesReaderLogic(LogicBase):
                 self._process_trace_data(data)
 
                 # Emit update signal
+                data_view  = data[0]
+                self.sigNewRawData.emit(data_view, data_view)
                 self.sigDataChanged.emit(*self.trace_data, *self.averaged_trace_data)
                 self._sigNextDataFrame.emit()
         return
