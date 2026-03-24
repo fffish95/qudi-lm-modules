@@ -72,7 +72,7 @@ class LaserScannerHistoryEntry(QtCore.QObject):
         self.scan_continuable = False
 
         # init plot_x
-        self.plot_x = np.linspace(self.a_range[0], self.a_range[1], self.resolution)
+        self.plot_x = np.linspace(self.a_range[0], self.a_range[1], self.resolution)[:-1]
 
     def restore(self, laserscanner):
         """ Write data back into laser scan logic and pull all the necessary strings"""
@@ -334,8 +334,8 @@ class LaserScannerLogic(LogicBase):
 
 
     def set_clock_frequency(self):
-        scan_range = abs(self._scan_range[1] - self._scan_range[0])
-        duration = scan_range / self._scan_speed /1000
+        scan_range = abs(self._scan_range[1] - self._scan_range[0]) # scan range is in MHz
+        duration = scan_range / self._scan_speed /1000 # scan speed is in GHz, duration is in s
         clock_frequency = self._resolution / duration
         self._clock_frequency = float(clock_frequency)
         self.signal_clock_frequency_updated.emit()
@@ -370,12 +370,12 @@ class LaserScannerLogic(LogicBase):
 
 
     def initialise_data_matrix(self): 
-        self.trace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution, len(self.get_scanner_count_channels())))
-        self.retrace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution, len(self.get_scanner_count_channels())))
-        self.trace_plot_y_sum = np.zeros((len(self.get_scanner_count_channels()), self._resolution))
-        self.trace_plot_y = np.zeros((len(self.get_scanner_count_channels()), self._resolution))
-        self.retrace_plot_y = np.zeros((len(self.get_scanner_count_channels()), self._resolution))
-        self.plot_x = np.linspace(self._scan_range[0], self._scan_range[1], self._resolution)
+        self.trace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution-1, len(self.get_scanner_count_channels())))
+        self.retrace_scan_matrix = np.zeros((self._number_of_repeats, self._resolution-1, len(self.get_scanner_count_channels())))
+        self.trace_plot_y_sum = np.zeros((len(self.get_scanner_count_channels()), self._resolution-1))
+        self.trace_plot_y = np.zeros((len(self.get_scanner_count_channels()), self._resolution-1))
+        self.retrace_plot_y = np.zeros((len(self.get_scanner_count_channels()), self._resolution-1))
+        self.plot_x = np.linspace(self._scan_range[0], self._scan_range[1], self._resolution)[:-1]
         self.signal_initialise_matrix.emit()
     
     def start_scanner(self):
@@ -515,9 +515,9 @@ class LaserScannerLogic(LogicBase):
             scan_counter = self._scan_counter
             # add scan counter here to make sure the display in gui displays the corresponding number for the nth line
             self._scan_counter += 1
-            self.trace_scan_matrix[scan_counter, :] = counts_on_trace_line
-            self.trace_plot_y_sum +=  counts_on_trace_line.transpose()
-            self.trace_plot_y = counts_on_trace_line.transpose()
+            self.trace_scan_matrix[scan_counter, :] = counts_on_trace_line[:-1]
+            self.trace_plot_y_sum +=  counts_on_trace_line[:-1].transpose()
+            self.trace_plot_y = counts_on_trace_line[:-1].transpose()
             self.signal_trace_plots_updated.emit()
 
 
@@ -528,8 +528,8 @@ class LaserScannerLogic(LogicBase):
                 self.signal_scan_lines_next.emit()
                 return
                     
-            self.retrace_scan_matrix[scan_counter, :] = counts_on_retrace_line
-            self.retrace_plot_y = counts_on_retrace_line.transpose()
+            self.retrace_scan_matrix[scan_counter, :] = counts_on_retrace_line[1:]
+            self.retrace_plot_y = counts_on_retrace_line[1:].transpose()
             self.signal_retrace_plots_updated.emit()
 
 
