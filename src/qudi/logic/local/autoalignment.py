@@ -171,8 +171,8 @@ class autoalignmentLogic(LogicBase):
         centroid_position = np.asarray(sorted_simplex[1:]).mean(axis=0)
         #Solves for a position reflected from the worst position. Used in elements of downhill_simplex and optimize function.
         worst_position = np.asarray(sorted_simplex[0])
-        print(f'worst_position = {worst_position}')
-        print(f'centroid_position= {centroid_position}')
+        self.log.info(f'worst_position = {worst_position}')
+        self.log.info(f'centroid_position= {centroid_position}')
         reflection_position = centroid_position + 1*(centroid_position-worst_position)
         # move motors to the reflection position
         reflection_output = self.move_motors_abs(reflection_position)
@@ -305,7 +305,7 @@ class autoalignmentLogic(LogicBase):
                 new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] - self.correct_hysteresis_steps['y1']
                 new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] - self.correct_hysteresis_steps['y2']
                 new_output= self.move_motors_abs(new_position)
-        print(f'correct_hysteresis: new_position = {new_position}, old_position = {old_position}')
+        self.log.info(f'correct_hysteresis: new_position = {new_position}, old_position = {old_position}')
 
     def correct_hysteresis_oneaxis(self, motor):
         old_position = self._current_position.copy()
@@ -328,7 +328,7 @@ class autoalignmentLogic(LogicBase):
             new_output= self.move_motors_abs(new_position)
         new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] - self.correct_hysteresis_steps[motor]
         self.move_motors_abs(new_position)
-        print(f'correct_hysteresis_oneaxis: new_position = {new_position}, old_position = {old_position}')
+        self.log.info(f'correct_hysteresis_oneaxis: new_position = {new_position}, old_position = {old_position}')
 
     def explore_motor(self, motor):
         """
@@ -383,8 +383,8 @@ class autoalignmentLogic(LogicBase):
             sorted_output_simplex = final_output_simplex
             final_position = final_simplex[-1]
             final_output = final_output_simplex[-1]
-            print(f'final_simple = {final_simplex}')
-            print(f'final_output_simplex = {final_output_simplex}')
+            self.log.info(f'final_simple = {final_simplex}')
+            self.log.info(f'final_output_simplex = {final_output_simplex}')
             self.log.info(f'Best position = {final_position}')
             self.log.info(f'Best output = {final_output}')
             if power_achieved_counter > 0:
@@ -392,7 +392,7 @@ class autoalignmentLogic(LogicBase):
                 break
             if final_output > desired_power:
                 final_output = self.move_motors_abs(final_position)
-                print(final_output)
+                self.log.info(final_output)
                 simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
                 sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
                 power_achieved_counter +=1
@@ -404,7 +404,7 @@ class autoalignmentLogic(LogicBase):
                     self.correct_hysteresis()
                     self.log.info('Local Max Achieved.')
                     final_output = self.read_output()
-                    print(final_output)
+                    self.log.info(final_output)
                     hysteresis_counter  = 0
                     if final_output > desired_power:
                         self.log.info('Desired Power achieved. Initializing small search.')
@@ -452,6 +452,16 @@ class autoalignmentLogic(LogicBase):
                             sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(self.full_simplex_range)
             else:
                 hysteresis_counter = 0
+
+        final_simplex, final_output_simplex = self.downhill_simplex(sorted_simplex, sorted_output_simplex)
+        sorted_simplex = final_simplex
+        sorted_output_simplex = final_output_simplex
+        final_position = final_simplex[-1]
+        final_output = final_output_simplex[-1]
+        self.log.info(f'final_simple = {final_simplex}')
+        self.log.info(f'final_output_simplex = {final_output_simplex}')
+        self.log.info(f'Best position = {final_position}')
+        self.log.info(f'Best output = {final_output}')
         self.move_motors_abs(final_position)
         self.log.info('Correcting hysteresis...')
         self.correct_hysteresis()
