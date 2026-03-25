@@ -478,7 +478,7 @@ class LaserScannerLogic(LogicBase):
         if self.stopRequested:
             ## move to the middle position
             line_length = int(self._resolution/2)
-            move_line_counts = self._scanning_device.scan_trigger_line(line_length)
+            move_line_counts = self._scanning_device.scan_trigger_line(line_length-1)
             with self.threadlock:
                 self.kill_scanner()
                 self.stopRequested = False
@@ -501,13 +501,13 @@ class LaserScannerLogic(LogicBase):
             if self._move_to_start:
                 self._move_to_start = False
                 line_length = int(self._resolution/2)
-                move_line_counts = self._scanning_device.scan_trigger_line(line_length)
+                move_line_counts = self._scanning_device.scan_trigger_line(line_length-1)
                 if np.any(move_line_counts == -1):
                     self.stop_scanning()
                     self.signal_scan_lines_next.emit()
                     return
             line_length = int(self._resolution)
-            counts_on_trace_line = self._scanning_device.scan_trigger_line(line_length)
+            counts_on_trace_line = self._scanning_device.scan_trigger_line(line_length-1)
             if np.any(counts_on_trace_line == -1):
                 self.stop_scanning()
                 self.signal_scan_lines_next.emit()
@@ -515,21 +515,21 @@ class LaserScannerLogic(LogicBase):
             scan_counter = self._scan_counter
             # add scan counter here to make sure the display in gui displays the corresponding number for the nth line
             self._scan_counter += 1
-            self.trace_scan_matrix[scan_counter, :] = counts_on_trace_line[:-1]
-            self.trace_plot_y_sum +=  counts_on_trace_line[:-1].transpose()
-            self.trace_plot_y = counts_on_trace_line[:-1].transpose()
+            self.trace_scan_matrix[scan_counter, :] = counts_on_trace_line
+            self.trace_plot_y_sum +=  counts_on_trace_line.transpose()
+            self.trace_plot_y = counts_on_trace_line.transpose()
             self.signal_trace_plots_updated.emit()
 
 
             line_length = int(self._resolution)
-            counts_on_retrace_line = self._scanning_device.scan_trigger_line(line_length)[::-1]
+            counts_on_retrace_line = self._scanning_device.scan_trigger_line(line_length-1)[::-1]
             if np.any(counts_on_retrace_line == -1):
                 self.stop_scanning()
                 self.signal_scan_lines_next.emit()
                 return
                     
-            self.retrace_scan_matrix[scan_counter, :] = counts_on_retrace_line[1:]
-            self.retrace_plot_y = counts_on_retrace_line[1:].transpose()
+            self.retrace_scan_matrix[scan_counter, :] = counts_on_retrace_line
+            self.retrace_plot_y = counts_on_retrace_line.transpose()
             self.signal_retrace_plots_updated.emit()
 
 

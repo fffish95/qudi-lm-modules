@@ -9,7 +9,7 @@ from qudi.core.module import Base
 from qudi.core.configoption import ConfigOption
 from qudi.core.connector import Connector
 from qudi.util.mutex import Mutex
-
+import time
 
 
 
@@ -114,10 +114,6 @@ class NITT(Base):
         self._line_length = None
         self._trigger_line_length = None
         self._current_position = np.zeros(len(self._scanner_ao_channels))
-        if self._trigger_clock_channel and self._trigger_pixel_clock_channel is not None:
-            self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
-            if self._trigger_pixel_clock_channel_2 is not None:
-                self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel_2[0])
         
         if len(self._scanner_ao_channels) != len(self._scanner_voltage_ranges):
             self.log.error(
@@ -139,10 +135,6 @@ class NITT(Base):
         self._scanner_clock_task = None
         self._trigger_clock_task = None
         self._scanner_ai_task = None
-        if self._trigger_clock_channel and self._trigger_pixel_clock_channel is not None:
-            self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
-            if self._trigger_pixel_clock_channel_2 is not None:
-                self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel_2[0])
 
     def reset_hardware(self):
         """ Resets the NI hardware, so the connection is lost and other
@@ -436,10 +428,10 @@ class NITT(Base):
                             break
                         elif i == len(self._nicard._ai_task_handles)-1:
                             self._scanner_ai_task = self._nicard.create_ai_task(taskname = 'nitt_ai', channels = self._scanner_ai_channels, voltage_ranges = self._ai_voltage_ranges)
-                self._nicard.cfg_samp_clk_timing(self._scanner_ai_task, rate = self._trigger_clock_frequency, source= self._trigger_clock_channel[0], samps_per_chan = self._trigger_line_length)
+                self._nicard.cfg_samp_clk_timing(self._scanner_ai_task, rate = self._trigger_clock_frequency, source= self._trigger_clock_channel[0], samps_per_chan = self._trigger_line_length+1)
             # Configure Implicit Timing for the clock.
             # Set timing for scanner clock task to the number of pixel.
-            self._nicard.cfg_implicit_timing(self._trigger_clock_task, sample_mode='finite', samps_per_chan = self._trigger_line_length)
+            self._nicard.cfg_implicit_timing(self._trigger_clock_task, sample_mode='finite', samps_per_chan = self._trigger_line_length+1)
         except:
             self.log.exception('Error while setting up scanner to scan a line.')
             return -1
@@ -537,8 +529,14 @@ class NITT(Base):
                     self._set_up_trigger_line(line_length)
                 if self._scanner_ai_channels:
                     self._scanner_ai_task.start()
+                self._trigger_clock_task.stop()
+                if self._trigger_clock_channel and self._trigger_pixel_clock_channel is not None:
+                    self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+                    if self._trigger_pixel_clock_channel_2 is not None:
+                        self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel_2[0])
                 self._trigger_clock_task.start()
                 self._trigger_clock_task.wait_until_done(timeout = 10 * 2 * self._trigger_line_length)
+                time.sleep(0.02)
                 if self._scanner_ai_channels:
                     self._analog_data = self._scanner_ai_task.read(self._trigger_line_length)
                 self._trigger_clock_task.stop()
@@ -556,6 +554,10 @@ class NITT(Base):
                 if self._scanner_ai_channels:
                     analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._trigger_line_length))
                     all_data[len(self._timetagger_trigger_tasks):] = analog_data
+                if self._trigger_clock_channel and self._trigger_pixel_clock_channel is not None:
+                    self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
+                    if self._trigger_pixel_clock_channel_2 is not None:
+                        self._nicard.disconnect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel_2[0])
             except:
                 self.log.exception('Error while scanning line.')
                 return np.array([[-1.]])
