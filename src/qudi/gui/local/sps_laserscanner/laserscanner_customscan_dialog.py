@@ -93,12 +93,13 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
             self._customscan_mode[3]: self.stark_shift_scan_layout,
             self._customscan_mode[4]: self.scan_trigger_layout,
             self._customscan_mode[5]: self.timetagger_writeintofile_layout,
+            self._customscan_mode[6]: self.dp832_layout,
         }
         for n, mode in enumerate(self._current_modes):
             value = self._customscan_mode[mode]
             func = func_map.get(value)
             groupbox = func()
-            self.dynamic_layout.addWidget(groupbox, n, 0, 1, 6)
+            self.dynamic_layout.addWidget(groupbox, n, 0, 1, 7)
 
         
 
@@ -488,6 +489,46 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
         return tw_groupbox
     
+    def dp832_layout(self):
+        # mode num
+        modenum = 6
+
+        font = QtGui.QFont()
+        font.setBold(True)  
+
+        # measurements_per_action_layout
+        dp_setting_layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QLabel('Measurements per action')
+        dp_setting_layout.addWidget(label)
+        self.dp_measurements_per_action_lineedit = QtWidgets.QLineEdit()
+        self.dp_measurements_per_action_lineedit.setText('{0}'.format(self._params[modenum]['measurements_per_action']))
+        self.dp_measurements_per_action_lineedit.editingFinished.connect(lambda: self.dp_measurements_per_action_changed(modenum)) # Use lambda if you have some arguements for the function
+        dp_setting_layout.addWidget(self.dp_measurements_per_action_lineedit)
+
+        label = QtWidgets.QLabel('Delay')
+        dp_setting_layout.addWidget(label)
+        self.dp_delay_lineedit = QtWidgets.QLineEdit()
+        self.dp_delay_lineedit.setText('{0}'.format(self._params[modenum]['delay']))
+        self.dp_delay_lineedit.editingFinished.connect(lambda: self.dp_delay_changed(modenum))
+        dp_setting_layout.addWidget(self.dp_delay_lineedit)
+
+        # delete button
+        dp_delete_button_layout = QtWidgets.QHBoxLayout()
+        delete_button = QtWidgets.QPushButton('Delete')
+        delete_button.setCheckable(True)
+        delete_button.clicked.connect(self.customscan_delete)
+        dp_delete_button_layout.addWidget(delete_button)
+
+        dp_layout = QtWidgets.QGridLayout()
+        dp_layout.addLayout(dp_setting_layout, 0, 0, 1, 4)
+        dp_layout.addLayout(dp_delete_button_layout, 0, 5, 1, 1)
+
+        value = self._customscan_mode[modenum]
+        dp_groupbox = QtWidgets.QGroupBox(value)
+        dp_groupbox.setLayout(dp_layout)
+        self._customscan_del_button_hashmap[delete_button] = {'mode':modenum, 'groupbox': dp_groupbox}
+
+        return dp_groupbox
 
     def customscan_delete(self):
         mode = self._customscan_del_button_hashmap[self.sender()]['mode']
@@ -580,6 +621,12 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
 
     def tw_sample_name_changed(self, modenum):
         self._params[modenum]['sample_name'] = str(self.tw_sample_name_lineedit .text())
+
+    def dp_measurements_per_action_changed(self, modenum):
+        self._params[modenum]['measurements_per_action'] = int(self.dp_measurements_per_action_lineedit.text())
+
+    def dp_delay_changed(self, modenum):
+        self._params[modenum]['delay'] = str(self.dp_delay_lineedit .text())
 
 
 

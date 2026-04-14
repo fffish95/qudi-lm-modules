@@ -181,7 +181,7 @@ class LaserScannerLogic(LogicBase):
     # declare connectors
     laserscanner1 = Connector(interface='Base')
     iscan = Connector(interface='Base')
-    customscanlogic1 = Connector(interface='SPSCustonScanLogic')
+    customscanlogic1 = Connector(interface='SPSCustomScanLogic')
     savelogic = Connector(interface='SaveLogic')
 
     # status vars
