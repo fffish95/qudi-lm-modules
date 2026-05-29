@@ -178,8 +178,11 @@ class SPSCustomScanLogic(LogicBase):
         self._timetaggerlogic.start_recording()
 
     def dp832_start_scanner(self):
+        self.base_current = 0.005
         self._dp832logic.SetVoltage(1,12)
-        self._dp832logic.SetCurrent(1,0.8)
+        self._dp832logic.SetCurrent(1,self.base_current)
+        #self._dp832logic.SetCurrent(1,0.8)
+        self._dp832logic.On(1)
 
     def process_scanner_handler(self, current, scan_counter): 
 
@@ -313,10 +316,15 @@ class SPSCustomScanLogic(LogicBase):
             self._timetaggerlogic.start_recording()            
 
     def dp832_process_scanner(self,scan_counter):
+        # if scan_counter % self.Params[self._dp_modenum]['measurements_per_action'] == 0:
+        #     self._dp832logic.On(1)
+        #     time.sleep(float(self.Params[self._dp_modenum]['delay']))
+        #     self._dp832logic.Off(1)    
         if scan_counter % self.Params[self._dp_modenum]['measurements_per_action'] == 0:
-            self._dp832logic.On(1)
-            time.sleep(float(self.Params[self._dp_modenum]['delay']))
-            self._dp832logic.Off(1)    
+            i = int(scan_counter/self.Params[self._dp_modenum]['measurements_per_action']) + 1
+            current = i*self.base_current
+            self._dp832logic.SetCurrent(1,current)
+
             
     def stop_scanner_handler(self, current): 
 
