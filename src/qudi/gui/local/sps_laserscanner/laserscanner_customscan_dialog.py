@@ -208,7 +208,7 @@ class LaserscannerCustomScanWidget(QtWidgets.QWidget):
         label = QtWidgets.QLabel('realpower_to_readout_ratio')
         pr_realpower_to_readout_ratio_layout.addWidget(label)
         self.pr_realpower_to_readout_ratio_lineedit = QtWidgets.QLineEdit()
-        self.pr_realpower_to_readout_ratio_lineedit.setText('{0}'.format(self._params[modenum]['measurements_per_action']))
+        self.pr_realpower_to_readout_ratio_lineedit.setText('{0}'.format(self._params[modenum]['realpower_to_readout_ratio']))
         self.pr_realpower_to_readout_ratio_lineedit.editingFinished.connect(lambda: self.pr_realpower_to_readout_ratio_changed(modenum))
         pr_realpower_to_readout_ratio_layout.addWidget(self.pr_realpower_to_readout_ratio_lineedit)
 

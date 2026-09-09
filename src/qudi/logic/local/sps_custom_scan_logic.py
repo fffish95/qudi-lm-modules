@@ -51,7 +51,7 @@ class SPSCustomScanLogic(LogicBase):
     # status vars
 
     CustomScanMode = StatusVar(default = ['step motor', 'power record', 'EIT', 'stark shift scan', 'scan trigger', 'timetagger writeintofile', 'dp832'])
-    Params =  StatusVar(default=[{'step_motor_number': 1, 'motor_channel': 2, 'start_deg': 360.0, 'step_deg': -2.0, 'measurements_per_action': 4}, {'motor_on': False, 'step_motor_number': 1, 'motor_channel': 0, 'idle_deg': 0, 'running_deg': 90, 'averages': 4, 'measurements_per_action': 4, 'realpower_to_readout_ratio': 1.0, 'lines_power': [1.799035e-08, 1.7917925e-08, 1.9807925e-08, 2.0980975e-08, 2.1918575e-08, 2.4369349999999997e-08, 2.2822124999999998e-08, 2.6361400000000002e-08, 2.72615e-08, 2.8294125e-08, 3.1588325e-08, 3.5721525000000005e-08, 3.5477300000000004e-08, 4.0060575e-08, 3.826825e-08, 4.2179075e-08, 4.2636075e-08, 4.7786225e-08, 4.7433e-08, 5.3052425000000004e-08, 5.66623e-08, 5.5764849999999995e-08, 5.9578850000000005e-08, 6.0471075e-08, 6.872355000000001e-08, 6.840695e-08, 7.37708e-08, 8.89849e-08, 8.4034475e-08, 8.653235000000001e-08, 9.660505e-08, 9.06089e-08, 1.094355e-07, 1.10482e-07, 1.17251e-07, 1.1235549999999999e-07, 1.402885e-07, 1.4455175e-07, 1.7112825e-07, 1.6312100000000002e-07, 1.6719124999999999e-07, 1.7472425000000003e-07, 1.984345e-07, 2.0192275000000002e-07, 2.104945e-07, 2.2064375e-07, 2.49918e-07, 2.5896324999999997e-07, 2.5740300000000005e-07, 2.6508950000000004e-07, 3.070725e-07, 3.2915925e-07, 3.5789874999999996e-07, 3.7962624999999997e-07, 3.83737e-07, 4.0973275000000003e-07, 4.6803574999999994e-07, 4.883695e-07, 5.2559325e-07, 5.287575e-07, 5.951142499999999e-07, 6.306552499999999e-07, 6.26755e-07, 7.148485e-07, 7.592939999999999e-07, 8.040467499999999e-07, 8.293940000000001e-07, 9.3201075e-07, 9.029647499999999e-07, 1.0758575000000001e-06, 9.906815e-07, 1.1592075e-06, 1.1321275e-06, 1.223795e-06, 2.19223e-06]}, {'Background_subtract': False, 'wavelength_ramp': False, 'shutter_channels': ['pfi2'], 'start_frequency(THz)': 630.7234, 'step_frequency(MHz)': 50, 'lines_frequency': [], 'measurements_per_action': 1}, {'start_V': 250, 'step_V': -2, 'measurements_per_action': 1}, {'trigger_channel': ['pfi2'], 'trigger_length': 50},{
+    Params =  StatusVar(default=[{'step_motor_number': 1, 'motor_channel': 2, 'start_deg': 360.0, 'step_deg': -2.0, 'measurements_per_action': 4}, {'motor_on': False, 'step_motor_number': 1, 'motor_channel': 0, 'idle_deg': 0, 'running_deg': 90, 'averages': 4, 'measurements_per_action': 4, 'realpower_to_readout_ratio': 1.0, 'lines_power': [1.799035e-08, 1.7917925e-08, 1.9807925e-08, 2.0980975e-08, 2.1918575e-08, 2.4369349999999997e-08, 2.2822124999999998e-08, 2.6361400000000002e-08, 2.72615e-08, 2.8294125e-08, 3.1588325e-08, 3.5721525000000005e-08, 3.5477300000000004e-08, 4.0060575e-08, 3.826825e-08, 4.2179075e-08, 4.2636075e-08, 4.7786225e-08, 4.7433e-08, 5.3052425000000004e-08, 5.66623e-08, 5.5764849999999995e-08, 5.9578850000000005e-08, 6.0471075e-08, 6.872355000000001e-08, 6.840695e-08, 7.37708e-08, 8.89849e-08, 8.4034475e-08, 8.653235000000001e-08, 9.660505e-08, 9.06089e-08, 1.094355e-07, 1.10482e-07, 1.17251e-07, 1.1235549999999999e-07, 1.402885e-07, 1.4455175e-07, 1.7112825e-07, 1.6312100000000002e-07, 1.6719124999999999e-07, 1.7472425000000003e-07, 1.984345e-07, 2.0192275000000002e-07, 2.104945e-07, 2.2064375e-07, 2.49918e-07, 2.5896324999999997e-07, 2.5740300000000005e-07, 2.6508950000000004e-07, 3.070725e-07, 3.2915925e-07, 3.5789874999999996e-07, 3.7962624999999997e-07, 3.83737e-07, 4.0973275000000003e-07, 4.6803574999999994e-07, 4.883695e-07, 5.2559325e-07, 5.287575e-07, 5.951142499999999e-07, 6.306552499999999e-07, 6.26755e-07, 7.148485e-07, 7.592939999999999e-07, 8.040467499999999e-07, 8.293940000000001e-07, 9.3201075e-07, 9.029647499999999e-07, 1.0758575000000001e-06, 9.906815e-07, 1.1592075e-06, 1.1321275e-06, 1.223795e-06, 2.19223e-06]}, {'Background_subtract': False, 'wavelength_ramp': False, 'shutter_channels': ['pfi3'], 'start_frequency(THz)': 630.7234, 'step_frequency(MHz)': 50, 'lines_frequency': [], 'measurements_per_action': 1}, {'start_V': 250, 'step_V': -2, 'measurements_per_action': 1}, {'trigger_channel': ['pfi2'], 'trigger_length': 50},{
         'sample_name':'sample1',
         'measurements_per_action':1,
     },{'delay':1, 'measurements_per_action': 1}])
@@ -147,8 +147,8 @@ class SPSCustomScanLogic(LogicBase):
 
 
         if self.Params[self._eit_modenum]['Background_subtract']:
-            for param in self.Params:
-                param['measurements_per_action'] *= 2 # add 1 action for background substract
+            # for param in self.Params:
+            #     param['measurements_per_action'] *= 2 # add 1 action for background substract
             self._shutter_task = self._nicard.create_do_task(taskname = 'shutter', channels = self.Params[self._eit_modenum]['shutter_channels'])
             # Stop deviation and automatical exposure time before close the shutter
             if self.Params[self._eit_modenum]['wavelength_ramp']:
@@ -362,8 +362,8 @@ class SPSCustomScanLogic(LogicBase):
     
     def EIT_stop_scanner(self):
         if self.Params[self._eit_modenum]['Background_subtract']:
-            for param in self.Params:
-                param['measurements_per_action'] = int(param['measurements_per_action']/2) # remove 1 action added before
+            # for param in self.Params:
+            #     param['measurements_per_action'] = int(param['measurements_per_action']/2) # remove 1 action added before
             # keep the shutter open
             self._nicard.write_task(task= self._shutter_task, data = True)
             self._nicard.close_do_task(taskname = 'shutter')

@@ -31,7 +31,7 @@ from collections import OrderedDict
 from distutils.version import LooseVersion
 
 from qudi.core.module import LogicBase
-from qudi.util.paths import get_main_dir
+from qudi.util.paths import get_home_dir
 from qudi.util.mutex import Mutex
 from qudi.util.config import load, save
 from qudi.core.configoption import ConfigOption
@@ -62,7 +62,7 @@ class FitLogic(LogicBase):
 
         filenames = []
         # for path in directories:
-        path_list = [os.path.join(get_main_dir(), 'util', 'fitmethods')]
+        path_list = [os.path.join(get_home_dir(), 'qudi','src','qudi','util', 'fitmethods')]
         # adding additional path, to be defined in the config
 
         if self._additional_methods_import_path:
