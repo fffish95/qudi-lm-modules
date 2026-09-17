@@ -47,3 +47,6 @@ class StepMotorLogic(LogicBase):
         with self.threadlock:
             self._motor.move_abs(motor_channel, degree)
 
+    def get_pos(self, motor_channel=None):
+        with self.threadlock:
+            return self._motor.get_pos(motor_channel)

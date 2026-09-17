@@ -61,8 +61,8 @@ class StepMotor(Base):
         pass
 
 
-    def get_pos(self):
-        pass
+    def get_pos(self, motor_channel=None):
+        return 0.0
 
 
     def get_status(self):

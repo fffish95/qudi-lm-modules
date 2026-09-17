@@ -82,9 +82,10 @@ class StepMotor(Base):
 
         self._my_instrument.write('MOVEABS {} {} deg'.format(motor_channel, degree))
 
-    def get_pos(self):
+    def get_pos(self, motor_channel=None):
         try:
-            pos = self._my_instrument.query('GETPOS')
+            command = 'GETPOS' if motor_channel is None else f'GETPOS {motor_channel}'
+            pos = self._my_instrument.query(command)
             position = float(''.join(char for char in pos if char.isdigit() or char in '.-'))
             return position #returns position in degrees
         except Exception as e:
