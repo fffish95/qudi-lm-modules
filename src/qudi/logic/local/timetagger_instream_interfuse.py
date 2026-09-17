@@ -4,6 +4,10 @@ import numpy as np
 from enum import Enum 
 import time
 
+try:
+    from nidaqmx.constants import AcquisitionType
+except ImportError:
+    AcquisitionType = None
 
 from qudi.core.configoption import ConfigOption
 from qudi.core.connector import Connector
@@ -267,6 +271,12 @@ class TTInstreamInterfuse(DataInStreamInterface):
                 self.log.error('Analog channels require a connected NICard.')
                 self._is_running = False
                 return -1
+            if AcquisitionType is None:
+                self.log.error(
+                    'nidaqmx is not available. Cannot configure analog input channels.'
+                )
+                self._is_running = False
+                return -1
             self._analog_task = self._nicard.create_ai_task(
                 taskname='timetagger_analog_input',
                 channels=analog_channels,
@@ -278,9 +288,15 @@ class TTInstreamInterfuse(DataInStreamInterface):
             if self._analog_task == -1:
                 self._is_running = False
                 return -1
+            # NOTE: sample_mode must be CONTINUOUS. Without it, cfg_samp_clk_timing defaults to
+            # a finite acquisition of "samps_per_chan" samples. The task then stops itself once
+            # that many samples have been acquired and any later stop()/close() call (e.g. from
+            # stop_stream) raises "Finite acquisition ... has been stopped before the requested
+            # number of samples were acquired" as a DaqWarning.
             self._analog_task.timing.cfg_samp_clk_timing(
                 rate=self.__sample_rate,
-                samps_per_chan=self.buffer_size,
+                sample_mode=AcquisitionType.CONTINUOUS,
+                samps_per_chan=min(self.buffer_size, max(int(self.__sample_rate) * 10, 1000)),
             )
             self._analog_task.start()
         return 0
