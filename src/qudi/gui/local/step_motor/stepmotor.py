@@ -69,6 +69,12 @@ class StepMotorGui(GuiBase):
         self._position_timer.timeout.connect(self.update_position)
         self._position_timer.start(500)
         self.update_motor_channel(0)
+        if self._step_motor_logic is None:
+            self.log.error(
+                'Step motor logic is not connected. Check the stepmotorlogic '
+                'GUI connection in the configuration.'
+            )
+            self._mw.statusBar().showMessage('Step motor logic is not connected.')
 
         self.show()
     
@@ -80,7 +86,8 @@ class StepMotorGui(GuiBase):
 
     def on_deactivate(self):
 
-        self._position_timer.stop()
+        if hasattr(self, '_position_timer'):
+            self._position_timer.stop()
         return 0
 
 
@@ -121,7 +128,6 @@ class StepMotorGui(GuiBase):
         if position is None:
             return
         self._last_position = position
-        self._mw.moveAbsPositionLabel.setText(f'Current: {position:.2f}')
         self._mw.currentPositionLabel.setText(f'Current: {position:.2f}')
         calibration = self._calibration[self._motor_channel]
         if calibration['zero'] is not None and calibration['full'] is not None:
@@ -133,6 +139,8 @@ class StepMotorGui(GuiBase):
             self._mw.currentPercentageLabel.setText('Percentage: n/a')
 
     def _read_position(self):
+        if self._step_motor_logic is None:
+            return None
         position = self._step_motor_logic.get_pos(self._motor_channel)
         if position is None or position < 0:
             self._mw.statusBar().showMessage('Unable to read the current motor position.')
