@@ -21,10 +21,15 @@ class TTInstreamInterfuse(DataInStreamInterface):
     """
 
     timetagger = Connector(interface = "TT")
+    nicard = Connector(interface="NICard", optional=True)
     # config options
     __available_channels = ConfigOption(name='available_channels', default=tuple(), missing='nothing')
     __sample_rate = ConfigOption(name='sample_rate', default=50, missing='nothing')
     __buffer_size = ConfigOption(name='buffer_size', default=10000000, missing='nothing')
+    __analog_channels = ConfigOption(name='analog_channels', default=tuple(), missing='nothing')
+    __analog_voltage_ranges = ConfigOption(
+        name='analog_voltage_ranges', default=((-10, 10),), missing='nothing'
+    )
 
 
     def __init__(self, *args, **kwargs):
@@ -39,6 +44,8 @@ class TTInstreamInterfuse(DataInStreamInterface):
         self._last_read = None
         self._start_time = None
         self.__active_channels = tuple()
+        self._nicard = None
+        self._analog_task = None
 
         # Stored hardware constraints
         self._constraints = None
@@ -48,12 +55,22 @@ class TTInstreamInterfuse(DataInStreamInterface):
 
     def on_activate(self):
         self._tt = self.timetagger()
+        self._nicard = self.nicard()
 
         # Create constraints
         self._constraints = DataInStreamConstraints()
         self._constraints.digital_channels = tuple(
             StreamChannel(name=ch, type=StreamChannelType.DIGITAL, unit='Cps') for ch in
             self.__available_channels)
+        if self._nicard is not None:
+            if len(self.__analog_channels) != len(self.__analog_voltage_ranges):
+                raise ValueError(
+                    'analog_channels and analog_voltage_ranges must have the same length.'
+                )
+            self._constraints.analog_channels = tuple(
+                StreamChannel(name=ch, type=StreamChannelType.ANALOG, unit='V')
+                for ch in self.__analog_channels
+            )
 
 
 
@@ -64,7 +81,11 @@ class TTInstreamInterfuse(DataInStreamInterface):
             self._is_running = False
         if hasattr(self, 'Counterfunc'):
             for chn in self.__active_channels:
-                self.Counterfunc[chn].clear()
+                if chn in self.Counterfunc:
+                    self.Counterfunc[chn].clear()
+        if self._analog_task is not None:
+            self._nicard.close_ai_task(taskname=self._analog_task.name)
+            self._analog_task = None
 
     def configure(self, *args, **kwargs):
         """
@@ -124,7 +145,7 @@ class TTInstreamInterfuse(DataInStreamInterface):
     def sample_rate(self, rate):
         if self._check_settings_change():
             if not self._clk_frequency_valid(rate):
-                if self._analog_channels:
+                if self.__analog_channels:
                     min_val = self._constraints.combined_sample_rate.min
                     max_val = self._constraints.combined_sample_rate.max
                 else:
@@ -232,7 +253,36 @@ class TTInstreamInterfuse(DataInStreamInterface):
 
         self.Counterfunc=dict()
         for chn in self.__active_channels:
-            self.Counterfunc[chn] = self._tt.counter(channels=[self._tt.channel_codes[chn]], refresh_rate=self.__sample_rate, n_values=(self.buffer_size // self.number_of_channels))
+            if chn in self.__available_channels:
+                self.Counterfunc[chn] = self._tt.counter(
+                    channels=[self._tt.channel_codes[chn]],
+                    refresh_rate=self.__sample_rate,
+                    n_values=(self.buffer_size // self.number_of_channels)
+                )
+        analog_channels = [
+            chn for chn in self.__active_channels if chn in self.__analog_channels
+        ]
+        if analog_channels:
+            if self._nicard is None:
+                self.log.error('Analog channels require a connected NICard.')
+                self._is_running = False
+                return -1
+            self._analog_task = self._nicard.create_ai_task(
+                taskname='timetagger_analog_input',
+                channels=analog_channels,
+                voltage_ranges=[
+                    self.__analog_voltage_ranges[self.__analog_channels.index(chn)]
+                    for chn in analog_channels
+                ]
+            )
+            if self._analog_task == -1:
+                self._is_running = False
+                return -1
+            self._analog_task.timing.cfg_samp_clk_timing(
+                rate=self.__sample_rate,
+                samps_per_chan=self.buffer_size,
+            )
+            self._analog_task.start()
         return 0
 
     def stop_stream(self):
@@ -245,7 +295,11 @@ class TTInstreamInterfuse(DataInStreamInterface):
             self._is_running = False
         if hasattr(self, 'Counterfunc'):
             for chn in self.__active_channels:
-                self.Counterfunc[chn].clear()
+                if chn in self.Counterfunc:
+                    self.Counterfunc[chn].clear()
+        if self._analog_task is not None:
+            self._nicard.close_ai_task(taskname=self._analog_task.name)
+            self._analog_task = None
         return 0
 
     def read_data_into_buffer(self, buffer, number_of_samples=None):
@@ -304,10 +358,30 @@ class TTInstreamInterfuse(DataInStreamInterface):
         self._last_read = time.perf_counter()
 
         write_offset = 0
-        for i, chn in enumerate(self.__active_channels):
-            raw_data = self.Counterfunc[chn].getData()
-            cleaned_data = np.array(raw_data).copy()  # fully serialize it from RPyC proxy to real NumPy array
-            buffer[write_offset:(write_offset+number_of_samples)] = cleaned_data[0][-number_of_samples:]
+        analog_data = {}
+        analog_channels = [
+            chn for chn in self.__active_channels if chn in self.__analog_channels
+        ]
+        if analog_channels:
+            values = self._analog_task.read(
+                number_of_samples_per_channel=number_of_samples,
+                timeout=10
+            )
+            values = np.asarray(values)
+            if values.ndim == 1:
+                values = values.reshape(1, -1)
+            analog_data = {
+                chn: values[index, -number_of_samples:]
+                for index, chn in enumerate(analog_channels)
+            }
+
+        for chn in self.__active_channels:
+            if chn in analog_data:
+                cleaned_data = analog_data[chn]
+            else:
+                raw_data = self.Counterfunc[chn].getData()
+                cleaned_data = np.array(raw_data).copy()[0][-number_of_samples:]
+            buffer[write_offset:(write_offset+number_of_samples)] = cleaned_data
             write_offset += number_of_samples
         return number_of_samples
 
@@ -458,7 +532,7 @@ class TTInstreamInterfuse(DataInStreamInterface):
 
     # =============================================================================================
     def _clk_frequency_valid(self, frequency):
-        if self._analog_channels:
+        if self.__analog_channels:
             max_rate = self._constraints.combined_sample_rate.max
             min_rate = self._constraints.combined_sample_rate.min
         else:
