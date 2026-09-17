@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>500</width><height>260</height></rect>
+  </property>
+  <property name="windowTitle">
+   <string>Auto Alignment</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QGroupBox" name="readGroupBox">
+      <property name="title"><string>Read settings</string></property>
+      <layout class="QGridLayout" name="readLayout">
+       <item row="0" column="0"><widget class="QLabel" name="readSourceLabel"><property name="text"><string>Read source:</string></property></widget></item>
+       <item row="0" column="1"><widget class="QComboBox" name="readSourceComboBox"/></item>
+       <item row="1" column="0"><widget class="QLabel" name="channelLabel"><property name="text"><string>Timetagger channel:</string></property></widget></item>
+       <item row="1" column="1"><widget class="QComboBox" name="channelComboBox"/></item>
+       <item row="1" column="2"><widget class="QPushButton" name="refreshChannelsButton"><property name="text"><string>Refresh channels</string></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="optimizeGroupBox">
+      <property name="title"><string>Optimization</string></property>
+      <layout class="QGridLayout" name="optimizeLayout">
+       <item row="0" column="0"><widget class="QLabel" name="rangeSizeLabel"><property name="text"><string>Range size:</string></property></widget></item>
+       <item row="0" column="1"><widget class="QComboBox" name="rangeSizeComboBox"/></item>
+       <item row="1" column="0" colspan="2"><widget class="QPushButton" name="optimizeButton"><property name="text"><string>Optimize</string></property></widget></item>
+       <item row="2" column="0" colspan="2"><widget class="QPushButton" name="correctHysteresisButton"><property name="text"><string>Correct Hysteresis</string></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="statusLabel">
+      <property name="text"><string>Status: idle</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="emergencyStopButton">
+      <property name="minimumHeight"><number>50</number></property>
+      <property name="styleSheet"><string notr="true">background-color: rgb(200, 0, 0); color: white; font-weight: bold; font-size: 14pt;</string></property>
+      <property name="text"><string>EMERGENCY STOP</string></property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

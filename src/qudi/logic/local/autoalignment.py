@@ -5,7 +5,15 @@ from qudi.core.connector import Connector
 from qudi.core.configoption import ConfigOption
 from qudi.util import tools
 from qudi.core.module import LogicBase
+from PySide2 import QtCore
 import time
+
+
+class AutoAlignmentStopRequested(Exception):
+    """ Internal control-flow exception used to unwind a running optimize()/
+    correct_hysteresis() call as soon as stop_all() has been invoked.
+    """
+    pass
 
 
 class autoalignmentLogic(LogicBase):
@@ -25,6 +33,13 @@ class autoalignmentLogic(LogicBase):
     thorlabspm1 = Connector(interface = "ThorlabsPM", optional=True)
     _time_series_logic_con = Connector(interface='TimeSeriesReaderLogic', optional = True)
     _timetagger_read_channel = ConfigOption('timetagger_read_channel', missing='info')
+
+    # signals for GUI notification
+    sigOptimizeFinished = QtCore.Signal()
+    sigHysteresisFinished = QtCore.Signal()
+    sigStopped = QtCore.Signal()
+    sigReadSourceChanged = QtCore.Signal(str)
+    sigReadChannelChanged = QtCore.Signal(str)
 
     def on_activate(self):
         """ Initialisation performed during activation of the module.
@@ -48,6 +63,19 @@ class autoalignmentLogic(LogicBase):
         #The length of optimization time in seconds. 
         self.timeout = 100
         self._current_position = [0,0,0,0,0]
+        self._stop_requested = False
+        # Default read source: prefer the power meter if connected, otherwise fall back
+        # to the time series (timetagger) reader.
+        if self._tlpm is not None:
+            self._read_source = 'powermeter'
+        elif self._time_series_logic is not None:
+            self._read_source = 'timetagger'
+        else:
+            self._read_source = None
+            self.log.error(
+                'Neither a power meter nor a time series logic is connected. '
+                'read_output() will not work until one of them is connected.'
+            )
 
     def on_deactivate(self):
         """ Deinitialisation performed during deactivation of the module.
@@ -56,31 +84,176 @@ class autoalignmentLogic(LogicBase):
             self._tlpm.disconnect()
 
     def read_output(self, num_samples=None):
-        """ Read the output of powermeter or timetagger counter.
+        """ Read the output of powermeter or timetagger counter, depending on the
+        currently selected read source (see set_read_source()).
         """
         sample_count = self._active_num_samples if num_samples is None else num_samples
-        if self._tlpm is not None:
+        if self._read_source == 'powermeter':
+            if self._tlpm is None:
+                self.log.error('Power meter is not connected; cannot read output.')
+                return np.nan
             # power measurement
             power_measurements = []
             count = 0 
             while count < sample_count:
+                self._check_stop()
                 power_measurements.append(self._tlpm.get_power())
                 count+=1
                 tools.delay(500)
             power_measurements = np.array(power_measurements)
             value = np.mean(power_measurements)
-        else:
+        elif self._read_source == 'timetagger':
+            if self._time_series_logic is None:
+                self.log.error('Time series logic is not connected; cannot read output.')
+                return np.nan
             power_measurements = []
             count = 0 
             while count < sample_count:
+                self._check_stop()
                 data_time, data = self._time_series_logic.trace_data
                 power_measurements.append(data[self._timetagger_read_channel][-1])
                 count+=1
                 tools.delay(1100)
             power_measurements = np.array(power_measurements)
             value = np.mean(power_measurements)
+        else:
+            self.log.error(
+                "No valid read source is set. Use set_read_source('powermeter' or "
+                "'timetagger') first."
+            )
+            return np.nan
 
         return value
+
+    def _check_stop(self):
+        """ Raise AutoAlignmentStopRequested if stop_all() has been called.
+
+        Called from within the long-running loops of read_output(),
+        randomize_initial_simplex(), downhill_simplex() and correct_hysteresis(), so
+        that an emergency stop takes effect promptly instead of waiting for the whole
+        optimize()/correct_hysteresis() call to complete on its own.
+        """
+        if self._stop_requested:
+            raise AutoAlignmentStopRequested()
+
+    def get_available_read_sources(self):
+        """ Return the read sources ('powermeter'/'timetagger') that are currently
+        usable, based on which optional connectors are actually connected.
+        """
+        sources = []
+        if self._tlpm is not None:
+            sources.append('powermeter')
+        if self._time_series_logic is not None:
+            sources.append('timetagger')
+        return sources
+
+    def get_read_source(self):
+        """ Return the currently selected read source. """
+        return self._read_source
+
+    def set_read_source(self, source):
+        """ Select whether read_output() reads from the power meter or the timetagger
+        (time series logic).
+
+        @param str source: 'powermeter' or 'timetagger'
+        """
+        source = source.lower() if isinstance(source, str) else source
+        if source == 'powermeter' and self._tlpm is None:
+            self.log.error('No power meter connected; cannot switch to powermeter readout.')
+            return
+        if source == 'timetagger' and self._time_series_logic is None:
+            self.log.error(
+                'No time series logic connected; cannot switch to timetagger readout.'
+            )
+            return
+        if source not in ('powermeter', 'timetagger'):
+            self.log.error("read source must be 'powermeter' or 'timetagger'.")
+            return
+        self._read_source = source
+        self.sigReadSourceChanged.emit(self._read_source)
+
+    def get_available_timetagger_channels(self):
+        """ Return the timetagger channels currently active in the connected time
+        series logic, i.e. the channels that read_output() can actually read from.
+        """
+        if self._time_series_logic is None:
+            return tuple()
+        return self._time_series_logic.active_channel_names
+
+    def get_timetagger_read_channel(self):
+        """ Return the timetagger channel currently used by read_output() when
+        read_source is 'timetagger'.
+        """
+        return self._timetagger_read_channel
+
+    def set_timetagger_read_channel(self, channel):
+        """ Change which timetagger channel is used by read_output() when
+        read_source is 'timetagger'.
+        """
+        available = self.get_available_timetagger_channels()
+        if available and channel not in available:
+            self.log.warning(
+                f'Channel {channel} is not currently an active time series channel '
+                f'(available: {available}). Setting it anyway.'
+            )
+        self._timetagger_read_channel = channel
+        self.sigReadChannelChanged.emit(channel)
+
+    def stop_all(self):
+        """ Emergency stop: immediately halt the picomotor controller and request
+        that any running optimize()/correct_hysteresis() call abort as soon as
+        possible.
+
+        This method must be invoked directly (not via a queued Qt signal) so it
+        takes effect immediately even while the logic module's own thread is stuck
+        inside a long-running optimize()/correct_hysteresis() call.
+        """
+        self._stop_requested = True
+        try:
+            self._pmc.halt()
+        except Exception:
+            self.log.exception('Error while trying to halt the picomotor controller.')
+        self.log.warning('Emergency stop requested: aborting autoalignment and halting motors.')
+        self.sigStopped.emit()
+
+    def start_optimize(self, range_size):
+        """ Public entry point for the GUI. Guards against re-entrancy, resets the
+        stop flag, and emits sigOptimizeFinished when done (successfully or not).
+        """
+        if self.module_state() == 'locked':
+            self.log.warning('Autoalignment is already busy; ignoring new optimize request.')
+            return
+        self.module_state.lock()
+        self._stop_requested = False
+        try:
+            self.optimize(range_size)
+        except AutoAlignmentStopRequested:
+            self.log.info('Optimization stopped by user request.')
+        except ValueError:
+            self.log.exception('Invalid range_size for optimize().')
+        finally:
+            self._active_num_samples = self.num_samples
+            self.module_state.unlock()
+            self.sigOptimizeFinished.emit()
+
+    def start_correct_hysteresis(self):
+        """ Public entry point for the GUI. Guards against re-entrancy, resets the
+        stop flag, and emits sigHysteresisFinished when done (successfully or not).
+        """
+        if self.module_state() == 'locked':
+            self.log.warning(
+                'Autoalignment is already busy; ignoring new correct hysteresis request.'
+            )
+            return
+        self.module_state.lock()
+        self._stop_requested = False
+        try:
+            self.correct_hysteresis()
+        except AutoAlignmentStopRequested:
+            self.log.info('Hysteresis correction stopped by user request.')
+        finally:
+            self.module_state.unlock()
+            self.sigHysteresisFinished.emit()
 
     def move_motors_abs(self, position):
         """
@@ -162,6 +335,7 @@ class autoalignmentLogic(LogicBase):
         # we need to measure motor_number + 1 positions
 
         for i in range(self.motor_number):
+            self._check_stop()
             motor_position = []
             for motor in self.motor_list:
                 position = np.random.randint(
@@ -216,6 +390,7 @@ class autoalignmentLogic(LogicBase):
                 sorted_output_simplex[0] = contraction_output
             else:
                 for i in range(self.motor_number):
+                    self._check_stop()
                     sorted_simplex[i] = list(np.asarray(sorted_simplex[-1]) + 0.5 * (np.asarray(sorted_simplex[i]) - np.asarray(sorted_simplex[-1])))
                     sorted_output_simplex[i] = self.move_motors_abs(sorted_simplex[i])
         # if the reflection is worse than the worst, try inside contraction
@@ -228,6 +403,7 @@ class autoalignmentLogic(LogicBase):
                 sorted_output_simplex[0] = contraction_output
             else:
                 for i in range(self.motor_number):
+                    self._check_stop()
                     sorted_simplex[i] = list(np.asarray(sorted_simplex[-1]) + 0.5 * (np.asarray(sorted_simplex[i]) - np.asarray(sorted_simplex[-1])))
                     sorted_output_simplex[i] = self.move_motors_abs(sorted_simplex[i])
         final_output_simplex, final_simplex = zip(*sorted(zip(sorted_output_simplex,sorted_simplex)))
@@ -273,6 +449,7 @@ class autoalignmentLogic(LogicBase):
                 self.move_motors_abs(new_position)
             else:
                 while new_output > prev_output:
+                    self._check_stop()
                     prev_output = new_output
                     new_position = self._current_position.copy()
                     new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] + self.correct_hysteresis_steps['x1']
@@ -312,6 +489,7 @@ class autoalignmentLogic(LogicBase):
                 self.move_motors_abs(new_position)
             else:
                 while new_output > prev_output:
+                    self._check_stop()
                     prev_output = new_output
                     new_position = self._current_position.copy()
                     new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] + self.correct_hysteresis_steps['y1']
@@ -337,6 +515,7 @@ class autoalignmentLogic(LogicBase):
         if new_output < prev_output:
             self.log.info(f"correct hysteresis for {motor} failed. You may want to assign a smaller value for self.correct_hysteresis_steps[{motor}]")
         while new_output > prev_output:
+            self._check_stop()
             prev_output = new_output
             new_position = self._current_position.copy()
             new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + self.correct_hysteresis_steps[motor]
@@ -373,6 +552,7 @@ class autoalignmentLogic(LogicBase):
         sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
         deadline = time.time() + self.timeout
         while deadline > time.time():
+            self._check_stop()
             prev_best_position = sorted_simplex[-1]
             final_simplex, final_output_simplex = self.downhill_simplex(sorted_simplex, sorted_output_simplex)
             sorted_simplex = final_simplex
