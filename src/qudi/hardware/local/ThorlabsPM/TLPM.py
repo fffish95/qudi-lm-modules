@@ -1,3 +1,8 @@
+# NOTE: This module was written or modified by fffish
+# (https://github.com/fffish95/qudi-lm-modules) and remains subject to the GNU
+# license terms stated below (or, if none are stated in this file, to the GNU
+# General Public License under which Qudi is distributed).
+
 import os
 from ctypes import cdll,c_long,c_uint32,c_uint16,c_uint8,byref,create_string_buffer,c_bool, c_char, c_char_p,c_int,c_int16,c_int8,c_double,c_float,sizeof,c_voidp, Structure
 

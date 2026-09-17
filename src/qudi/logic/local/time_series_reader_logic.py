@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# NOTE: This module was written or modified by fffish
+# (https://github.com/fffish95/qudi-lm-modules) and remains subject to the GNU
+# license terms stated below (or, if none are stated in this file, to the GNU
+# General Public License under which Qudi is distributed).
+
 """
 This file contains the qudi logic to continuously read data from a streaming device as time series.
 
