@@ -23,6 +23,7 @@ import os
 
 from qudi.core.connector import Connector
 from qudi.core.module import GuiBase
+from qudi.core.statusvariable import StatusVar
 from PySide2 import QtCore, QtWidgets
 from qudi.util import uic
 
@@ -40,6 +41,13 @@ class StepMotorMainWindow(QtWidgets.QMainWindow):
 
 class StepMotorGui(GuiBase):
     stepmotorlogic = Connector(interface='StepMotorLogic')
+
+    # Persist the per-channel 0%/100% calibration positions across restarts.
+    _calibration = StatusVar(
+        name='calibration',
+        default={channel: {'zero': None, 'full': None} for channel in range(4)}
+    )
+
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
     def on_activate(self):
@@ -50,10 +58,10 @@ class StepMotorGui(GuiBase):
 
         self._mw.setDockNestingEnabled(True)
         self._motor_channel = 0
-        self._calibration = {
-            channel: {'zero': None, 'full': None}
-            for channel in range(4)
-        }
+        # Ensure every channel has a calibration entry, even if the StatusVar was
+        # saved by an older version of this GUI with fewer/different channels.
+        for channel in range(4):
+            self._calibration.setdefault(channel, {'zero': None, 'full': None})
         self._last_position = None
 
         self._mw.motorChannelComboBox.addItems([str(channel) for channel in range(4)])
