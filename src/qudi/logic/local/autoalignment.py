@@ -2,11 +2,9 @@
 import numpy as np
 
 from qudi.core.connector import Connector
-from qudi.core.statusvariable import StatusVar
 from qudi.core.configoption import ConfigOption
 from qudi.util import tools
 from qudi.core.module import LogicBase
-from qudi.util.mutex import Mutex
 import time
 
 
@@ -36,13 +34,14 @@ class autoalignmentLogic(LogicBase):
         self._time_series_logic = self._time_series_logic_con()
         if self._tlpm is not None:
             self._tlpm.connect()
-        # Number of samples wanted. The read time per sample is 1 second.
+        # Measurement samples used for final confirmation. Broad optimization uses fewer.
         self._vel = 100 # picomotor moving velocity
         self._acc = 500 # picomotor acceleration
         self.num_samples = 10
+        self.exploration_samples = 3
+        self._active_num_samples = self.num_samples
         self.motor_alphabet = ['x1','y1','x2','y2','z']
         self.full_simplex_range = dict(zip(self.motor_alphabet, list([300]*4+[900])))
-        self.explore_step = dict(zip(self.motor_alphabet, list([20]*4+[60])))
         self.motor_list = ['x1','y1','x2','y2','z'] # optional ['x1','y1','x2','y2']
         self.correct_hysteresis_steps = {'x1':5,'y1':5,'x2':5,'y2':5,'z':15}
         self.channel_codes = {'x1':0,'y1':1,'x2':2,'y2':3,'z':4}
@@ -56,14 +55,15 @@ class autoalignmentLogic(LogicBase):
         if self._tlpm is not None:
             self._tlpm.disconnect()
 
-    def read_output(self):
+    def read_output(self, num_samples=None):
         """ Read the output of powermeter or timetagger counter.
         """
+        sample_count = self._active_num_samples if num_samples is None else num_samples
         if self._tlpm is not None:
             # power measurement
             power_measurements = []
             count = 0 
-            while count < self.num_samples:
+            while count < sample_count:
                 power_measurements.append(self._tlpm.get_power())
                 count+=1
                 tools.delay(500)
@@ -72,7 +72,7 @@ class autoalignmentLogic(LogicBase):
         else:
             power_measurements = []
             count = 0 
-            while count < self.num_samples:
+            while count < sample_count:
                 data_time, data = self._time_series_logic.trace_data
                 power_measurements.append(data[self._timetagger_read_channel][-1])
                 count+=1
@@ -90,6 +90,18 @@ class autoalignmentLogic(LogicBase):
         if len(position) != self.motor_number:
             self.log.error('position dimension doesnt match motor list dimension.')
             return
+        position = np.asarray(position, dtype=float)
+        limits = np.asarray([
+            self.full_simplex_range[motor] / 2
+            for motor in self.motor_list
+        ])
+        bounded_position = np.clip(position, -limits, limits)
+        if not np.array_equal(position, bounded_position):
+            self.log.warning(
+                f'Position {position} exceeds motor limits; '
+                f'clipping to {bounded_position}.'
+            )
+        position = bounded_position
         # if 'z' in motor_list
         if len(position) > 4:
             # move z axis
@@ -152,7 +164,10 @@ class autoalignmentLogic(LogicBase):
         for i in range(self.motor_number):
             motor_position = []
             for motor in self.motor_list:
-                position = np.random.randint(low=-(simplex_range[motor]/2), high=(simplex_range[motor]/2))
+                position = np.random.randint(
+                    low=int(-simplex_range[motor] / 2),
+                    high=int(simplex_range[motor] / 2)
+                )
                 motor_position.append(position)
             output = self.move_motors_abs(motor_position)
             simplex.append(motor_position)
@@ -312,7 +327,7 @@ class autoalignmentLogic(LogicBase):
         
         prev_output = self.read_output()
         new_position = self._current_position.copy()
-        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + self.correct_hysteresis_steps['z']
+        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + self.correct_hysteresis_steps[motor]
         new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
             self.correct_hysteresis_steps[motor] = -self.correct_hysteresis_steps[motor]
@@ -330,51 +345,32 @@ class autoalignmentLogic(LogicBase):
         self.move_motors_abs(new_position)
         self.log.info(f'correct_hysteresis_oneaxis: new_position = {new_position}, old_position = {old_position}')
 
-    def explore_motor(self, motor):
-        """
-        Explores one motor in one direction 2000 steps by moving this far and working back to the original position 100 steps at a time. Used in optimize function.
-        Requires the motor to be explored and the direction of exploration (1 is forward and -1 is backward).
-        """
-        explore_step = self.explore_step[motor]
-        explore_counter = 30
-        explore_range = int(explore_counter/2)*explore_step
-        best_count = 0
-        target_output = self.read_output()
-        new_position = self._current_position.copy()
-        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + explore_range
-        self.move_motors_abs(new_position)
-        while explore_counter >= 0:
-            explore_counter = explore_counter - 1
-            new_position = self._current_position.copy()
-            new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] -explore_step
-            explore_output = self.move_motors_abs(new_position)
-            if explore_output > target_output:
-                best_count = explore_counter
-                target_output = explore_output    
-        new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + explore_step*best_count
-        self.move_motors_abs(new_position)
+    def _simplex_range_for_size(self, range_size):
+        """Return the configured simplex range for a named search size."""
+        range_scales = {
+            'small': 1 / 20,
+            'medium': 1 / 5,
+            'large': 1,
+        }
+        try:
+            scale = range_scales[range_size.lower()]
+        except (AttributeError, KeyError) as error:
+            raise ValueError(
+                "range_size must be 'small', 'medium', or 'large'."
+            ) from error
+        return {motor: value * scale for motor, value in self.full_simplex_range.items()}
 
-    def optimize(self, desired_power):
+    def optimize(self, range_size):
         """
-        Optimizes motors and finds a local maximum of power. Begins with intializing a simplex and performing downhill simplex. After 3 iterations of same best postion
-        this function corrects for hystersis and prompts the user to decide if they would like to continue optimizing. If a low output is found, optimizer will explore to find
-        the global peak instead. Optimization with stop if desired power is achieved.
+        Optimize the motor positions using a named simplex search range.
+
+        ``range_size`` must be ``small``, ``medium``, or ``large``.
         """
         hysteresis_counter = 0
-        power_achieved_counter = 0
+        self._active_num_samples = self.exploration_samples
+        simplex_range = self._simplex_range_for_size(range_size)
         final_output = self.read_output()
-        if final_output > desired_power:
-            self.log.info('Desired Power achieved. Initializing small search.')
-            simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
-            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-        elif desired_power > final_output > 0.9*desired_power:
-            simplex_range = {k:v/10 for k, v in self.full_simplex_range.items()}
-            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-        elif 0.9*desired_power > final_output > 0.5*desired_power:
-            simplex_range = {k:v/5 for k, v in self.full_simplex_range.items()}
-            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-        else:
-            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(self.full_simplex_range)
+        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
         deadline = time.time() + self.timeout
         while deadline > time.time():
             prev_best_position = sorted_simplex[-1]
@@ -387,79 +383,27 @@ class autoalignmentLogic(LogicBase):
             self.log.info(f'final_output_simplex = {final_output_simplex}')
             self.log.info(f'Best position = {final_position}')
             self.log.info(f'Best output = {final_output}')
-            if power_achieved_counter > 0:
-                self.log.info('Optimization succeed.')
-                break
-            if final_output > desired_power:
-                final_output = self.move_motors_abs(final_position)
-                self.log.info(final_output)
-                simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
-                sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-                power_achieved_counter +=1
             if final_position == prev_best_position:
                 hysteresis_counter = hysteresis_counter + 1
                 if hysteresis_counter > 2:
                     self.move_motors_abs(final_position)
                     self.log.info('Correcting hysteresis...')
+                    self._active_num_samples = self.num_samples
                     self.correct_hysteresis()
                     self.log.info('Local Max Achieved.')
                     final_output = self.read_output()
                     self.log.info(final_output)
                     hysteresis_counter  = 0
-                    if final_output > desired_power:
-                        self.log.info('Desired Power achieved. Initializing small search.')
-                        simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
-                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-                    elif desired_power > final_output > 0.9*desired_power:
-                        simplex_range = {k:v/10 for k, v in self.full_simplex_range.items()}
-                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-                    elif 0.9*desired_power > final_output > 0.5*desired_power:
-                        simplex_range = {k:v/5 for k, v in self.full_simplex_range.items()}
-                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-                    elif 0.5*desired_power > final_output > 0.1*desired_power:
-                        sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(self.full_simplex_range)
-                    else:
-                        self.log.info('Exploring...')
-                        explore = True
-                        exploring_motor = 0
-                        explore_counter = 0
-                        while explore == True:
-                            explore_counter = explore_counter + 1
-                            self.explore_motor(self.motor_list[exploring_motor])
-                            self.correct_hysteresis()
-                            explore_output=self.read_output()
-                            if explore_output > 10*final_output:
-                                self.log.info('Explore Success.')
-                                explore = False
-                            if explore_counter > 1:
-                                exploring_motor = exploring_motor + 1
-                                explore_counter = 0
-                            if exploring_motor >= len(self.motor_list):
-                                self.log.info('Explore Failed. Optimizer may be stuck or output is too low. Couple manually to better output.')
-                                explore = False
-                        self.log.info(f'Explore Output = {explore_output}')
-                        if explore_output > desired_power:
-                            self.log.info('Desired Power achieved. Initializing small search.')
-                            simplex_range = {k:v/20 for k, v in self.full_simplex_range.items()}
-                            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-                        elif desired_power > explore_output > 0.9*desired_power:
-                            simplex_range = {k:v/10 for k, v in self.full_simplex_range.items()}
-                            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-                        elif 0.9*desired_power > explore_output > 0.5*desired_power:
-                            simplex_range = {k:v/5 for k, v in self.full_simplex_range.items()}
-                            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
-                        else:
-                            sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(self.full_simplex_range)
+                    self._active_num_samples = self.exploration_samples
+                    sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
             else:
                 hysteresis_counter = 0
 
-        final_simplex, final_output_simplex = self.downhill_simplex(sorted_simplex, sorted_output_simplex)
-        sorted_simplex = final_simplex
-        sorted_output_simplex = final_output_simplex
-        final_position = final_simplex[-1]
-        final_output = final_output_simplex[-1]
-        self.log.info(f'final_simple = {final_simplex}')
-        self.log.info(f'final_output_simplex = {final_output_simplex}')
+        self._active_num_samples = self.num_samples
+        final_position = sorted_simplex[-1]
+        final_output = sorted_output_simplex[-1]
+        self.log.info(f'final_simple = {sorted_simplex}')
+        self.log.info(f'final_output_simplex = {sorted_output_simplex}')
         self.log.info(f'Best position = {final_position}')
         self.log.info(f'Best output = {final_output}')
         self.move_motors_abs(final_position)
