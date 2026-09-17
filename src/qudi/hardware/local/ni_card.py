@@ -246,7 +246,7 @@ class NICard(Base):
                         return -1
                     finally:
                         self._ao_task_handles.remove(task)
-                        return 0
+                    return 0
                 elif i == len(self._ao_task_handles)-1:
                     self.log.info('cant close ao task {0}, because it does not exist'.format(taskname))
                     return 0
@@ -307,10 +307,12 @@ class NICard(Base):
                         task.close()
                     except ni.DaqError:
                         self.log.exception('Error while trying to terminate ai task {0}'.format(taskname))
-                        return -1
+                        result = -1
+                    else:
+                        result = 0
                     finally:
                         self._ai_task_handles.remove(task)
-                        return 0
+                    return result
                 elif i == len(self._ai_task_handles)-1:
                     self.log.info('cant close ai task {0}, because it does not exist'.format(taskname))
                     return 0
@@ -336,10 +338,16 @@ class NICard(Base):
             for i, chn in enumerate(channels):
                 chn = chn.lower()
                 chn_name = '/{0}/{1}'.format(self._device_name, chn)
-                print(chn_name)
                 task.do_channels.add_do_chan(lines=chn_name)
         except:
-            self.terminate_all_tasks()
+            # Only clean up the task we just tried (and failed) to create. Do NOT call
+            # terminate_all_tasks() here: this task was never added to self._do_task_handles,
+            # so a blanket terminate would needlessly tear down unrelated ao/ai/do/di/ci/co
+            # tasks that other modules sharing this NI card may currently have running.
+            try:
+                task.close()
+            except ni.DaqError:
+                pass
             self.log.exception('Error adding digital output task.')
             return -1
         self._do_task_handles.append(task)
@@ -348,24 +356,27 @@ class NICard(Base):
     def close_do_task(self, taskname = None):
         if taskname is None:
             self.log.error('Need taskname to close the do task.')
-            return -1        
-        else:
-            for i, task in enumerate(self._do_task_handles):
-                if task.name == taskname:
-                    try:
-                        if not task.is_task_done():
-                            task.stop()
-                        task.close()
-                    except ni.DaqError:
-                        self.log.exception('Error while trying to terminate do task {0}'.format(taskname))
-                        return -1
-                    finally:
-                        self._do_task_handles.remove(task)
-                        return 0
-                elif i == len(self._do_task_handles)-1:
-                    self.log.info('cant close do task {0}, because it does not exist'.format(taskname))
-                    return 0
-
+            return -1
+        if not self._do_task_handles:
+            self.log.info('cant close do task {0}, because it does not exist'.format(taskname))
+            return 0
+        for i, task in enumerate(self._do_task_handles):
+            if task.name == taskname:
+                try:
+                    if not task.is_task_done():
+                        task.stop()
+                    task.close()
+                except ni.DaqError:
+                    self.log.exception('Error while trying to terminate do task {0}'.format(taskname))
+                    result = -1
+                else:
+                    result = 0
+                finally:
+                    self._do_task_handles.remove(task)
+                return result
+            elif i == len(self._do_task_handles)-1:
+                self.log.info('cant close do task {0}, because it does not exist'.format(taskname))
+                return 0
 
 
     def create_di_task(self, taskname = None, channels = None):
@@ -468,7 +479,7 @@ class NICard(Base):
                         return -1
                     finally:
                         self._co_task_handles.remove(task)
-                        return 0
+                    return 0
                 elif i == len(self._co_task_handles)-1:
                     self.log.info('cant close co task {0}, because it does not exist'.format(taskname))
                     return 0

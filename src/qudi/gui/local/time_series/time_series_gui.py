@@ -58,6 +58,62 @@ class TimeSeriesSelectionDialog(QtWidgets.QDialog):
         loadUi(ui_file, self)
 
 
+class ShutterSwitch(QtWidgets.QFrame):
+    """ A simple two-position rocker-style switch showing "ON" above "OFF".
+    Whichever state is currently active is highlighted; clicking anywhere on the widget
+    toggles the state and emits sigStateChanged.
+    """
+
+    sigStateChanged = QtCore.Signal(bool)  # True == "on"
+
+    _ON_STYLE = 'background-color: #2e7d32; color: white; font-weight: bold; border-radius: 2px;'
+    _OFF_STYLE = 'background-color: #b71c1c; color: white; font-weight: bold; border-radius: 2px;'
+    _INACTIVE_STYLE = 'background-color: transparent; color: gray;'
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+        self.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.setToolTip('Toggle the shutter')
+
+        self._on_label = QtWidgets.QLabel('ON')
+        self._off_label = QtWidgets.QLabel('OFF')
+        for label in (self._on_label, self._off_label):
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            label.setMinimumWidth(40)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(2)
+        layout.addWidget(self._on_label)
+        layout.addWidget(self._off_label)
+
+        self._is_on = False
+        self._update_appearance()
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton and self.isEnabled():
+            self.set_state(not self._is_on)
+            self.sigStateChanged.emit(self._is_on)
+        super().mousePressEvent(event)
+
+    def is_on(self):
+        return self._is_on
+
+    def set_state(self, is_on):
+        """ Update the displayed state without emitting sigStateChanged. """
+        self._is_on = bool(is_on)
+        self._update_appearance()
+
+    def _update_appearance(self):
+        if self._is_on:
+            self._on_label.setStyleSheet(self._ON_STYLE)
+            self._off_label.setStyleSheet(self._INACTIVE_STYLE)
+        else:
+            self._on_label.setStyleSheet(self._INACTIVE_STYLE)
+            self._off_label.setStyleSheet(self._OFF_STYLE)
+
+
 class TimeSeriesGui(GuiBase):
     """
     GUI module to be used in conjunction with TimeSeriesReaderLogic.
@@ -65,6 +121,7 @@ class TimeSeriesGui(GuiBase):
 
     # declare connectors
     _time_series_logic_con = Connector(interface='TimeSeriesReaderLogic')
+    _shutter_logic_con = Connector(interface='ShutterLogic', optional=True)
 
     # declare ConfigOptions
     _use_antialias = ConfigOption('use_antialias', default=True)
@@ -79,6 +136,8 @@ class TimeSeriesGui(GuiBase):
         super().__init__(*args, **kwargs)
 
         self._time_series_logic = None
+        self._shutter_logic = None
+        self._shutter_switch = None
         self._mw = None
         self._pw = None
         self._vb = None
@@ -100,6 +159,7 @@ class TimeSeriesGui(GuiBase):
         self._use_antialias = bool(self._use_antialias)
 
         self._time_series_logic = self._time_series_logic_con()
+        self._shutter_logic = self._shutter_logic_con()
 
         #####################
         # Configuring the dock widgets
@@ -174,6 +234,10 @@ class TimeSeriesGui(GuiBase):
         #####################
         # Set up trace view selection dialog
         self._init_trace_view_selection_dialog()
+
+        #####################
+        # Set up the shutter toggle switch in the toolbar
+        self._init_shutter_switch()
 
         #####################
         # Setting default parameters
@@ -291,7 +355,41 @@ class TimeSeriesGui(GuiBase):
         self._time_series_logic.sigSettingsChanged.disconnect()
         self._time_series_logic.sigStatusChanged.disconnect()
 
+        if self._shutter_logic is not None:
+            self._shutter_switch.sigStateChanged.disconnect()
+            self._shutter_logic.sigShutterStateChanged.disconnect(self._shutter_switch.set_state)
+
         self._mw.close()
+
+    def _init_shutter_switch(self):
+        """ Add a shutter ON/OFF toggle switch to the toolbar if a shutter logic is connected. """
+        self._shutter_switch = ShutterSwitch()
+        self._mw.trace_control_ToolBar.addSeparator()
+        self._mw.trace_control_ToolBar.addWidget(self._shutter_switch)
+
+        if self._shutter_logic is None:
+            self._shutter_switch.setEnabled(False)
+            self._shutter_switch.setToolTip('No shutter logic connected.')
+            return
+
+        # Reflect the shutter's actual last known state instead of assuming it is closed.
+        self._shutter_switch.set_state(bool(self._shutter_logic.is_open))
+        self._shutter_switch.sigStateChanged.connect(self.shutter_switch_toggled)
+        self._shutter_logic.sigShutterStateChanged.connect(
+            self._shutter_switch.set_state, QtCore.Qt.QueuedConnection
+        )
+
+    def shutter_switch_toggled(self, is_on):
+        """ Called when the user clicks the shutter toggle switch. """
+        try:
+            if is_on:
+                self._shutter_logic.shutter_on()
+            else:
+                self._shutter_logic.shutter_off()
+        except Exception:
+            self.log.exception('Error while toggling the shutter.')
+            # Reflect the (unchanged) actual hardware state back on the switch.
+            self._shutter_switch.set_state(bool(self._shutter_logic.is_open))
 
     def _init_trace_view_selection_dialog(self):
         all_channels = tuple(ch.name for ch in self._time_series_logic.available_channels)
