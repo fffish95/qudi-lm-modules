@@ -113,6 +113,7 @@ class NITT(Base):
             self._scanner_ai_task = None
         self._line_length = None
         self._trigger_line_length = None
+        self._trigger_cbm_bins = None
         self._current_position = np.zeros(len(self._scanner_ao_channels))
         if self._trigger_clock_channel and self._trigger_pixel_clock_channel is not None:
             self._nicard.connect_ctr_to_pfi(self._trigger_clock_channel[0], self._trigger_pixel_clock_channel[0])
@@ -422,10 +423,22 @@ class NITT(Base):
         self._trigger_line_length = length
 
         try:
+            # TimeTagger.count_between_markers needs (n_values + 1) rising edges on
+            # begin_channel to close n_values complete count windows: the window for
+            # data point k spans from marker k to marker k+1. Since begin_channel here
+            # is physically the same NI counter pulse that steps the iScan device's
+            # frequency by one increment, we cannot emit an extra "closing" pulse the
+            # way the regular (non-iscan) scan_line does, without moving iScan one
+            # step further than the requested line length. So we only ask for
+            # (length - 1) windows, i.e. exactly as many as can close within the
+            # `length` pulses we actually emit; the last requested pixel is padded
+            # in scan_trigger_line() instead of exposing an incomplete, still-open
+            # (and therefore spuriously large) count window.
+            self._trigger_cbm_bins = max(self._trigger_line_length - 1, 1)
             # Start instance of TimeTagger.CountBetweenMarkers with the correct channels. Does this every time a line is scanned
             self._timetagger_trigger_tasks = list()
             for _i,ch in enumerate(self._timetagger_channels):
-                self._timetagger_trigger_tasks.append(self._tt.count_between_markers(click_channel = self._tt.channel_codes[ch], begin_channel = self._tt.channel_codes[self._timetagger_cbm_trigger_begin_channel[0]], n_values=self._trigger_line_length))
+                self._timetagger_trigger_tasks.append(self._tt.count_between_markers(click_channel = self._tt.channel_codes[ch], begin_channel = self._tt.channel_codes[self._timetagger_cbm_trigger_begin_channel[0]], n_values=self._trigger_cbm_bins))
 
             if self._scanner_ai_channels:
                 if self._scanner_ai_task is None:
@@ -551,8 +564,14 @@ class NITT(Base):
                     cleaned_data = np.array(raw_data).copy()  # fully serialize it from RPyC proxy to real NumPy array
                     counts = np.nan_to_num(cleaned_data)
                     task.clear()
-                    data = np.reshape(counts,(1, self._trigger_line_length))
-                    all_data[i] = data * self._trigger_clock_frequency
+                    data = np.reshape(counts,(1, self._trigger_cbm_bins)) * self._trigger_clock_frequency
+                    if self._trigger_cbm_bins < self._trigger_line_length:
+                        # Pad the last pixel(s), whose count window could not close within
+                        # this task's lifetime (see _set_up_trigger_line), by repeating the
+                        # last genuinely completed value instead of an incomplete/open bin.
+                        pad = np.repeat(data[:, -1:], self._trigger_line_length - self._trigger_cbm_bins, axis=1)
+                        data = np.concatenate((data, pad), axis=1)
+                    all_data[i] = data
                 if self._scanner_ai_channels:
                     analog_data = np.reshape(self._analog_data,(len(self._scanner_ai_channels),self._trigger_line_length))
                     all_data[len(self._timetagger_trigger_tasks):] = analog_data
