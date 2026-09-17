@@ -3,12 +3,7 @@
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>520</width>
-    <height>320</height>
-   </rect>
+   <rect><x>0</x><y>0</y><width>650</width><height>250</height></rect>
   </property>
   <property name="windowTitle">
    <string>Step motor control</string>
@@ -17,136 +12,34 @@
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <layout class="QHBoxLayout" name="channelLayout">
-      <item>
-       <widget class="QLabel" name="motorChannelLabel">
-        <property name="text">
-         <string>Motor channel:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="motorChannelComboBox"/>
-      </item>
-      <item>
-       <spacer name="channelSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Expanding</enum>
-        </property>
-       </spacer>
-      </item>
+      <item><widget class="QLabel" name="motorChannelLabel"><property name="text"><string>Motor channel:</string></property></widget></item>
+      <item><widget class="QComboBox" name="motorChannelComboBox"/></item>
+      <item><widget class="QLabel" name="currentPositionLabel"><property name="text"><string>Current: not available</string></property></widget></item>
+      <item><widget class="QLabel" name="currentPercentageLabel"><property name="text"><string>Percentage: n/a</string></property></widget></item>
+      <item><spacer name="channelSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeType"><enum>QSizePolicy::Expanding</enum></property></spacer></item>
      </layout>
     </item>
     <item>
      <widget class="QGroupBox" name="calibrationGroupBox">
-      <property name="title">
-       <string>Calibration</string>
-      </property>
+      <property name="title"><string>Calibration values</string></property>
       <layout class="QHBoxLayout" name="calibrationLayout">
-       <item>
-        <widget class="QPushButton" name="setZeroButton">
-         <property name="text">
-          <string>Set current as 0%</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="zeroPositionLabel">
-         <property name="text">
-          <string>0%: not set</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="setFullButton">
-         <property name="text">
-          <string>Set current as 100%</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="fullPositionLabel">
-         <property name="text">
-          <string>100%: not set</string>
-         </property>
-        </widget>
-       </item>
+       <item><widget class="QLabel" name="zeroLabel"><property name="text"><string>0%:</string></property></widget></item>
+       <item><widget class="QDoubleSpinBox" name="zeroSpinBox"><property name="decimals"><number>2</number></property><property name="minimum"><double>-1000000.000000000000000</double></property><property name="maximum"><double>1000000.000000000000000</double></property></widget></item>
+       <item><widget class="QLabel" name="fullLabel"><property name="text"><string>100%:</string></property></widget></item>
+       <item><widget class="QDoubleSpinBox" name="fullSpinBox"><property name="decimals"><number>2</number></property><property name="minimum"><double>-1000000.000000000000000</double></property><property name="maximum"><double>1000000.000000000000000</double></property></widget></item>
+       <item><widget class="QPushButton" name="applyCalibrationButton"><property name="text"><string>Apply calibration</string></property></widget></item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QGroupBox" name="absoluteGroupBox">
-      <property name="title">
-       <string>Move absolute</string>
-      </property>
-      <layout class="QHBoxLayout" name="absoluteLayout">
-       <item>
-        <widget class="QSlider" name="moveAbsSlider">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="moveAbsPercentageLabel">
-         <property name="text">
-          <string>0%</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="moveAbsPositionLabel">
-         <property name="text">
-           <string>Current: not calibrated</string>
-         </property>
-        </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="moveAbsTargetLabel">
-          <property name="text">
-           <string>Target: not calibrated</string>
-          </property>
-         </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QGroupBox" name="relativeGroupBox">
-      <property name="title">
-       <string>Move relative</string>
-      </property>
-      <layout class="QHBoxLayout" name="relativeLayout">
-       <item>
-        <widget class="QSlider" name="moveRelSlider">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="moveRelPercentageLabel">
-         <property name="text">
-          <string>0%</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="moveRelPositionLabel">
-         <property name="text">
-           <string>Current: not calibrated</string>
-         </property>
-        </widget>
-       </item>
-        <item>
-         <widget class="QLabel" name="moveRelTargetLabel">
-          <property name="text">
-           <string>Move: not calibrated</string>
-          </property>
-         </widget>
-        </item>
+      <property name="title"><string>Move absolute</string></property>
+      <layout class="QGridLayout" name="absoluteLayout">
+       <item row="0" column="0"><widget class="QSlider" name="moveAbsSlider"><property name="orientation"><enum>Qt::Horizontal</enum></property></widget></item>
+       <item row="0" column="1"><widget class="QLabel" name="moveAbsPercentageLabel"><property name="text"><string>0%</string></property></widget></item>
+       <item row="0" column="2"><widget class="QLabel" name="moveAbsTargetLabel"><property name="text"><string>Target: n/a</string></property></widget></item>
+       <item row="1" column="0"><widget class="QDoubleSpinBox" name="moveAbsValueSpinBox"><property name="decimals"><number>2</number></property><property name="minimum"><double>-1000000.000000000000000</double></property><property name="maximum"><double>1000000.000000000000000</double></property></widget></item>
+       <item row="1" column="1" colspan="2"><widget class="QPushButton" name="moveAbsButton"><property name="text"><string>Go to value</string></property></widget></item>
       </layout>
      </widget>
     </item>
