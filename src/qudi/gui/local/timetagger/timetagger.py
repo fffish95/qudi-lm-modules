@@ -32,6 +32,11 @@ class TimeTaggerMainWindow(QtWidgets.QMainWindow):
         super(TimeTaggerMainWindow, self).__init__()
         self._dock_visibility = {}
         uic.loadUi(ui_file, self)
+        # Group the Autocorrelation and Histogram plots into the same dock area and let the
+        # user switch between them via tabs (similar to the qdplot GUI's tabbed plot view),
+        # while the WriteFiles dock widget stays in its own separate area at the bottom.
+        self.tabifyDockWidget(self.Autocorr_DockWidget, self.Histogram_DockWidget)
+        self.Autocorr_DockWidget.raise_()
         self.docks = [
             self.Autocorr_DockWidget,
             self.Histogram_DockWidget,
