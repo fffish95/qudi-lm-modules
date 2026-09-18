@@ -135,6 +135,9 @@ class LaserscannerGui(GuiBase):
     laserscannerlogic1 = Connector(interface='LaserScannerLogic')
     savelogic = Connector(interface='SaveLogic')
 
+    # Start/stop frequencies (MHz) must always differ by a multiple of this step.
+    _FREQ_STEP = 500
+
 
     sigStartScan = QtCore.Signal()
     sigStopScan = QtCore.Signal()
@@ -282,9 +285,9 @@ class LaserscannerGui(GuiBase):
         self._mw.clock_frequency_OutputWidget.setText('{0}'.format(round(self._scanning_logic._clock_frequency, 2)))
 
         # Update the inputed/displayed numbers if the cursor has left the field:
-        self._mw.startDoubleSpinBox.editingFinished.connect(self.setRegionCursorPosition)
+        self._mw.startDoubleSpinBox.editingFinished.connect(self.change_start)
         self._mw.speedDoubleSpinBox.editingFinished.connect(self.change_speed)
-        self._mw.stopDoubleSpinBox.editingFinished.connect(self.setRegionCursorPosition)
+        self._mw.stopDoubleSpinBox.editingFinished.connect(self.change_stop)
         self._mw.resolutionSpinBox.editingFinished.connect(self.change_resolution)
         self._mw.noofrepeatsSpinBox.editingFinished.connect(self.change_no_of_repeats)
         self._mw.cursorpositionDoubleSpinBox.editingFinished.connect(self.setCursorPosition)
@@ -698,9 +701,9 @@ class LaserscannerGui(GuiBase):
         self._mw.trace_plot_y_ViewWidget.addItem(self.main_cursor)
 
         # Update the inputed/displayed numbers if the cursor has left the field:
-        self._mw.startDoubleSpinBox.editingFinished.connect(self.setRegionCursorPosition)
+        self._mw.startDoubleSpinBox.editingFinished.connect(self.change_start)
         self._mw.speedDoubleSpinBox.editingFinished.connect(self.change_speed)
-        self._mw.stopDoubleSpinBox.editingFinished.connect(self.setRegionCursorPosition)
+        self._mw.stopDoubleSpinBox.editingFinished.connect(self.change_stop)
         self._mw.resolutionSpinBox.editingFinished.connect(self.change_resolution)
         self._mw.noofrepeatsSpinBox.editingFinished.connect(self.change_no_of_repeats)
         self._mw.cursorpositionDoubleSpinBox.editingFinished.connect(self.setCursorPosition)
@@ -739,6 +742,47 @@ class LaserscannerGui(GuiBase):
     def setRegionCursorPosition(self):
         self.region_cursor.setRegion([self._mw.startDoubleSpinBox.value(),self._mw.stopDoubleSpinBox.value()])
         self.set_scan_range()
+
+    def change_start(self):
+        """ Called when the start frequency spin box is edited.
+
+        Keeps the stop frequency above the start and re-snaps the stop/start
+        difference to the nearest multiple of _FREQ_STEP by adjusting the stop
+        frequency, then applies the (possibly adjusted) range.
+        """
+        self._snap_scan_range(fixed='start')
+
+    def change_stop(self):
+        """ Called when the stop frequency spin box is edited.
+
+        Keeps the stop frequency above the start and re-snaps the stop/start
+        difference to the nearest multiple of _FREQ_STEP by adjusting the
+        start frequency, then applies the (possibly adjusted) range.
+        """
+        self._snap_scan_range(fixed='stop')
+
+    def _snap_scan_range(self, fixed):
+        """ Adjust start/stop scan frequencies so their difference is the
+        closest (non-zero) multiple of _FREQ_STEP, keeping stop > start.
+
+        @param str fixed: which spin box was just edited by the user and
+                           should be left untouched ('start' or 'stop')
+        """
+        step = self._FREQ_STEP
+        start = self._mw.startDoubleSpinBox.value()
+        stop = self._mw.stopDoubleSpinBox.value()
+        diff = round((stop - start) / step) * step
+        if diff <= 0:
+            diff = step
+        if fixed == 'start':
+            self._mw.stopDoubleSpinBox.blockSignals(True)
+            self._mw.stopDoubleSpinBox.setValue(start + diff)
+            self._mw.stopDoubleSpinBox.blockSignals(False)
+        else:
+            self._mw.startDoubleSpinBox.blockSignals(True)
+            self._mw.startDoubleSpinBox.setValue(stop - diff)
+            self._mw.startDoubleSpinBox.blockSignals(False)
+        self.setRegionCursorPosition()
 
     def setCursorPosition(self):
         self._scanning_logic._scan_offset = self._mw.cursorpositionDoubleSpinBox.value()
