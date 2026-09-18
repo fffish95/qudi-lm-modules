@@ -32,11 +32,6 @@ class TimeTaggerMainWindow(QtWidgets.QMainWindow):
         super(TimeTaggerMainWindow, self).__init__()
         self._dock_visibility = {}
         uic.loadUi(ui_file, self)
-        # Group the Autocorrelation and Histogram plots into the same dock area and let the
-        # user switch between them via tabs (similar to the qdplot GUI's tabbed plot view),
-        # while the WriteFiles dock widget stays in its own separate area at the bottom.
-        self.tabifyDockWidget(self.Autocorr_DockWidget, self.Histogram_DockWidget)
-        self.Autocorr_DockWidget.raise_()
         self.docks = [
             self.Autocorr_DockWidget,
             self.Histogram_DockWidget,
@@ -48,6 +43,31 @@ class TimeTaggerMainWindow(QtWidgets.QMainWindow):
                 dock.visibilityChanged.connect(self.updateDockVisibility)
         self.showMaximized()
         self.show()
+        # Group the Autocorrelation and Histogram plots into the same dock area and let the
+        # user switch between them via tabs (similar to the qdplot GUI's tabbed plot view),
+        # while the WriteFiles dock widget stays in its own, separate area at the bottom.
+        # showMaximized()/show() above only *queue* a WindowStateChange event; when that event
+        # is later processed it calls changeEvent(), which re-shows every dock in self.docks
+        # order and would otherwise leave whichever dock is shown last (Histogram) as the
+        # active tab, undoing the tabbing/raise done here. Deferring with a zero-delay
+        # QTimer runs this after that queued event has been processed, so it reliably sticks.
+        QtCore.QTimer.singleShot(0, self._init_plot_tabs)
+
+    def _init_plot_tabs(self):
+        # The View-menu actions (e.g. actionAutocorrelation_view) are wired bidirectionally to
+        # their dock's visibilityChanged/toggled signals (see ui_timetaggergui.ui) so the menu
+        # checkbox stays in sync with the dock. Once Autocorr and Histogram share a tab group,
+        # switching tabs makes Qt hide/show the non-current dock internally; the reciprocal
+        # "visibilityChanged -> action.setChecked -> action.toggled -> dock.setVisible()" wiring
+        # reacts to that by explicitly calling setVisible() again, which Qt treats as closing the
+        # dock rather than merely switching tabs and collapses the tab group back down to one
+        # dock. Disconnect that reverse sync permanently for these two docks so switching tabs
+        # (at startup and for the lifetime of the window) keeps both of them tabbed. The forward
+        # direction (View-menu toggle -> dock.setVisible()) is left intact.
+        self.Autocorr_DockWidget.visibilityChanged.disconnect(self.actionAutocorrelation_view.setChecked)
+        self.Histogram_DockWidget.visibilityChanged.disconnect(self.actionHistogram_view.setChecked)
+        self.tabifyDockWidget(self.Autocorr_DockWidget, self.Histogram_DockWidget)
+        self.Autocorr_DockWidget.raise_()
 
     def updateDockVisibility(self, visible):
         if self.isMinimized():
