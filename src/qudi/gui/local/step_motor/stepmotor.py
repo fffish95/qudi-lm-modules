@@ -106,6 +106,7 @@ class StepMotorGui(GuiBase):
 
     def update_motor_channel(self, channel):
         self._motor_channel = int(channel)
+        self._last_position = None
         self._update_calibration_labels()
         self.update_position()
     
@@ -139,16 +140,37 @@ class StepMotorGui(GuiBase):
     def update_position(self):
         position = self._read_position()
         if position is None:
+            self._mw.currentPositionLabel.setText('Current: not available')
+            self._mw.currentPercentageLabel.setText('Percentage: n/a')
+            self._mw.moveAbsPercentageLabel.setText('n/a')
+            self._mw.moveAbsTargetLabel.setText('Target: not available')
+            self._mw.moveAbsValueSpinBox.setValue(0)
+            self._mw.moveAbsSlider.setValue(0)
             return
         self._last_position = position
         self._mw.currentPositionLabel.setText(f'Current: {position:.2f}')
         calibration = self._calibration[self._motor_channel]
         if calibration['zero'] is not None and calibration['full'] is not None:
             percentage = self._position_to_percentage(position)
+            slider_value = max(0, min(100, round(percentage)))
+            self._mw.moveAbsSlider.blockSignals(True)
+            self._mw.moveAbsSlider.setValue(slider_value)
+            self._mw.moveAbsSlider.blockSignals(False)
+            self._mw.moveAbsValueSpinBox.blockSignals(True)
+            self._mw.moveAbsValueSpinBox.setValue(position)
+            self._mw.moveAbsValueSpinBox.blockSignals(False)
+            self._mw.moveAbsTargetLabel.setText(f'Target: {position:.2f}')
             self._mw.moveAbsPercentageLabel.setText(f'{percentage:.1f}%')
             self._mw.currentPercentageLabel.setText(f'Percentage: {percentage:.1f}%')
         else:
+            self._mw.moveAbsSlider.blockSignals(True)
+            self._mw.moveAbsSlider.setValue(0)
+            self._mw.moveAbsSlider.blockSignals(False)
+            self._mw.moveAbsValueSpinBox.blockSignals(True)
+            self._mw.moveAbsValueSpinBox.setValue(position)
+            self._mw.moveAbsValueSpinBox.blockSignals(False)
             self._mw.moveAbsPercentageLabel.setText('n/a')
+            self._mw.moveAbsTargetLabel.setText('Target: not calibrated')
             self._mw.currentPercentageLabel.setText('Percentage: n/a')
 
     def _read_position(self):
