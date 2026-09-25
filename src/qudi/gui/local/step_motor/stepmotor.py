@@ -76,7 +76,6 @@ class StepMotorGui(GuiBase):
         self._mw.motorChannelComboBox.currentIndexChanged.connect(self.update_motor_channel)
         self._mw.applyCalibrationButton.clicked.connect(self.apply_calibration)
         self._mw.moveAbsButton.clicked.connect(self.MOVEABS_VALUE)
-        self._mw.moveAbsValueSpinBox.editingFinished.connect(self.MOVEABS_VALUE)
 
         self._position_timer = QtCore.QTimer(self._mw)
         self._position_timer.timeout.connect(self.update_position)
