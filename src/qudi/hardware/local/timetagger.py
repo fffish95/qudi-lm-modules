@@ -183,6 +183,37 @@ class TT(Base):
         filename, self.allChans)
 
 
+    def countrate(self, channels):
+        """
+        Average count rate (Hz) per channel since creation or the last .clear().
+        get data by .getData()
+        """
+        return Countrate(self.tagger, channels)
+
+    def get_trigger_level(self, channel):
+        return self.tagger.getTriggerLevel(channel)
+
+    def set_trigger_level(self, channel, voltage):
+        self.tagger.setTriggerLevel(channel, voltage)
+
+    def get_input_delay(self, channel):
+        return self.tagger.getInputDelay(channel)
+
+    def get_delay_hardware(self, channel):
+        return self.tagger.getDelayHardware(channel)
+
+    def set_delay_hardware(self, channel, delay):
+        """ Hardware delay is applied on top of the input delay set by delay_channel(). """
+        self.tagger.setDelayHardware(channel, delay)
+
+    def get_conditional_filter(self):
+        """ Return the currently active conditional filter as (trigger, filtered) lists. """
+        return (list(self.tagger.getConditionalFilterTrigger()),
+                list(self.tagger.getConditionalFilterFiltered()))
+
+    def set_conditional_filter(self, trigger, filtered):
+        self.tagger.setConditionalFilter(trigger=list(trigger), filtered=list(filtered))
+
     def time_differences(self, click_channel, start_channel, scan_trigger_channel, line_trigger_channel, binwidth, n_bins, n_histograms):
         """
         Gives the ability to launch startstop measurement with scan trigger and line trigger.

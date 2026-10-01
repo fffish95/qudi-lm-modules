@@ -99,6 +99,30 @@ class TT(Base):
         pass
 
 
+    def countrate(self, channels):
+        pass
+
+    def get_trigger_level(self, channel):
+        return 0.5
+
+    def set_trigger_level(self, channel, voltage):
+        pass
+
+    def get_input_delay(self, channel):
+        return 0
+
+    def get_delay_hardware(self, channel):
+        return 0
+
+    def set_delay_hardware(self, channel, delay):
+        pass
+
+    def get_conditional_filter(self):
+        return ([], [])
+
+    def set_conditional_filter(self, trigger, filtered):
+        pass
+
     def time_differences(self, click_channel, start_channel, scan_trigger_channel, line_trigger_channel, binwidth, n_bins, n_histograms):
         """
         Gives the ability to launch startstop measurement with scan trigger and line trigger.
