@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>JoystickControllerMainWindow</class>
+ <widget class="QMainWindow" name="JoystickControllerMainWindow">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>640</width><height>480</height></rect>
+  </property>
+  <property name="windowTitle">
+   <string>Joystick Controller</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QGroupBox" name="controlGroupBox">
+      <property name="title"><string>Control</string></property>
+      <layout class="QGridLayout" name="controlLayout">
+       <item row="0" column="0"><widget class="QLabel" name="deviceLabel"><property name="text"><string>Active device:</string></property></widget></item>
+       <item row="0" column="1"><widget class="QLabel" name="activeDeviceValueLabel"><property name="text"><string>nanopositioner</string></property></widget></item>
+       <item row="0" column="2"><widget class="QLabel" name="pollingLabel"><property name="text"><string>Polling:</string></property></widget></item>
+       <item row="0" column="3"><widget class="QLabel" name="pollingValueLabel"><property name="text"><string>stopped</string></property></widget></item>
+       <item row="1" column="0"><widget class="QLabel" name="rangeSizeLabel"><property name="text"><string>Step size:</string></property></widget></item>
+       <item row="1" column="1"><widget class="QComboBox" name="stepSizeComboBox"/></item>
+       <item row="1" column="2" colspan="2"><widget class="QPushButton" name="startPollingButton"><property name="text"><string>Start polling</string></property><property name="checkable"><bool>true</bool></property></widget></item>
+       <item row="2" column="0" colspan="2"><widget class="QLabel" name="connectionStatusLabel"><property name="text"><string>Controller: not detected</string></property></widget></item>
+       <item row="2" column="2" colspan="2"><widget class="QPushButton" name="clearTerminalButton"><property name="text"><string>Clear terminal</string></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="terminalTextEdit">
+      <property name="readOnly"><bool>true</bool></property>
+      <property name="maximumBlockCount"><number>2000</number></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="emergencyStopButton">
+      <property name="minimumHeight"><number>50</number></property>
+      <property name="styleSheet"><string notr="true">background-color: rgb(200, 0, 0); color: white; font-weight: bold; font-size: 14pt;</string></property>
+      <property name="text"><string>EMERGENCY STOP</string></property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect><x>0</x><y>0</y><width>640</width><height>21</height></rect>
+   </property>
+   <widget class="QMenu" name="menuDevice">
+    <property name="title"><string>Device</string></property>
+    <addaction name="actionNanopositioner"/>
+    <addaction name="actionPicomotor"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title"><string>Tools</string></property>
+    <addaction name="actionDiagnosticMode"/>
+   </widget>
+   <addaction name="menuDevice"/>
+   <addaction name="menuTools"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionNanopositioner">
+   <property name="checkable"><bool>true</bool></property>
+   <property name="checked"><bool>true</bool></property>
+   <property name="text"><string>Nanopositioner</string></property>
+  </action>
+  <action name="actionPicomotor">
+   <property name="checkable"><bool>true</bool></property>
+   <property name="text"><string>Picomotor</string></property>
+  </action>
+  <action name="actionDiagnosticMode">
+   <property name="checkable"><bool>true</bool></property>
+   <property name="text"><string>Diagnostic mode</string></property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
