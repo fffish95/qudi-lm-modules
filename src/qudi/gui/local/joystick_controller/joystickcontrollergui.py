@@ -71,8 +71,8 @@ class JoystickControllerGui(GuiBase):
         for device, action in self._device_actions.items():
             action.setEnabled(device in available)
             device_group.addAction(action)
-            action.triggered.connect(
-                lambda checked, d=device: checked and self.sigSetActiveDeviceRequested.emit(d))
+            # PySide2 does not always pass "checked" to triggered slots, so accept any args.
+            action.triggered.connect(lambda *args, d=device: self._device_action_triggered(d))
         self._active_device_changed(self._logic.active_device)
 
         self.sigSetActiveDeviceRequested.connect(self._logic.set_active_device,
@@ -123,6 +123,10 @@ class JoystickControllerGui(GuiBase):
 
     def _step_size_changed(self, step_size):
         self._mw.stepSizeComboBox.setCurrentText(str(step_size))
+
+    def _device_action_triggered(self, device):
+        if self._device_actions[device].isChecked():
+            self.sigSetActiveDeviceRequested.emit(device)
 
     def _active_device_changed(self, device):
         self._mw.activeDeviceValueLabel.setText(device)
