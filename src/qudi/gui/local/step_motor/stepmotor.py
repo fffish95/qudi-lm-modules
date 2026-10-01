@@ -107,7 +107,7 @@ class StepMotorGui(GuiBase):
         self._motor_channel = int(channel)
         self._last_position = None
         self._update_calibration_labels()
-        self.update_position()
+        self.update_position(sync_target=True)
     
     def MOVEABS(self):
         calibration = self._calibration[self._motor_channel]
@@ -136,41 +136,54 @@ class StepMotorGui(GuiBase):
         self._update_calibration_labels()
         self._mw.statusBar().showMessage('Calibration applied.')
 
-    def update_position(self):
+    def update_position(self, sync_target=False):
+        """ Refresh the current-position readouts. The absolute-value spin box
+        and target label are only overwritten when sync_target is True (e.g.
+        on channel change), so the periodic refresh never clobbers a value the
+        user is typing in.
+        """
         position = self._read_position()
         if position is None:
             self._mw.currentPositionLabel.setText('Current: not available')
             self._mw.currentPercentageLabel.setText('Percentage: n/a')
-            self._mw.moveAbsPercentageLabel.setText('n/a')
-            self._mw.moveAbsTargetLabel.setText('Target: not available')
-            self._mw.moveAbsValueSpinBox.setValue(0)
-            self._mw.moveAbsSlider.setValue(0)
+            if sync_target:
+                self._mw.moveAbsPercentageLabel.setText('n/a')
+                self._mw.moveAbsTargetLabel.setText('Target: not available')
+                self._set_target_value(0)
+            if not self._mw.moveAbsSlider.isSliderDown():
+                self._set_slider_value(0)
             return
         self._last_position = position
         self._mw.currentPositionLabel.setText(f'Current: {position:.2f}')
         calibration = self._calibration[self._motor_channel]
-        if calibration['zero'] is not None and calibration['full'] is not None:
+        calibrated = calibration['zero'] is not None and calibration['full'] is not None
+        if calibrated:
             percentage = self._position_to_percentage(position)
-            slider_value = max(0, min(100, round(percentage)))
-            self._mw.moveAbsSlider.blockSignals(True)
-            self._mw.moveAbsSlider.setValue(slider_value)
-            self._mw.moveAbsSlider.blockSignals(False)
-            self._mw.moveAbsValueSpinBox.blockSignals(True)
-            self._mw.moveAbsValueSpinBox.setValue(position)
-            self._mw.moveAbsValueSpinBox.blockSignals(False)
-            self._mw.moveAbsTargetLabel.setText(f'Target: {position:.2f}')
-            self._mw.moveAbsPercentageLabel.setText(f'{percentage:.1f}%')
             self._mw.currentPercentageLabel.setText(f'Percentage: {percentage:.1f}%')
+            if not self._mw.moveAbsSlider.isSliderDown():
+                self._set_slider_value(max(0, min(100, round(percentage))))
         else:
-            self._mw.moveAbsSlider.blockSignals(True)
-            self._mw.moveAbsSlider.setValue(0)
-            self._mw.moveAbsSlider.blockSignals(False)
-            self._mw.moveAbsValueSpinBox.blockSignals(True)
-            self._mw.moveAbsValueSpinBox.setValue(position)
-            self._mw.moveAbsValueSpinBox.blockSignals(False)
-            self._mw.moveAbsPercentageLabel.setText('n/a')
-            self._mw.moveAbsTargetLabel.setText('Target: not calibrated')
             self._mw.currentPercentageLabel.setText('Percentage: n/a')
+            if not self._mw.moveAbsSlider.isSliderDown():
+                self._set_slider_value(0)
+        if sync_target:
+            self._set_target_value(position)
+            if calibrated:
+                self._mw.moveAbsTargetLabel.setText(f'Target: {position:.2f}')
+                self._mw.moveAbsPercentageLabel.setText(f'{percentage:.1f}%')
+            else:
+                self._mw.moveAbsPercentageLabel.setText('n/a')
+                self._mw.moveAbsTargetLabel.setText('Target: not calibrated')
+
+    def _set_slider_value(self, value):
+        self._mw.moveAbsSlider.blockSignals(True)
+        self._mw.moveAbsSlider.setValue(value)
+        self._mw.moveAbsSlider.blockSignals(False)
+
+    def _set_target_value(self, value):
+        self._mw.moveAbsValueSpinBox.blockSignals(True)
+        self._mw.moveAbsValueSpinBox.setValue(value)
+        self._mw.moveAbsValueSpinBox.blockSignals(False)
 
     def _read_position(self):
         if self._step_motor_logic is None:
