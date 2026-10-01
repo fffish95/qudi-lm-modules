@@ -49,6 +49,7 @@
     <property name="title"><string>Device</string></property>
     <addaction name="actionNanopositioner"/>
     <addaction name="actionPicomotor"/>
+    <addaction name="actionNF8752"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title"><string>Tools</string></property>
@@ -66,6 +67,10 @@
   <action name="actionPicomotor">
    <property name="checkable"><bool>true</bool></property>
    <property name="text"><string>Picomotor</string></property>
+  </action>
+  <action name="actionNF8752">
+   <property name="checkable"><bool>true</bool></property>
+   <property name="text"><string>NewFocus 8752</string></property>
   </action>
   <action name="actionDiagnosticMode">
    <property name="checkable"><bool>true</bool></property>

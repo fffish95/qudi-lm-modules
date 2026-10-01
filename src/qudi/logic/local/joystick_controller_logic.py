@@ -6,9 +6,9 @@
 
 """
 Shared logic module that reads a PS5 (or similar) game controller with
-``pygame`` and drives either a :class:`NanopositionerController` or a
-:class:`PicomotorController` hardware module, whichever is currently
-selected as the "active device".
+``pygame`` and drives a :class:`NanopositionerController`, a :class:`PicomotorController`
+or an ``NF8752Logic`` module, whichever is currently selected as the
+"active device".
 
 This replaces the two old, standalone scripts
 ``hardware/local/ps5controller/nanopositioner_controller.py`` and
@@ -45,6 +45,24 @@ from qudi.util.mutex import Mutex
 # D-pad direction as (dx, dy): right/up are positive.
 _DPAD_BUTTONS = {'dpad_up': (0, 1), 'dpad_down': (0, -1),
                  'dpad_left': (-1, 0), 'dpad_right': (1, 0)}
+
+
+class NF8752Adapter:
+    """ Gives the NewFocus 8752 picomotor logic (NF8752Logic) the same
+    move_steps()/stop_all() interface as the two hardware modules. """
+
+    def __init__(self, nf8752, velocity, acceleration):
+        self._nf8752 = nf8752
+        self._velocity = velocity
+        self._acceleration = acceleration
+
+    def move_steps(self, axis, steps):
+        # Blocks until the move has finished (NF8752Logic.move_rel waits for it),
+        # because the 8752 cannot switch channels while a motor is still moving.
+        self._nf8752.move_rel(steps, axis, vel=self._velocity, acc=self._acceleration)
+
+    def stop_all(self):
+        self._nf8752.halt()
 
 
 class JoystickWorker(QtCore.QObject):
@@ -171,7 +189,10 @@ class JoystickWorker(QtCore.QObject):
 
     def _move(self, axis, steps):
         device = self._parentclass.active_hardware()
-        if device is None or steps == 0:
+        if steps == 0:
+            return
+        if device is None:
+            self.sig_message.emit(f'{self._parentclass.active_device} is not connected, move ignored.')
             return
         device.move_steps(axis, steps)
         self.sig_message.emit(f'{self._parentclass.active_device}: {axis} {steps:+d}')
@@ -193,9 +214,14 @@ class JoystickWorker(QtCore.QObject):
                 self._move('z', 1)
             elif name == 'r1':
                 self._move('z', -1)
-        elif p.active_device == 'picomotor':
+        elif p.active_device in ('picomotor', 'nf8752'):
             # Same directions as the original picomotor_controller.py script.
-            if name == 'square':
+            # The NF8752 additionally has a z axis on L1/R1 (evdev codes 310/311).
+            if name == 'l1' and p.active_device == 'nf8752':
+                self._move('z', p.step_size)
+            elif name == 'r1' and p.active_device == 'nf8752':
+                self._move('z', -p.step_size)
+            elif name == 'square':
                 self._move('x2', p.step_size)
             elif name == 'circle':
                 self._move('x2', -p.step_size)
@@ -216,7 +242,7 @@ class JoystickWorker(QtCore.QObject):
         if p.active_device == 'nanopositioner':
             self._move('x', -dx * p.step_size)
             self._move('y', dy * p.step_size)
-        elif p.active_device == 'picomotor':
+        elif p.active_device in ('picomotor', 'nf8752'):
             self._move('x1', -dx * p.step_size)
             self._move('y1', -dy * p.step_size)
 
@@ -236,9 +262,13 @@ class JoystickWorker(QtCore.QObject):
 
 
 class JoystickControllerLogic(LogicBase):
-    """ Reads a PS5-style game controller and drives either a nanopositioner
-    or a picomotor hardware module, whichever is selected as "active
-    device" from the GUI.
+    """ Reads a PS5-style game controller and drives a nanopositioner, a
+    picomotor or a NewFocus 8752 picomotor driver, whichever is selected as
+    "active device" from the GUI.
+
+    All device connectors are optional (same as in SPSCustomScanLogic): to
+    leave a device out, comment out its hardware/logic module AND its line in
+    the "connect:" section. Only the connected devices are offered in the GUI.
 
     Example config for copy-paste:
 
@@ -247,9 +277,12 @@ class JoystickControllerLogic(LogicBase):
         connect:
             nanopositioner: 'nanopositioner'
             picomotor: 'picomotor'
+            #nf8752: 'nf8752'
         options:
             step_sizes: [1, 10, 40, 200]
             poll_interval: 0.15
+            nf8752_velocity: 100       # steps/s, 1..2000
+            nf8752_acceleration: 500   # steps/s^2, 1..32000
             trigger_blind: 20
             emergency_max_delay: 1.0
             dpad_hat_index: 0          # only used if the D-pad shows up as a hat
@@ -273,12 +306,17 @@ class JoystickControllerLogic(LogicBase):
                 r2: 5
     """
 
-    nanopositioner = Connector(name='nanopositioner', interface='NanopositionerController',
-                                optional=True)
-    picomotor = Connector(name='picomotor', interface='PicomotorController', optional=True)
+    # connectors, all optional
+    nanopositioner = Connector(interface='NanopositionerController', optional=True)
+    picomotor = Connector(interface='PicomotorController', optional=True)
+    nf8752 = Connector(interface='NF8752Logic', optional=True)
 
+    _DEVICES = ('nanopositioner', 'picomotor', 'nf8752')
     _step_sizes = ConfigOption(name='step_sizes', default=[1, 10, 40, 200], missing='nothing')
     _poll_interval = ConfigOption(name='poll_interval', default=0.15, missing='nothing')
+    _nf8752_velocity = ConfigOption(name='nf8752_velocity', default=100, missing='nothing')
+    _nf8752_acceleration = ConfigOption(name='nf8752_acceleration', default=500,
+                                        missing='nothing')
     _trigger_blind = ConfigOption(name='trigger_blind', default=20, missing='nothing')
     _emergency_max_delay = ConfigOption(name='emergency_max_delay', default=1.0, missing='nothing')
     _dpad_hat_index = ConfigOption(name='dpad_hat_index', default=0, missing='nothing')
@@ -305,12 +343,25 @@ class JoystickControllerLogic(LogicBase):
         self._thread_lock = Mutex()
         self._step_index = 0
         self.active_device = 'nanopositioner'
+        self._devices = dict()  # device type -> driver object, connected devices only
         self.diagnostic_mode = False
         self._polling = False
 
     def on_activate(self):
         self._poll_interval_ms = max(1, int(round(self._poll_interval * 1000)))
         self._emergency_max_delay_ms = max(1, int(round(self._emergency_max_delay * 1000)))
+        nf8752 = self.nf8752()
+        devices = {'nanopositioner': self.nanopositioner(),
+                   'picomotor': self.picomotor(),
+                   'nf8752': None if nf8752 is None else NF8752Adapter(
+                       nf8752, self._nf8752_velocity, self._nf8752_acceleration)}
+        self._devices = {name: dev for name, dev in devices.items() if dev is not None}
+        if not self._devices:
+            self.log.warning('No device connected to the joystick controller logic. '
+                             'Uncomment at least one entry in its "connect:" section.')
+        available = self.get_available_devices()
+        if available and self.active_device not in available:
+            self.active_device = available[0]
         self.worker_thread = QtCore.QThread()
         self._worker = JoystickWorker(self)
         self._worker.moveToThread(self.worker_thread)
@@ -339,28 +390,22 @@ class JoystickControllerLogic(LogicBase):
         self.sigStepSizeChanged.emit(self.step_size)
 
     def active_hardware(self):
-        """ Return the currently active hardware module instance, or None if
-        it is not connected in this config. """
-        if self.active_device == 'nanopositioner':
-            return self.nanopositioner()
-        elif self.active_device == 'picomotor':
-            return self.picomotor()
-        return None
+        """ Return the driver object of the active device, or None if that
+        device is not connected in this config. """
+        return self._devices.get(self.active_device)
 
     def get_available_devices(self):
-        """ Return the list of device names that actually have a hardware
-        module connected in this config. """
-        devices = []
-        if self.nanopositioner.is_connected:
-            devices.append('nanopositioner')
-        if self.picomotor.is_connected:
-            devices.append('picomotor')
-        return devices
+        """ Return the device types that are connected in this config. """
+        return [device for device in self._DEVICES if device in self._devices]
 
     def set_active_device(self, device):
-        """ Switch which hardware module the joystick drives. """
-        if device not in ('nanopositioner', 'picomotor'):
+        """ Switch which device the joystick drives. """
+        if device not in self._DEVICES:
             self.log.error(f'Unknown device "{device}".')
+            return
+        if device not in self._devices:
+            self.sigMessage.emit(f'{device} is not connected in the config.')
+            self.sigActiveDeviceChanged.emit(self.active_device)
             return
         self.active_device = device
         self.sigMessage.emit(f'Active device: {device}')
@@ -369,6 +414,10 @@ class JoystickControllerLogic(LogicBase):
     def start_polling(self):
         with self._thread_lock:
             if self._polling:
+                return
+            if self.active_hardware() is None:
+                self.sigMessage.emit('No device connected, polling not started.')
+                self.sigPollingChanged.emit(False)
                 return
             self._polling = True
         self.sig_handle_timer.emit(True)
@@ -395,8 +444,7 @@ class JoystickControllerLogic(LogicBase):
         """ Immediately stop every connected hardware module. Safe to call
         directly (not queued) from the GUI thread at any time. """
         with self._thread_lock:
-            for connector in (self.nanopositioner, self.picomotor):
-                device = connector()
+            for device in self._devices.values():
                 if device is not None:
                     try:
                         device.stop_all()

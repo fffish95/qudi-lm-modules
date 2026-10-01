@@ -5,8 +5,8 @@
 # General Public License under which Qudi is distributed).
 
 """
-GUI for JoystickControllerLogic: switch which hardware module (nanopositioner
-or picomotor) the joystick drives from the menu bar, start/stop polling,
+GUI for JoystickControllerLogic: switch which device (nanopositioner,
+picomotor or NewFocus 8752) the joystick drives from the menu bar, start/stop polling,
 choose a step size, toggle diagnostic mode, and watch a terminal log of
 everything the controller is doing. An emergency-stop button is always
 available and takes effect immediately.
@@ -62,14 +62,18 @@ class JoystickControllerGui(GuiBase):
         self._mw.stepSizeComboBox.setCurrentText(str(self._logic.step_size))
         self._mw.stepSizeComboBox.setEnabled(False)  # step size is cycled by the "share" button
 
+        self._device_actions = {'nanopositioner': self._mw.actionNanopositioner,
+                                'picomotor': self._mw.actionPicomotor,
+                                'nf8752': self._mw.actionNF8752}
         available = self._logic.get_available_devices()
-        self._mw.actionNanopositioner.setEnabled('nanopositioner' in available)
-        self._mw.actionPicomotor.setEnabled('picomotor' in available)
-
         device_group = QtWidgets.QActionGroup(self._mw)
         device_group.setExclusive(True)
-        device_group.addAction(self._mw.actionNanopositioner)
-        device_group.addAction(self._mw.actionPicomotor)
+        for device, action in self._device_actions.items():
+            action.setEnabled(device in available)
+            device_group.addAction(action)
+            action.triggered.connect(
+                lambda checked, d=device: checked and self.sigSetActiveDeviceRequested.emit(d))
+        self._active_device_changed(self._logic.active_device)
 
         self.sigSetActiveDeviceRequested.connect(self._logic.set_active_device,
                                                   QtCore.Qt.QueuedConnection)
@@ -86,10 +90,6 @@ class JoystickControllerGui(GuiBase):
                                                     QtCore.Qt.QueuedConnection)
         self._logic.sigPollingChanged.connect(self._polling_changed, QtCore.Qt.QueuedConnection)
 
-        self._mw.actionNanopositioner.triggered.connect(
-            lambda checked: checked and self.sigSetActiveDeviceRequested.emit('nanopositioner'))
-        self._mw.actionPicomotor.triggered.connect(
-            lambda checked: checked and self.sigSetActiveDeviceRequested.emit('picomotor'))
         self._mw.actionDiagnosticMode.toggled.connect(self.sigSetDiagnosticModeRequested.emit)
         self._mw.startPollingButton.toggled.connect(self._start_polling_toggled)
         self._mw.clearTerminalButton.clicked.connect(self._mw.terminalTextEdit.clear)
@@ -126,6 +126,14 @@ class JoystickControllerGui(GuiBase):
 
     def _active_device_changed(self, device):
         self._mw.activeDeviceValueLabel.setText(device)
+        action = self._device_actions.get(device)
+        if action is not None:
+            action.setChecked(True)
 
     def _polling_changed(self, polling):
         self._mw.pollingValueLabel.setText('running' if polling else 'stopped')
+        # Keep the button in sync, e.g. when starting failed because the device could not load.
+        self._mw.startPollingButton.blockSignals(True)
+        self._mw.startPollingButton.setChecked(polling)
+        self._mw.startPollingButton.setText('Stop polling' if polling else 'Start polling')
+        self._mw.startPollingButton.blockSignals(False)
