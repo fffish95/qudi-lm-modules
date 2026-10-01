@@ -25,14 +25,26 @@ hardware, so the real indices can be read off and copied into the config
 file.
 """
 
-import pygame
+import os
 import time
+
+# SDL discards joystick input while none of *its* windows has focus. pygame
+# never owns a window inside qudi, so without this hint every button press is
+# silently dropped. Must be set before pygame/SDL is initialised.
+os.environ.setdefault('SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS', '1')
+
+import pygame
 
 from PySide2 import QtCore
 from qudi.core.connector import Connector
 from qudi.core.configoption import ConfigOption
 from qudi.core.module import LogicBase
 from qudi.util.mutex import Mutex
+
+
+# D-pad direction as (dx, dy): right/up are positive.
+_DPAD_BUTTONS = {'dpad_up': (0, 1), 'dpad_down': (0, -1),
+                 'dpad_left': (-1, 0), 'dpad_right': (1, 0)}
 
 
 class JoystickWorker(QtCore.QObject):
@@ -50,6 +62,7 @@ class JoystickWorker(QtCore.QObject):
         self._timer = None
         self._joystick = None
         self._emergency_tap_time = 0
+        self._last_scan = 0
 
     def handle_timer(self, state_change):
         """ Start or stop the polling timer.
@@ -61,9 +74,12 @@ class JoystickWorker(QtCore.QObject):
                 pygame.init()
             if not pygame.joystick.get_init():
                 pygame.joystick.init()
+            self._joystick = None
             self._timer = QtCore.QTimer()
             self._timer.timeout.connect(self._poll)
             self._timer.start(self._parentclass._poll_interval_ms)
+            if not self._ensure_joystick():
+                self.sig_message.emit('No controller found yet, waiting for one to be connected...')
         else:
             if self._timer is not None:
                 self._timer.stop()
@@ -72,47 +88,63 @@ class JoystickWorker(QtCore.QObject):
     def _ensure_joystick(self):
         if self._joystick is not None:
             return True
+        # Re-scanning re-initialises the joystick subsystem, so don't do it every tick.
+        now = time.time()
+        if now - self._last_scan < 1.0:
+            return False
+        self._last_scan = now
         pygame.joystick.quit()
         pygame.joystick.init()
         if pygame.joystick.get_count() == 0:
             return False
         self._joystick = pygame.joystick.Joystick(0)
         self._joystick.init()
-        self.sig_message.emit(f'Connected to controller: {self._joystick.get_name()}')
+        self.sig_message.emit(
+            f'Connected to controller: {self._joystick.get_name()} '
+            f'({self._joystick.get_numbuttons()} buttons, {self._joystick.get_numaxes()} axes, '
+            f'{self._joystick.get_numhats()} hats)')
         return True
 
     def _poll(self):
-        if not self._ensure_joystick():
-            return
         pygame.event.pump()
         events = pygame.event.get()
-        if not events:
-            return
+        if self._joystick is None:
+            if not self._ensure_joystick():
+                return
+            events = []
 
         p = self._parentclass
-        if p.diagnostic_mode:
-            for event in events:
-                self.sig_message.emit(f'[diagnostic] {event}')
-            return
-
-        # Throttle down to at most one button event and one axis/hat event
-        # per poll tick, mirroring the original scripts' behaviour of only
-        # ever acting on the last one or two queued events.
-        last_button = None
-        last_axis_or_hat = None
+        last_hat = None
+        last_axis = dict()
         for event in events:
+            if event.type == pygame.JOYDEVICEREMOVED:
+                self.sig_message.emit('Controller disconnected.')
+                self._joystick = None
+                self._last_scan = 0
+                return
+            if p.diagnostic_mode:
+                if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYHATMOTION):
+                    self.sig_message.emit(f'[diagnostic] {pygame.event.event_name(event.type)} '
+                                          f'{event.dict}')
+                elif event.type == pygame.JOYAXISMOTION and abs(event.value) > 0.5:
+                    self.sig_message.emit(f'[diagnostic] axis {event.axis} = {event.value:+.2f}')
+                continue
             if event.type == pygame.JOYBUTTONDOWN:
                 if self._check_emergency(event):
                     self.sig_message.emit('EMERGENCY STOP (double-tap detected)')
                     p.emergency_stop()
-                last_button = event
-            elif event.type in (pygame.JOYHATMOTION, pygame.JOYAXISMOTION):
-                last_axis_or_hat = event
+                    continue
+                self._dispatch_button(event.button)
+            elif event.type == pygame.JOYHATMOTION and event.hat == p._dpad_hat_index:
+                last_hat = event.value
+            elif event.type == pygame.JOYAXISMOTION:
+                # Analog axes flood the queue; only act on the newest value per axis.
+                last_axis[event.axis] = event.value
 
-        if last_button is not None:
-            self._dispatch_button(last_button)
-        if last_axis_or_hat is not None:
-            self._dispatch_axis_or_hat(last_axis_or_hat)
+        if last_hat is not None:
+            self._move_dpad(*last_hat)
+        for axis, value in last_axis.items():
+            self._dispatch_axis(axis, value)
 
     def _check_emergency(self, event):
         p = self._parentclass
@@ -123,79 +155,70 @@ class JoystickWorker(QtCore.QObject):
         self._emergency_tap_time = now
         return now < previous_tap + p._emergency_max_delay_ms
 
-    def _dispatch_button(self, event):
+    def _move(self, axis, steps):
+        device = self._parentclass.active_hardware()
+        if device is None or steps == 0:
+            return
+        device.move_steps(axis, steps)
+        self.sig_message.emit(f'{self._parentclass.active_device}: {axis} {steps:+d}')
+
+    def _dispatch_button(self, button):
         p = self._parentclass
-        button_map = p._button_map
-        if event.button == button_map.get('share', -2):
+        names = [name for name, index in p._button_map.items() if index == button]
+        if not names:
+            self.sig_message.emit(f'button {button} pressed (not mapped)')
+            return
+        name = names[0]
+        if name == 'share':
             p._advance_step_size()
             self.sig_message.emit(f'step size = {p.step_size}')
-            return
-
-        device = p.active_hardware()
-        if device is None:
-            return
-
-        if p.active_device == 'nanopositioner':
-            if event.button == button_map.get('l1', -2):
-                device.move_steps('z', 1)
-                self.sig_message.emit('nanopositioner: z +1')
-            elif event.button == button_map.get('r1', -2):
-                device.move_steps('z', -1)
-                self.sig_message.emit('nanopositioner: z -1')
+        elif name in _DPAD_BUTTONS:
+            self._move_dpad(*_DPAD_BUTTONS[name])
+        elif p.active_device == 'nanopositioner':
+            if name == 'l1':
+                self._move('z', 1)
+            elif name == 'r1':
+                self._move('z', -1)
         elif p.active_device == 'picomotor':
-            if event.button == button_map.get('square', -2):
-                device.move_steps('x2', 1)
-                self.sig_message.emit('picomotor: x2 +1')
-            elif event.button == button_map.get('circle', -2):
-                device.move_steps('x2', -1)
-                self.sig_message.emit('picomotor: x2 -1')
-            elif event.button == button_map.get('triangle', -2):
-                device.move_steps('y2', 1)
-                self.sig_message.emit('picomotor: y2 +1')
-            elif event.button == button_map.get('cross', -2):
-                device.move_steps('y2', -1)
-                self.sig_message.emit('picomotor: y2 -1')
+            # Same directions as the original picomotor_controller.py script.
+            if name == 'square':
+                self._move('x2', p.step_size)
+            elif name == 'circle':
+                self._move('x2', -p.step_size)
+            elif name == 'triangle':
+                self._move('y2', -p.step_size)
+            elif name == 'cross':
+                self._move('y2', p.step_size)
 
-    def _dispatch_axis_or_hat(self, event):
+    def _move_dpad(self, dx, dy):
+        """ D-pad move with dx/dy in {-1, 0, 1}, right/up positive. Signs reproduce
+        the original scripts: left moves x "up" on both devices, up moves the
+        nanopositioner y UP but the picomotor y1 by a negative relative step. """
         p = self._parentclass
-        device = p.active_hardware()
+        if p._dpad_invert_x:
+            dx = -dx
+        if p._dpad_invert_y:
+            dy = -dy
+        if p.active_device == 'nanopositioner':
+            self._move('x', -dx * p.step_size)
+            self._move('y', dy * p.step_size)
+        elif p.active_device == 'picomotor':
+            self._move('x1', -dx * p.step_size)
+            self._move('y1', -dy * p.step_size)
 
-        if event.type == pygame.JOYHATMOTION and event.hat == p._dpad_hat_index:
-            x, y = event.value
-            if p._dpad_invert_x:
-                x = -x
-            if p._dpad_invert_y:
-                y = -y
-            if device is None:
-                return
-            if p.active_device == 'nanopositioner':
-                if x:
-                    device.move_steps('x', x * p.step_size)
-                    self.sig_message.emit(f'nanopositioner: x {"+" if x > 0 else "-"}{p.step_size}')
-                if y:
-                    device.move_steps('y', y * p.step_size)
-                    self.sig_message.emit(f'nanopositioner: y {"+" if y > 0 else "-"}{p.step_size}')
-            elif p.active_device == 'picomotor':
-                if x:
-                    device.move_steps('x1', x * p.step_size)
-                    self.sig_message.emit(f'picomotor: x1 {"+" if x > 0 else "-"}{p.step_size}')
-                if y:
-                    device.move_steps('y1', y * p.step_size)
-                    self.sig_message.emit(f'picomotor: y1 {"+" if y > 0 else "-"}{p.step_size}')
+    def _dispatch_axis(self, axis, value):
+        p = self._parentclass
+        if p.active_device != 'nanopositioner':
             return
-
-        if event.type == pygame.JOYAXISMOTION and p.active_device == 'nanopositioner':
-            trigger_axes = p._trigger_axes
-            if event.axis == trigger_axes.get('l2', -1):
-                magnitude = int(round((event.value + 1) * 127.5))
-                if magnitude > p._trigger_blind:
-                    device.move_steps('z', magnitude)
-                    self.sig_message.emit(f'nanopositioner: z +{magnitude}')
-            elif event.axis == trigger_axes.get('r2', -1):
-                magnitude = int(round((event.value + 1) * 127.5))
-                if magnitude > p._trigger_blind:
-                    device.move_steps('z', -magnitude)
-                    self.sig_message.emit(f'nanopositioner: z -{magnitude}')
+        # Triggers rest at -1.0 and read +1.0 when fully pressed; rescale to 0..255
+        # like the original evdev script.
+        magnitude = int(round((value + 1) * 127.5))
+        if magnitude <= p._trigger_blind:
+            return
+        if axis == p._trigger_axes.get('l2', -1):
+            self._move('z', magnitude)
+        elif axis == p._trigger_axes.get('r2', -1):
+            self._move('z', -magnitude)
 
 
 class JoystickControllerLogic(LogicBase):
@@ -215,18 +238,22 @@ class JoystickControllerLogic(LogicBase):
             poll_interval: 0.15
             trigger_blind: 20
             emergency_max_delay: 1.0
-            dpad_hat_index: 0
+            dpad_hat_index: 0          # only used if the D-pad shows up as a hat
             dpad_invert_x: False
-            dpad_invert_y: True
-            button_map:
-                square: 2
-                circle: 1
-                triangle: 3
+            dpad_invert_y: False
+            button_map:                # SDL2 DualSense (PS5) layout
                 cross: 0
+                circle: 1
+                square: 2
+                triangle: 3
+                share: 4
+                playstation: 5
                 l1: 9
                 r1: 10
-                share: 8
-                playstation: 12
+                dpad_up: 11
+                dpad_down: 12
+                dpad_left: 13
+                dpad_right: 14
             trigger_axes:
                 l2: 4
                 r2: 5
@@ -242,10 +269,13 @@ class JoystickControllerLogic(LogicBase):
     _emergency_max_delay = ConfigOption(name='emergency_max_delay', default=1.0, missing='nothing')
     _dpad_hat_index = ConfigOption(name='dpad_hat_index', default=0, missing='nothing')
     _dpad_invert_x = ConfigOption(name='dpad_invert_x', default=False, missing='nothing')
-    _dpad_invert_y = ConfigOption(name='dpad_invert_y', default=True, missing='nothing')
+    _dpad_invert_y = ConfigOption(name='dpad_invert_y', default=False, missing='nothing')
+    # Defaults follow SDL2's DualSense (PS5) layout, where the D-pad is reported as buttons.
     _button_map = ConfigOption(name='button_map',
-                                default={'square': 2, 'circle': 1, 'triangle': 3, 'cross': 0,
-                                         'l1': 9, 'r1': 10, 'share': 8, 'playstation': 12},
+                                default={'cross': 0, 'circle': 1, 'square': 2, 'triangle': 3,
+                                         'share': 4, 'playstation': 5, 'l1': 9, 'r1': 10,
+                                         'dpad_up': 11, 'dpad_down': 12, 'dpad_left': 13,
+                                         'dpad_right': 14},
                                 missing='nothing')
     _trigger_axes = ConfigOption(name='trigger_axes', default={'l2': 4, 'r2': 5},
                                   missing='nothing')
