@@ -114,3 +114,6 @@ dmypy.json
 
 # vscode settings
 .vscode/
+# QBER module (local only)
+src/qudi/gui/local/qber/qbergui.py
+src/qudi/logic/local/qber_logic.py
