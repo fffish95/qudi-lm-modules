@@ -62,10 +62,14 @@ class JoystickWorker(QtCore.QObject):
         self._timer = None
         self._joystick = None
         self._emergency_tap_time = 0
-        self._last_scan = 0
 
     def handle_timer(self, state_change):
         """ Start or stop the polling timer.
+
+        The joystick subsystem is initialised only once and the controller is
+        kept open across stop/start: re-initialising SDL's joystick subsystem
+        makes it re-discover the controller asynchronously, so it would not be
+        found right after a restart.
 
         @param bool state_change: True starts polling, False stops it.
         """
@@ -74,27 +78,26 @@ class JoystickWorker(QtCore.QObject):
                 pygame.init()
             if not pygame.joystick.get_init():
                 pygame.joystick.init()
-            self._joystick = None
+            # Handle (dis)connects that happened while stopped, but drop any
+            # button/axis input queued meanwhile so stale presses never move hardware.
+            self._handle_device_events(pygame.event.get())
+            if self._open_joystick():
+                self.sig_message.emit(f'Using controller: {self._joystick.get_name()}')
+            else:
+                self.sig_message.emit('No controller found yet, waiting for one to be connected...')
             self._timer = QtCore.QTimer()
             self._timer.timeout.connect(self._poll)
             self._timer.start(self._parentclass._poll_interval_ms)
-            if not self._ensure_joystick():
-                self.sig_message.emit('No controller found yet, waiting for one to be connected...')
         else:
             if self._timer is not None:
                 self._timer.stop()
                 self._timer = None
 
-    def _ensure_joystick(self):
+    def _open_joystick(self):
+        """ Open the first available controller if none is open. Never
+        re-initialises the joystick subsystem. """
         if self._joystick is not None:
             return True
-        # Re-scanning re-initialises the joystick subsystem, so don't do it every tick.
-        now = time.time()
-        if now - self._last_scan < 1.0:
-            return False
-        self._last_scan = now
-        pygame.joystick.quit()
-        pygame.joystick.init()
         if pygame.joystick.get_count() == 0:
             return False
         self._joystick = pygame.joystick.Joystick(0)
@@ -105,23 +108,34 @@ class JoystickWorker(QtCore.QObject):
             f'{self._joystick.get_numhats()} hats)')
         return True
 
+    def _handle_device_events(self, events):
+        """ Track controller (dis)connects; returns the remaining input events. """
+        remaining = []
+        for event in events:
+            if event.type == pygame.JOYDEVICEREMOVED:
+                if (self._joystick is not None
+                        and event.instance_id == self._joystick.get_instance_id()):
+                    self._joystick = None
+                    self.sig_message.emit('Controller disconnected.')
+            elif event.type == pygame.JOYDEVICEADDED:
+                self._open_joystick()
+            else:
+                remaining.append(event)
+        return remaining
+
     def _poll(self):
-        pygame.event.pump()
-        events = pygame.event.get()
+        events = self._handle_device_events(pygame.event.get())
         if self._joystick is None:
-            if not self._ensure_joystick():
-                return
-            events = []
+            self._open_joystick()
+            return
+        # Ignore input from any other controller that may be plugged in.
+        own_id = self._joystick.get_instance_id()
+        events = [e for e in events if getattr(e, 'instance_id', own_id) == own_id]
 
         p = self._parentclass
         last_hat = None
         last_axis = dict()
         for event in events:
-            if event.type == pygame.JOYDEVICEREMOVED:
-                self.sig_message.emit('Controller disconnected.')
-                self._joystick = None
-                self._last_scan = 0
-                return
             if p.diagnostic_mode:
                 if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYHATMOTION):
                     self.sig_message.emit(f'[diagnostic] {pygame.event.event_name(event.type)} '
