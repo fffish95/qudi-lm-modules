@@ -52,6 +52,9 @@ class NITT(Base):
                 # - [0, 8e-6]
                 # - [0, 8e-6]
                 - [0, 9144]
+            # Listed axes map increasing positions to decreasing voltages.
+            # Keep position and voltage ranges in ascending order.
+            scanner_inverted_axes: ['x', 'y']
             scanner_clock_channel:
                 - 'ctr0'
             pixel_clock_channel:
@@ -90,6 +93,7 @@ class NITT(Base):
     _scanner_ao_channels = ConfigOption('scanner_ao_channels', missing='error')
     _scanner_voltage_ranges = ConfigOption('scanner_voltage_ranges', missing='error')
     _scanner_position_ranges = ConfigOption('scanner_position_ranges', missing='error')
+    _scanner_inverted_axes = ConfigOption('scanner_inverted_axes', [], missing='nothing')
     _scanner_clock_channel = ConfigOption('scanner_clock_channel', missing='error')
     _trigger_clock_channel = ConfigOption('trigger_clock_channel', missing='nothing') 
     _pixel_clock_channel = ConfigOption('pixel_clock_channel', None, missing='nothing')
@@ -106,6 +110,13 @@ class NITT(Base):
 
 
     def on_activate(self):
+        axes = ['x', 'y', 'z', 'a'][:len(self._scanner_ao_channels)]
+        if (not isinstance(self._scanner_inverted_axes, (list, tuple))
+                or any(axis not in axes for axis in self._scanner_inverted_axes)):
+            raise ValueError(
+                'scanner_inverted_axes must be a list of configured scanner axes '
+                'from {0}.'.format(axes))
+
         self._nicard = self.nicard()
         self._tt = self.timetagger()
         self.threadlock = Mutex()
@@ -324,6 +335,9 @@ class NITT(Base):
     def _scanner_position_to_volt(self, positions=None):
         """ Converts a set of position pixels to acutal voltages.
 
+        Axes in scanner_inverted_axes map the lower position limit to the upper
+        voltage limit, without changing the position coordinates or scan order.
+
         @param float[][n] positions: array of n-part tuples defining the pixels
 
         @return float[][n]: array of n-part tuples of corresponing voltages
@@ -341,11 +355,14 @@ class NITT(Base):
 
         vlist = []
         for i, position in enumerate(positions):
+            voltage_start, voltage_end = self._scanner_voltage_ranges[i]
+            if ['x', 'y', 'z', 'a'][i] in self._scanner_inverted_axes:
+                voltage_start, voltage_end = voltage_end, voltage_start
             vlist.append(
-                (self._scanner_voltage_ranges[i][1] - self._scanner_voltage_ranges[i][0])
+                (voltage_end - voltage_start)
                 / (self._scanner_position_ranges[i][1] - self._scanner_position_ranges[i][0])
                 * (position - self._scanner_position_ranges[i][0])
-                + self._scanner_voltage_ranges[i][0]
+                + voltage_start
             )
         volts = np.vstack(vlist)
 
@@ -635,5 +652,4 @@ class NITT(Base):
 
         self._scanner_clock_task = None
         return self._nicard.close_co_task(taskname = 'nitt_trigger_clock')
-
 

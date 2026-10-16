@@ -3,7 +3,7 @@
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
-   <rect><x>0</x><y>0</y><width>500</width><height>260</height></rect>
+   <rect><x>0</x><y>0</y><width>600</width><height>560</height></rect>
   </property>
   <property name="windowTitle">
    <string>Auto Alignment</string>
@@ -36,6 +36,24 @@
     <item>
      <widget class="QLabel" name="statusLabel">
       <property name="text"><string>Status: idle</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="outputGroupBox">
+      <property name="title"><string>Output</string></property>
+      <layout class="QVBoxLayout" name="outputLayout">
+       <item>
+        <widget class="QPlainTextEdit" name="outputTextEdit">
+         <property name="readOnly"><bool>true</bool></property>
+         <property name="minimumHeight"><number>150</number></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="clearOutputButton">
+         <property name="text"><string>Clear output</string></property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
     <item>

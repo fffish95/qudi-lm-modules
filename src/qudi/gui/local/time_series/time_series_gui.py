@@ -27,12 +27,11 @@ If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import pyqtgraph as pg
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtCore, QtGui, QtWidgets
 
 from qudi.util.uic import loadUi
 from qudi.core.connector import Connector
 from qudi.core.configoption import ConfigOption
-from qudi.util.colordefs import QudiPalettePale as palette
 from qudi.core.module import GuiBase
 from qudi.interface.local.data_instream_interface import StreamChannelType
 
@@ -200,27 +199,14 @@ class TimeSeriesGui(GuiBase):
 
         self.curves = dict()
         self.averaged_curves = dict()
-        for i, ch in enumerate(all_channels):
-            # Determine pen style
+        self._channel_colors = self._make_channel_colors(all_channels)
+        for ch in all_channels:
+            # Every channel gets its own color. The moving average uses a lighter
+            # shade of the same color so both curves of a channel belong together.
             # FIXME: Choosing a pen width != 1px (not cosmetic) causes massive performance drops
-            # For mixed signals each signal type (digital or analog) has the same color
-            # If just a single signal type is present, alternate the colors accordingly
-            if digital_channels and analog_channels:
-                if ch in digital_channels:
-                    pen1 = pg.mkPen(palette.c2, cosmetic=True)
-                    pen2 = pg.mkPen(palette.c1, cosmetic=True)
-                else:
-                    pen1 = pg.mkPen(palette.c3, cosmetic=True)
-                    pen2 = pg.mkPen(palette.c4, cosmetic=True)
-            elif i % 3 == 0:
-                pen1 = pg.mkPen(palette.c2, cosmetic=True)
-                pen2 = pg.mkPen(palette.c1, cosmetic=True)
-            elif i % 3 == 1:
-                pen1 = pg.mkPen(palette.c3, cosmetic=True)
-                pen2 = pg.mkPen(palette.c4, cosmetic=True)
-            else:
-                pen1 = pg.mkPen(palette.c5, cosmetic=True)
-                pen2 = pg.mkPen(palette.c6, cosmetic=True)
+            color = self._channel_colors[ch]
+            pen1 = pg.mkPen(color.lighter(160), cosmetic=True)
+            pen2 = pg.mkPen(color, cosmetic=True)
             self.averaged_curves[ch] = pg.PlotCurveItem(pen=pen1,
                                                         clipToView=True,
                                                         downsampleMethod='subsample',
@@ -412,9 +398,10 @@ class TimeSeriesGui(GuiBase):
         for i, chnl in enumerate(all_channels, 2):
             widget_dict = dict()
             widget_dict['label'] = QtWidgets.QLabel(chnl)
+            widget_dict['name'] = self._channel_name_widget(chnl, widget_dict['label'])
             widget_dict['checkbox1'] = QtWidgets.QCheckBox()
             widget_dict['checkbox2'] = QtWidgets.QCheckBox()
-            layout.addWidget(widget_dict['label'], i, 0)
+            layout.addWidget(widget_dict['name'], i, 0)
             layout.addWidget(widget_dict['checkbox1'], i, 1)
             layout.addWidget(widget_dict['checkbox2'], i, 2)
             widget_dict['checkbox1'].setChecked(False)
@@ -422,6 +409,37 @@ class TimeSeriesGui(GuiBase):
             self._vsd_widgets[chnl] = widget_dict
         layout.setRowStretch(i + 1, 1)
         self._vsd.trace_selection_scrollArea.setLayout(layout)
+
+    # Distinct, bright colors that are easy to tell apart on the dark plot background
+    _CHANNEL_COLORS = ('#ff4040', '#40a0ff', '#40e040', '#ffa500', '#ff40ff', '#00e0e0',
+                       '#ffff40', '#a070ff', '#ff8080', '#80ffb0', '#c08040', '#ffffff')
+
+    @classmethod
+    def _make_channel_colors(cls, channels):
+        """ Return {channel: QColor}. Beyond the fixed color list, evenly spaced
+        hues are used so that every channel still has its own color. """
+        colors = dict()
+        n = len(channels)
+        for i, ch in enumerate(channels):
+            if n <= len(cls._CHANNEL_COLORS):
+                colors[ch] = QtGui.QColor(cls._CHANNEL_COLORS[i])
+            else:
+                colors[ch] = pg.intColor(i, hues=n, minValue=200, maxValue=255)
+        return colors
+
+    def _channel_name_widget(self, channel, label):
+        """ Channel name label with a color swatch showing the channel's curve color. """
+        widget = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        color = self._channel_colors.get(channel)
+        if color is not None:
+            swatch = QtWidgets.QLabel()
+            swatch.setFixedSize(14, 14)
+            swatch.setStyleSheet(f'background-color: {color.name()}; border: 1px solid black;')
+            layout.addWidget(swatch)
+        layout.addWidget(label, 1)
+        return widget
 
     def _init_channel_settings_dialog(self):
         all_channels = tuple(ch.name for ch in self._time_series_logic.available_channels)
@@ -439,9 +457,10 @@ class TimeSeriesGui(GuiBase):
         for i, chnl in enumerate(all_channels, 2):
             widget_dict = dict()
             widget_dict['label'] = QtWidgets.QLabel(chnl)
+            widget_dict['name'] = self._channel_name_widget(chnl, widget_dict['label'])
             widget_dict['checkbox1'] = QtWidgets.QCheckBox()
             widget_dict['checkbox2'] = QtWidgets.QCheckBox()
-            layout.addWidget(widget_dict['label'], i, 0)
+            layout.addWidget(widget_dict['name'], i, 0)
             layout.addWidget(widget_dict['checkbox1'], i, 1)
             layout.addWidget(widget_dict['checkbox2'], i, 2)
             widget_dict['checkbox1'].setChecked(True)
@@ -525,7 +544,7 @@ class TimeSeriesGui(GuiBase):
             # Hide corresponding view selection
             visible = chnl in channels
             av_visible = chnl in av_channels
-            widgets['label'].setVisible(visible)
+            widgets['name'].setVisible(visible)
             widgets['checkbox1'].setVisible(visible)
             widgets['checkbox2'].setVisible(visible)
             widgets['checkbox2'].setEnabled(av_visible)

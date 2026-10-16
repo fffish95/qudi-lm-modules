@@ -28,7 +28,7 @@ import os
 
 from qudi.core.connector import Connector
 from qudi.core.module import GuiBase
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtCore, QtGui, QtWidgets
 from qudi.util import uic
 
 
@@ -76,6 +76,11 @@ class AutoAlignmentGui(GuiBase):
 
         self._mw.rangeSizeComboBox.addItems(['small', 'medium', 'large'])
 
+        self._mw.outputTextEdit.setFont(QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont))
+        self._mw.outputTextEdit.setMaximumBlockCount(5000)  # keep memory bounded on long runs
+        self._mw.clearOutputButton.clicked.connect(self._mw.outputTextEdit.clear)
+        self._logic.sigMessage.connect(self._append_output, QtCore.Qt.QueuedConnection)
+
         self._populate_read_sources()
         self._populate_channels()
 
@@ -120,7 +125,13 @@ class AutoAlignmentGui(GuiBase):
         self._mw.raise_()
 
     def on_deactivate(self):
+        self._logic.sigMessage.disconnect(self._append_output)
         return 0
+
+    def _append_output(self, text):
+        self._mw.outputTextEdit.appendPlainText(text)
+        scrollbar = self._mw.outputTextEdit.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
 
     def _populate_read_sources(self):
         sources = self._logic.get_available_read_sources()
