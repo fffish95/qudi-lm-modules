@@ -6,6 +6,7 @@
 from TimeTagger import createTimeTagger, freeTimeTagger, Correlation, Histogram, Counter, CountBetweenMarkers, FileWriter, Countrate, Combiner, TimeDifferences
 from qudi.core.configoption import ConfigOption
 from qudi.core.module import Base
+from qudi.core.statusvariable import StatusVar
 
 
 class TT(Base):
@@ -22,6 +23,8 @@ class TT(Base):
                 ch1:
                     delay: 0
                     # triggerLevel: 2 # range 0.5V-2.5V, with 50 Ohms impedance usually half input Volts is read out
+            # Input delays edited in TimeTagger GUI Settings are saved as status
+            # variables and override these delay defaults after a restart.
 
             test_channels: [1,2,8] #[1,2,3,4,5,6,7]#[1,2, 4, -4]
             combined_channels: # Alias for combined channels must not start with 'ch'
@@ -42,6 +45,8 @@ class TT(Base):
     _test_channels = ConfigOption('test_channels', False, missing='nothing')
     _channels_params = ConfigOption('channels_params', False, missing='nothing')
     _combined_channels = ConfigOption('combined_channels', missing = 'error')
+    # GUI edits override channels_params on subsequent activations.
+    _input_delays = StatusVar(default={})
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -69,9 +74,20 @@ class TT(Base):
             for channel, params in self._channels_params.items():
                 channel = self.channel_codes[channel]
                 if 'delay' in params.keys():
-                    self.delay_channel(delay=params['delay'], channel = channel)
+                    self.tagger.setInputDelay(delay=params['delay'], channel=channel)
                 if 'triggerLevel' in params.keys():
                     self.tagger.setTriggerLevel(channel, params['triggerLevel'])
+
+        try:
+            available_channels = set(self.get_input_channels().values())
+            for channel, delay in self._input_delays.items():
+                channel = int(channel)
+                if channel not in available_channels:
+                    raise ValueError(f'Saved input delay refers to unavailable channel {channel}.')
+                self.tagger.setInputDelay(channel=channel, delay=int(delay))
+        except Exception:
+            freeTimeTagger(self.tagger)
+            raise
 
         #Create combine channels:
         self.__combined_channels = self._combined_channels.copy()
@@ -132,6 +148,13 @@ class TT(Base):
         if absolute value of the delay not exceed 2000000 ps, this delay will be applied onboard directly.
         """
         self.tagger.setInputDelay(delay=delay, channel=channel)
+        self._input_delays = {**self._input_delays, int(channel): int(delay)}
+
+    def get_input_channels(self):
+        """Return available physical input channels, excluding virtual combiners."""
+        available = set(self.tagger.getChannelList())
+        return {name: channel for name, channel in self.channel_codes.items()
+                if name == f'ch{channel}' and channel in available}
 
     def counter(self, **kwargs):
         """

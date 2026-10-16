@@ -5,6 +5,7 @@
 
 
 from PySide2 import QtCore, QtGui, QtWidgets
+from qudi.util.widgets.scientific_spinbox import ScienSpinBox
 import copy
 
 
@@ -12,18 +13,18 @@ class TimetaggerSettingDialog(QtWidgets.QDialog):
     """
     """
 
-    def __init__(self, channel_codes, refresh_time, corr_params, hist_params):
+    def __init__(self, channel_codes, refresh_time, corr_params, hist_params, input_delays):
         super().__init__()
         self.setObjectName('timetagger_settings_dialog')
         self.setWindowTitle('Timetagger Settings')
 
         self.settings_widget = TimetaggerSettingsWidget(channel_codes = channel_codes, refresh_time = refresh_time, corr_params = corr_params, hist_params = hist_params)
+        self.settings_widget.set_input_delays(input_delays)
         self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
                                                      QtWidgets.QDialogButtonBox.Cancel |
                                                      QtCore.Qt.Horizontal,
                                                      self)
 
-        self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
 
         layout = QtWidgets.QVBoxLayout()
@@ -135,6 +136,40 @@ class TimetaggerSettingsWidget(QtWidgets.QWidget):
         self.layout().addWidget(refresh_time_frame,0,0,1,60)
         self.layout().addWidget(corr_groupbox,1,0,40,60)
         self.layout().addWidget(hist_groupbox,42,0,40,60)
+
+        delay_groupbox = QtWidgets.QGroupBox('Input delays (ps)')
+        delay_layout = QtWidgets.QVBoxLayout(delay_groupbox)
+        note = QtWidgets.QLabel('Shared by all measurements, including QBER. Saved across restarts.\n'
+                               'Changing delays during acquisition mixes old and new timing data;\n'
+                               'stop or clear affected measurements before continuing.')
+        note.setWordWrap(True)
+        delay_layout.addWidget(note)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setMinimumHeight(160)
+        delay_widget = QtWidgets.QWidget()
+        self.input_delays_layout = QtWidgets.QFormLayout(delay_widget)
+        scroll.setWidget(delay_widget)
+        delay_layout.addWidget(scroll)
+        self.input_delay_spinboxes = {}
+        self.layout().addWidget(delay_groupbox, 83, 0, 1, 60)
+
+    def set_input_delays(self, delays):
+        while self.input_delays_layout.rowCount():
+            self.input_delays_layout.removeRow(0)
+        self.input_delay_spinboxes = {}
+        for name, params in delays.items():
+            spin = ScienSpinBox()
+            spin.setRange(-(2**63), 2**63 - 1)
+            spin.setSingleStep(100)
+            spin.setSuffix(' ps')
+            spin.setKeyboardTracking(False)
+            spin.setValue(params['delay'])
+            self.input_delays_layout.addRow(name, spin)
+            self.input_delay_spinboxes[params['channel']] = spin
+
+    def get_input_delays(self):
+        return {channel: spin.value() for channel, spin in self.input_delay_spinboxes.items()}
     
     def update_corr_channels_display(self):
         

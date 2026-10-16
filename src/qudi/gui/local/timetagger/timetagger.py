@@ -361,7 +361,8 @@ class TTGui(GuiBase):
         Moreover it sets default values if not existed in the logic modules.
         """
         # Create the Settings window
-        self._sd = TimetaggerSettingDialog(channel_codes = self._timetagger_logic._timetagger.channel_codes, refresh_time = self._timetagger_logic._refresh_time, corr_params = self._timetagger_logic._autocorr_params, hist_params = self._timetagger_logic._histogram_params)
+        self._sd = TimetaggerSettingDialog(channel_codes = self._timetagger_logic._timetagger.channel_codes, refresh_time = self._timetagger_logic._refresh_time, corr_params = self._timetagger_logic._autocorr_params, hist_params = self._timetagger_logic._histogram_params,
+                                           input_delays=self._timetagger_logic.get_input_delays())
 
         # Connect the action of the settings window with the code:
         self._sd.button_box.accepted.connect(self.update_settings)
@@ -555,6 +556,7 @@ class TTGui(GuiBase):
 
     def menu_settings(self):
         """ This method opens the settings menu. """
+        self.keep_former_settings()
         self._sd.exec_()
 
     def save_images(self):
@@ -628,7 +630,14 @@ class TTGui(GuiBase):
             self._mw.actionBack.setEnabled(False)
 
     def update_settings(self):
-        """ Write new settings from the gui to the file. """      
+        """Apply shared delays and measurement settings."""
+        if not self._timetagger_logic.set_input_delays(self._sd.settings_widget.get_input_delays()):
+            self._sd.settings_widget.set_input_delays(self._timetagger_logic.get_input_delays())
+            QtWidgets.QMessageBox.warning(
+                self._sd, 'Input delays not fully applied',
+                'Could not apply all input delays. Some channel edits may already be active '
+                'and saved. The fields now show the current hardware values. See the log for details.')
+            return
         self._timetagger_logic._refresh_time = self._sd.settings_widget._refresh_time
         self._timetagger_logic._autocorr_params = copy.deepcopy(self._sd.settings_widget._corr_params)
         self._timetagger_logic._histogram_params = copy.deepcopy(self._sd.settings_widget._hist_params)
@@ -644,6 +653,7 @@ class TTGui(GuiBase):
         self._histogram_channel = 0
         self.setup_autocorr_combobox()
         self.setup_histogram_combobox()
+        self._sd.accept()
 
     def keep_former_settings(self):
         self._sd.settings_widget._refresh_time = self._timetagger_logic._refresh_time
@@ -653,6 +663,7 @@ class TTGui(GuiBase):
         self._sd.settings_widget.refresh_time_lineedit.setText('{0}'.format(self._sd.settings_widget._refresh_time))
         self._sd.settings_widget.update_corr_channels_display()
         self._sd.settings_widget.update_hist_channels_display()
+        self._sd.settings_widget.set_input_delays(self._timetagger_logic.get_input_delays())
 
 
     def update_writeintofilechannels(self):

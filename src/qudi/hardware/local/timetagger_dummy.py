@@ -4,6 +4,7 @@
 # General Public License under which Qudi is distributed).
 
 from qudi.core.module import Base
+from qudi.core.statusvariable import StatusVar
 
 
 class TT(Base):
@@ -18,12 +19,17 @@ class TT(Base):
 
     """
 
+    _input_delays = StatusVar(default={})
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
 
     def on_activate(self):
         pass
+
+    def get_input_channels(self):
+        return {f'ch{channel}': channel for channel in range(1, 19)}
 
     
 
@@ -64,7 +70,7 @@ class TT(Base):
         this delay can be positive or negative,
         if absolute value of the delay not exceed 2000000 ps, this delay will be applied onboard directly.
         """
-        pass
+        self._input_delays = {**self._input_delays, int(channel): int(delay)}
 
     def counter(self, **kwargs):
         """
@@ -109,7 +115,7 @@ class TT(Base):
         pass
 
     def get_input_delay(self, channel):
-        return 0
+        return self._input_delays.get(channel, 0)
 
     def get_delay_hardware(self, channel):
         return 0

@@ -330,6 +330,28 @@ class TimeTaggerLogic(LogicBase):
             self._statusVariables['history_{0}'.format(histindex)] = state.serialize()
             histindex += 1
 
+    def get_input_delays(self):
+        """Read current physical input delays in ps from the shared tagger."""
+        return {name: {'channel': channel, 'delay': self._timetagger.get_input_delay(channel)}
+                for name, channel in self._timetagger.get_input_channels().items()}
+
+    def set_input_delays(self, delays):
+        """Apply input delays; the hardware module persists successful edits."""
+        channels = set(self._timetagger.get_input_channels().values())
+        if any(channel not in channels or not isinstance(delay, int)
+               for channel, delay in delays.items()):
+            self.log.error('Input delays must be integer ps values for physical input channels.')
+            return False
+        try:
+            for channel, delay in delays.items():
+                if self._timetagger.get_input_delay(channel) != delay:
+                    self._timetagger.delay_channel(channel, delay)
+        except Exception:
+            self.log.exception('Could not apply all input delays. Previously applied channel '
+                               'edits remain active; read back the settings before retrying.')
+            return False
+        return True
+
     def load_history_config(self):
         # restore here ...
         self.history = []
