@@ -45,6 +45,8 @@ class autoalignmentLogic(LogicBase):
     sigStopped = QtCore.Signal()
     sigReadSourceChanged = QtCore.Signal(str)
     sigReadChannelChanged = QtCore.Signal(str)
+    # Progress/output text for the GUI's output box (instead of the terminal)
+    sigMessage = QtCore.Signal(str)
 
     def on_activate(self):
         """ Initialisation performed during activation of the module.
@@ -77,10 +79,29 @@ class autoalignmentLogic(LogicBase):
             self._read_source = 'timetagger'
         else:
             self._read_source = None
-            self.log.error(
+            self._error(
                 'Neither a power meter nor a time series logic is connected. '
                 'read_output() will not work until one of them is connected.'
             )
+
+    def _report(self, message):
+        """ Send progress output to the GUI only (not to the terminal/qudi log). """
+        self.sigMessage.emit(f'[{time.strftime("%H:%M:%S")}] {message}')
+
+    def _warn(self, message):
+        """ Warnings go to the GUI and to the qudi log. """
+        self._report(f'WARNING: {message}')
+        self.log.warning(message)
+
+    def _error(self, message):
+        """ Errors go to the GUI and to the qudi log. """
+        self._report(f'ERROR: {message}')
+        self.log.error(message)
+
+    def _exception(self, message):
+        """ Like _error, but the qudi log also gets the traceback. """
+        self._report(f'ERROR: {message} (see qudi log for details)')
+        self.log.exception(message)
 
     def on_deactivate(self):
         """ Deinitialisation performed during deactivation of the module.
@@ -95,7 +116,7 @@ class autoalignmentLogic(LogicBase):
         sample_count = self._active_num_samples if num_samples is None else num_samples
         if self._read_source == 'powermeter':
             if self._tlpm is None:
-                self.log.error('Power meter is not connected; cannot read output.')
+                self._error('Power meter is not connected; cannot read output.')
                 return np.nan
             # power measurement
             power_measurements = []
@@ -109,7 +130,7 @@ class autoalignmentLogic(LogicBase):
             value = np.mean(power_measurements)
         elif self._read_source == 'timetagger':
             if self._time_series_logic is None:
-                self.log.error('Time series logic is not connected; cannot read output.')
+                self._error('Time series logic is not connected; cannot read output.')
                 return np.nan
             power_measurements = []
             count = 0 
@@ -122,7 +143,7 @@ class autoalignmentLogic(LogicBase):
             power_measurements = np.array(power_measurements)
             value = np.mean(power_measurements)
         else:
-            self.log.error(
+            self._error(
                 "No valid read source is set. Use set_read_source('powermeter' or "
                 "'timetagger') first."
             )
@@ -164,15 +185,15 @@ class autoalignmentLogic(LogicBase):
         """
         source = source.lower() if isinstance(source, str) else source
         if source == 'powermeter' and self._tlpm is None:
-            self.log.error('No power meter connected; cannot switch to powermeter readout.')
+            self._error('No power meter connected; cannot switch to powermeter readout.')
             return
         if source == 'timetagger' and self._time_series_logic is None:
-            self.log.error(
+            self._error(
                 'No time series logic connected; cannot switch to timetagger readout.'
             )
             return
         if source not in ('powermeter', 'timetagger'):
-            self.log.error("read source must be 'powermeter' or 'timetagger'.")
+            self._error("read source must be 'powermeter' or 'timetagger'.")
             return
         self._read_source = source
         self.sigReadSourceChanged.emit(self._read_source)
@@ -197,7 +218,7 @@ class autoalignmentLogic(LogicBase):
         """
         available = self.get_available_timetagger_channels()
         if available and channel not in available:
-            self.log.warning(
+            self._warn(
                 f'Channel {channel} is not currently an active time series channel '
                 f'(available: {available}). Setting it anyway.'
             )
@@ -217,8 +238,8 @@ class autoalignmentLogic(LogicBase):
         try:
             self._pmc.halt()
         except Exception:
-            self.log.exception('Error while trying to halt the picomotor controller.')
-        self.log.warning('Emergency stop requested: aborting autoalignment and halting motors.')
+            self._exception('Error while trying to halt the picomotor controller.')
+        self._warn('Emergency stop requested: aborting autoalignment and halting motors.')
         self.sigStopped.emit()
 
     def start_optimize(self, range_size):
@@ -226,16 +247,16 @@ class autoalignmentLogic(LogicBase):
         stop flag, and emits sigOptimizeFinished when done (successfully or not).
         """
         if self.module_state() == 'locked':
-            self.log.warning('Autoalignment is already busy; ignoring new optimize request.')
+            self._warn('Autoalignment is already busy; ignoring new optimize request.')
             return
         self.module_state.lock()
         self._stop_requested = False
         try:
             self.optimize(range_size)
         except AutoAlignmentStopRequested:
-            self.log.info('Optimization stopped by user request.')
+            self._report('Optimization stopped by user request.')
         except ValueError:
-            self.log.exception('Invalid range_size for optimize().')
+            self._exception('Invalid range_size for optimize().')
         finally:
             self._active_num_samples = self.num_samples
             self.module_state.unlock()
@@ -246,7 +267,7 @@ class autoalignmentLogic(LogicBase):
         stop flag, and emits sigHysteresisFinished when done (successfully or not).
         """
         if self.module_state() == 'locked':
-            self.log.warning(
+            self._warn(
                 'Autoalignment is already busy; ignoring new correct hysteresis request.'
             )
             return
@@ -255,7 +276,7 @@ class autoalignmentLogic(LogicBase):
         try:
             self.correct_hysteresis()
         except AutoAlignmentStopRequested:
-            self.log.info('Hysteresis correction stopped by user request.')
+            self._report('Hysteresis correction stopped by user request.')
         finally:
             self.module_state.unlock()
             self.sigHysteresisFinished.emit()
@@ -266,7 +287,7 @@ class autoalignmentLogic(LogicBase):
         """
         self.motor_number = len(self.motor_list)
         if len(position) != self.motor_number:
-            self.log.error('position dimension doesnt match motor list dimension.')
+            self._error('position dimension doesnt match motor list dimension.')
             return
         position = np.asarray(position, dtype=float)
         limits = np.asarray([
@@ -275,7 +296,7 @@ class autoalignmentLogic(LogicBase):
         ])
         bounded_position = np.clip(position, -limits, limits)
         if not np.array_equal(position, bounded_position):
-            self.log.warning(
+            self._warn(
                 f'Position {position} exceeds motor limits; '
                 f'clipping to {bounded_position}.'
             )
@@ -329,7 +350,7 @@ class autoalignmentLogic(LogicBase):
 
         self.motor_number = len(self.motor_list)
         if self.motor_number <4:
-            self.log.error('Need at least 2 axises for optimization.')
+            self._error('Need at least 2 axises for optimization.')
             return
         motor_position = [0]*self.motor_number
         output = self.read_output()
@@ -365,8 +386,8 @@ class autoalignmentLogic(LogicBase):
         centroid_position = np.asarray(sorted_simplex[1:]).mean(axis=0)
         #Solves for a position reflected from the worst position. Used in elements of downhill_simplex and optimize function.
         worst_position = np.asarray(sorted_simplex[0])
-        self.log.info(f'worst_position = {worst_position}')
-        self.log.info(f'centroid_position= {centroid_position}')
+        self._report(f'worst_position = {worst_position}')
+        self._report(f'centroid_position= {centroid_position}')
         reflection_position = centroid_position + 1*(centroid_position-worst_position)
         # move motors to the reflection position
         reflection_output = self.move_motors_abs(reflection_position)
@@ -435,7 +456,7 @@ class autoalignmentLogic(LogicBase):
             new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] + 2*self.correct_hysteresis_steps['x1']
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
-            self.log.info("correct hysteresis for x1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x1']")
+            self._report("correct hysteresis for x1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x1']")
             new_position[self.channel_codes['x1']] = self._current_position[self.channel_codes['x1']] - self.correct_hysteresis_steps['x1']
             self.move_motors_abs(new_position)
         else:
@@ -449,7 +470,7 @@ class autoalignmentLogic(LogicBase):
                 new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] + 2*self.correct_hysteresis_steps['x2']
                 new_output= self.move_motors_abs(new_position)
             if new_output < prev_output:
-                self.log.info("correct hysteresis for x2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x2']")
+                self._report("correct hysteresis for x2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['x2']")
                 new_position[self.channel_codes['x2']] = self._current_position[self.channel_codes['x2']] - self.correct_hysteresis_steps['x2']
                 self.move_motors_abs(new_position)
             else:
@@ -475,7 +496,7 @@ class autoalignmentLogic(LogicBase):
             new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] + 2*self.correct_hysteresis_steps['y1']
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
-            self.log.info("correct hysteresis for y1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y1']")
+            self._report("correct hysteresis for y1 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y1']")
             new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] - self.correct_hysteresis_steps['y1']
             self.move_motors_abs(new_position)
         else:
@@ -489,7 +510,7 @@ class autoalignmentLogic(LogicBase):
                 new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] + 2*self.correct_hysteresis_steps['y2']
                 new_output= self.move_motors_abs(new_position)
             if new_output < prev_output:
-                self.log.info("correct hysteresis for y2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y2']")
+                self._report("correct hysteresis for y2 failed. You may want to assign a smaller value for self.correct_hysteresis_steps['y2']")
                 new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] - self.correct_hysteresis_steps['y2']
                 self.move_motors_abs(new_position)
             else:
@@ -503,7 +524,7 @@ class autoalignmentLogic(LogicBase):
                 new_position[self.channel_codes['y1']] = self._current_position[self.channel_codes['y1']] - self.correct_hysteresis_steps['y1']
                 new_position[self.channel_codes['y2']] = self._current_position[self.channel_codes['y2']] - self.correct_hysteresis_steps['y2']
                 new_output= self.move_motors_abs(new_position)
-        self.log.info(f'correct_hysteresis: new_position = {new_position}, old_position = {old_position}')
+        self._report(f'correct_hysteresis: new_position = {new_position}, old_position = {old_position}')
 
     def correct_hysteresis_oneaxis(self, motor):
         old_position = self._current_position.copy()
@@ -518,7 +539,7 @@ class autoalignmentLogic(LogicBase):
             new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] + 2*self.correct_hysteresis_steps[motor]
             new_output= self.move_motors_abs(new_position)
         if new_output < prev_output:
-            self.log.info(f"correct hysteresis for {motor} failed. You may want to assign a smaller value for self.correct_hysteresis_steps[{motor}]")
+            self._report(f"correct hysteresis for {motor} failed. You may want to assign a smaller value for self.correct_hysteresis_steps[{motor}]")
         while new_output > prev_output:
             self._check_stop()
             prev_output = new_output
@@ -527,7 +548,7 @@ class autoalignmentLogic(LogicBase):
             new_output= self.move_motors_abs(new_position)
         new_position[self.channel_codes[motor]] = self._current_position[self.channel_codes[motor]] - self.correct_hysteresis_steps[motor]
         self.move_motors_abs(new_position)
-        self.log.info(f'correct_hysteresis_oneaxis: new_position = {new_position}, old_position = {old_position}')
+        self._report(f'correct_hysteresis_oneaxis: new_position = {new_position}, old_position = {old_position}')
 
     def _simplex_range_for_size(self, range_size):
         """Return the configured simplex range for a named search size."""
@@ -564,20 +585,20 @@ class autoalignmentLogic(LogicBase):
             sorted_output_simplex = final_output_simplex
             final_position = final_simplex[-1]
             final_output = final_output_simplex[-1]
-            self.log.info(f'final_simple = {final_simplex}')
-            self.log.info(f'final_output_simplex = {final_output_simplex}')
-            self.log.info(f'Best position = {final_position}')
-            self.log.info(f'Best output = {final_output}')
+            self._report(f'final_simple = {final_simplex}')
+            self._report(f'final_output_simplex = {final_output_simplex}')
+            self._report(f'Best position = {final_position}')
+            self._report(f'Best output = {final_output}')
             if final_position == prev_best_position:
                 hysteresis_counter = hysteresis_counter + 1
                 if hysteresis_counter > 2:
                     self.move_motors_abs(final_position)
-                    self.log.info('Correcting hysteresis...')
+                    self._report('Correcting hysteresis...')
                     self._active_num_samples = self.num_samples
                     self.correct_hysteresis()
-                    self.log.info('Local Max Achieved.')
+                    self._report('Local Max Achieved.')
                     final_output = self.read_output()
-                    self.log.info(final_output)
+                    self._report(final_output)
                     hysteresis_counter  = 0
                     self._active_num_samples = self.exploration_samples
                     sorted_simplex, sorted_output_simplex = self.randomize_initial_simplex(simplex_range)
@@ -587,13 +608,13 @@ class autoalignmentLogic(LogicBase):
         self._active_num_samples = self.num_samples
         final_position = sorted_simplex[-1]
         final_output = sorted_output_simplex[-1]
-        self.log.info(f'final_simple = {sorted_simplex}')
-        self.log.info(f'final_output_simplex = {sorted_output_simplex}')
-        self.log.info(f'Best position = {final_position}')
-        self.log.info(f'Best output = {final_output}')
+        self._report(f'final_simple = {sorted_simplex}')
+        self._report(f'final_output_simplex = {sorted_output_simplex}')
+        self._report(f'Best position = {final_position}')
+        self._report(f'Best output = {final_output}')
         self.move_motors_abs(final_position)
-        self.log.info('Correcting hysteresis...')
+        self._report('Correcting hysteresis...')
         self.correct_hysteresis()
-        self.log.info('Local Max Achieved.')
+        self._report('Local Max Achieved.')
         final_output = self.read_output()
-        self.log.info(f'Final power ={final_output}')
+        self._report(f'Final power ={final_output}')
